@@ -128,61 +128,81 @@
         <div id="loading-text">Verarbeite KML Daten...</div>
     </div>
 
-    <!-- HUD (Head Up Display) -->
-    <div id="hud-top" class="absolute top-0 left-0 right-0 p-2 z-20 flex justify-between items-start pointer-events-none">
-        <!-- Main Flight Instruments -->
-        <div class="glass-panel rounded-xl p-3 flex gap-4 pointer-events-auto">
-            <div class="text-center w-20">
-                <div class="text-xs text-gray-400">HÖHE (m)</div>
-                <div id="hud-alt" class="text-3xl font-bold hud-value">0</div>
-            </div>
-            <div class="text-center w-20">
-                <div class="text-xs text-gray-400">GS (km/h)</div>
-                <div id="hud-speed" class="text-3xl font-bold hud-value">0</div>
-            </div>
-            <div class="text-center w-20">
-                <div class="text-xs text-gray-400">VARIO (m/s)</div>
-                <div id="hud-vario" class="text-3xl font-bold hud-value text-gray-300">0.0</div>
-            </div>
-            <div class="text-center w-16">
-                <div class="text-xs text-gray-400">TRACK</div>
-                <div id="hud-heading" class="text-2xl font-bold hud-value">0°</div>
-            </div>
-        </div>
-
-        <!-- Status & Menu Button -->
-        <div class="glass-panel rounded-xl p-2 px-3 flex flex-col gap-1 items-end pointer-events-auto">
-            <div id="gps-status" class="text-xs text-blue-400 font-bold mb-1">SIMULATION</div>
-            <div id="rec-status" class="hidden text-xs text-red-500 animate-pulse font-bold mb-1"><i class="fas fa-circle"></i> REC</div>
+    <!-- HUD (Head Up Display) - Full Width -->
+    <div id="hud-top" class="absolute top-0 left-0 right-0 p-2 z-20 flex justify-center pointer-events-none">
+        <!-- Main Flight Instruments Bar -->
+        <div class="glass-panel rounded-xl p-3 w-full max-w-4xl flex justify-between items-center pointer-events-auto shadow-lg relative">
             
-            <!-- Hamburger Menu Button -->
-            <button onclick="app.toggleSettings()" class="text-gray-300 hover:text-white p-1">
-                <i class="fas fa-bars text-xl"></i>
-            </button>
+            <!-- Altitude -->
+            <div class="flex-1 text-center border-r border-gray-700/50">
+                <div class="text-[10px] text-gray-400 uppercase tracking-widest">Höhe</div>
+                <div class="flex items-baseline justify-center">
+                    <span id="hud-alt" class="text-3xl font-bold hud-value">0</span>
+                    <span class="text-xs text-gray-500 ml-1">m</span>
+                </div>
+            </div>
+
+            <!-- Speed -->
+            <div class="flex-1 text-center border-r border-gray-700/50">
+                <div class="text-[10px] text-gray-400 uppercase tracking-widest">Speed</div>
+                <div class="flex items-baseline justify-center">
+                    <span id="hud-speed" class="text-3xl font-bold hud-value">0</span>
+                    <span class="text-xs text-gray-500 ml-1">km/h</span>
+                </div>
+            </div>
+
+            <!-- Vario -->
+            <div class="flex-1 text-center border-r border-gray-700/50">
+                <div class="text-[10px] text-gray-400 uppercase tracking-widest">Vario</div>
+                <div class="flex items-baseline justify-center">
+                    <span id="hud-vario" class="text-3xl font-bold hud-value text-gray-300">0.0</span>
+                    <span class="text-xs text-gray-500 ml-1">m/s</span>
+                </div>
+            </div>
+
+            <!-- Track -->
+            <div class="flex-1 text-center">
+                <div class="text-[10px] text-gray-400 uppercase tracking-widest">Kurs</div>
+                <div class="flex items-baseline justify-center">
+                    <span id="hud-heading" class="text-3xl font-bold hud-value">0</span>
+                    <span class="text-xs text-gray-500 ml-1">°</span>
+                </div>
+            </div>
+
+            <!-- Integrated Status Icons (Small, Absolute or Flex) -->
+            <div class="absolute -bottom-2 right-2 flex gap-2">
+                 <div id="gps-status" class="bg-gray-800/80 px-2 py-0.5 rounded text-[9px] font-bold text-blue-400 border border-gray-700 shadow">SIMULATION</div>
+                 <div id="rec-status" class="hidden bg-red-900/80 px-2 py-0.5 rounded text-[9px] font-bold text-red-200 border border-red-700 shadow animate-pulse">REC</div>
+            </div>
         </div>
     </div>
 
     <!-- Wind Layer Sidebar (Right) -->
-    <div class="absolute right-0 top-1/4 bottom-1/4 w-16 z-20 flex flex-col items-end pointer-events-none">
-        <div id="wind-layers" class="glass-panel rounded-l-xl h-full w-full flex flex-col pointer-events-auto overflow-y-auto text-xs">
+    <div class="absolute right-0 top-24 bottom-24 w-14 z-10 flex flex-col items-end pointer-events-none">
+        <div id="wind-layers" class="glass-panel rounded-l-xl h-full w-full flex flex-col pointer-events-auto overflow-y-auto text-xs border-r-0">
             <!-- Dynamic Wind Layers inserted here -->
         </div>
     </div>
 
     <!-- Simulation Controls (Bottom Center) -->
     <div id="sim-controls" class="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-30 flex gap-6">
-        <button id="btn-valve" class="control-btn glass-panel w-20 h-20 rounded-full flex flex-col items-center justify-center border-red-500/50 hover:bg-red-900/40 text-red-300 active:bg-red-700">
+        <button id="btn-valve" class="control-btn glass-panel w-20 h-20 rounded-full flex flex-col items-center justify-center border-red-500/50 hover:bg-red-900/40 text-red-300 active:bg-red-700 transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)]">
             <i class="fas fa-arrow-down text-2xl"></i>
             <span class="text-xs font-bold mt-1">VENTIL</span>
         </button>
-        <button id="btn-burner" class="control-btn glass-panel w-20 h-20 rounded-full flex flex-col items-center justify-center border-green-500/50 hover:bg-green-900/40 text-green-300 active:bg-green-600">
+        <button id="btn-burner" class="control-btn glass-panel w-20 h-20 rounded-full flex flex-col items-center justify-center border-green-500/50 hover:bg-green-900/40 text-green-300 active:bg-green-600 transition-all shadow-[0_0_20px_rgba(34,197,94,0.3)]">
             <i class="fas fa-fire text-2xl"></i>
             <span class="text-xs font-bold mt-1">BRENNER</span>
         </button>
     </div>
 
-    <!-- Main Toolbar (Bottom) -->
-    <div class="absolute bottom-6 left-6 z-30 flex flex-col gap-3">
+    <!-- Main Toolbar (Bottom Left) -->
+    <div class="absolute bottom-6 left-4 z-30 flex flex-col gap-3">
+        <!-- Setup / Menu Button -->
+        <button onclick="app.toggleSettings()" class="glass-panel p-3 rounded-full hover:bg-gray-700 w-12 h-12 flex items-center justify-center text-gray-200" title="Menü / Setup">
+            <i class="fas fa-bars"></i>
+        </button>
+
         <!-- Center/Follow Button -->
         <button id="btn-center" onclick="app.toggleFollow()" class="glass-panel p-3 rounded-full hover:bg-blue-900/50 w-12 h-12 flex items-center justify-center text-blue-400" title="Karte zentrieren">
             <i class="fas fa-crosshairs"></i>
@@ -192,11 +212,6 @@
             <i id="icon-record" class="fas fa-circle text-gray-400"></i>
         </button>
         
-        <!-- Toggle Overlay Visibility -->
-        <button id="btn-overlay" onclick="app.ui.toggleOverlays()" class="glass-panel p-3 rounded-full hover:bg-gray-700 w-12 h-12 flex items-center justify-center text-green-400" title="Daten ein/ausblenden">
-            <i class="fas fa-eye"></i>
-        </button>
-
         <button onclick="app.ui.cycleMapLayer()" class="glass-panel p-3 rounded-full hover:bg-gray-700 w-12 h-12 flex items-center justify-center" title="Kartenstil wechseln">
             <i class="fas fa-layer-group"></i>
         </button>
@@ -206,28 +221,49 @@
         </button>
     </div>
 
-    <!-- SETTINGS MODAL (Mobile Friendly) -->
-    <div id="settings-modal" class="hidden absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end md:items-center justify-center">
-        <!-- Panel: Full width/bottom rounded on mobile, centered rounded on desktop -->
-        <div class="glass-panel w-full h-[85vh] md:h-auto md:max-w-md md:rounded-2xl rounded-t-2xl p-6 overflow-y-auto slide-up-mobile">
+    <!-- SETTINGS MODAL (Responsive Fixed: Portrait Bottom-Sheet, Landscape/Desktop Centered Modal) -->
+    <div id="settings-modal" class="hidden absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end landscape:items-center md:items-center justify-center transition-opacity duration-300">
+        <!-- Panel -->
+        <div class="glass-panel w-full h-[85vh] md:h-auto md:max-h-[90vh] md:max-w-md landscape:h-auto landscape:max-h-[90vh] landscape:max-w-lg md:rounded-2xl landscape:rounded-2xl rounded-t-2xl p-6 overflow-y-auto slide-up-mobile flex flex-col shadow-2xl">
             
-            <div class="flex justify-between items-center border-b border-gray-700 pb-4 mb-4">
-                <h2 class="text-2xl font-bold">Einstellungen</h2>
+            <div class="flex justify-between items-center border-b border-gray-700 pb-4 mb-4 flex-shrink-0">
+                <h2 class="text-xl font-bold">Einstellungen</h2>
                 <button onclick="app.toggleSettings()" class="text-gray-400 hover:text-white p-2">
-                    <i class="fas fa-times text-xl"></i>
+                    <i class="fas fa-chevron-down md:fa-times landscape:fa-times text-xl"></i>
                 </button>
             </div>
             
-            <div class="space-y-6">
+            <div class="space-y-6 flex-1 overflow-y-auto">
+                <!-- Data Import Section -->
+                <div>
+                    <label class="block text-sm text-gray-300 font-bold mb-2">Karten-Ebenen (KML/GPX)</label>
+                    
+                    <!-- Layer List Container -->
+                    <div id="layer-list" class="space-y-2 mb-3 max-h-40 overflow-y-auto pr-1 bg-gray-900/50 rounded-lg p-2 border border-gray-700/50">
+                        <div class="text-xs text-gray-500 text-center py-2 italic">Keine Karten geladen</div>
+                    </div>
+
+                    <!-- File Dropzone -->
+                    <label class="flex flex-col items-center justify-center w-full h-12 border border-gray-600 border-dashed rounded-lg cursor-pointer bg-gray-800/50 hover:bg-gray-700/50">
+                        <div class="flex items-center justify-center gap-2">
+                            <i class="fas fa-plus text-sm text-gray-400"></i>
+                            <p class="text-xs text-gray-400">Datei hinzufügen...</p>
+                        </div>
+                        <input type="file" accept=".kml,.gpx,.xml" class="hidden" onchange="app.data.handleKML(this.files[0])" />
+                    </label>
+                </div>
+
+                <hr class="border-gray-700/50">
+
                 <!-- Simulation Mode -->
                 <div class="flex justify-between items-center">
                     <div>
-                        <label class="block text-base text-gray-200 font-bold">Simulations-Modus</label>
-                        <p class="text-xs text-gray-500">GPS deaktivieren, Physik simulieren</p>
+                        <label class="block text-sm text-gray-200 font-bold">Simulations-Modus</label>
+                        <p class="text-[10px] text-gray-500">Physik statt GPS</p>
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" id="sim-toggle-check" class="sr-only peer" onchange="app.toggleSimulation()">
-                        <div class="w-14 h-8 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
+                        <div class="w-12 h-7 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                     </label>
                 </div>
 
@@ -241,9 +277,8 @@
                 <div>
                     <label class="block text-sm text-gray-400 mb-2">Eigenes Ballon Icon</label>
                     <div class="flex items-center gap-2">
-                         <label class="flex-1 flex flex-col items-center px-4 py-3 bg-gray-800 text-blue rounded-lg shadow-lg tracking-wide uppercase border border-blue cursor-pointer hover:bg-gray-700">
-                            <i class="fas fa-cloud-upload-alt text-xl mb-1"></i>
-                            <span class="text-xs leading-normal">Bild wählen</span>
+                         <label class="flex-1 flex flex-col items-center justify-center h-10 bg-gray-800 text-gray-300 rounded border border-gray-600 cursor-pointer hover:bg-gray-700">
+                            <span class="text-xs">Bild wählen...</span>
                             <input type='file' class="hidden" accept="image/*" onchange="app.ui.loadCustomIcon(this.files[0])" />
                         </label>
                     </div>
@@ -251,32 +286,20 @@
 
                 <!-- API Key -->
                 <div>
-                    <label class="block text-sm text-gray-400 mb-2">Gemini API Key (Optional)</label>
-                    <input type="password" id="api-key" placeholder="AI Studio Key eingeben..." class="w-full bg-gray-800 border border-gray-600 rounded p-3 text-white text-sm">
-                </div>
-
-                <!-- Data Import -->
-                <div>
-                    <label class="block text-sm text-gray-400 mb-2">Daten Import (KML/GPX)</label>
-                    <label for="dropzone-file" class="flex flex-col items-center justify-center w-full h-24 border-2 border-gray-600 border-dashed rounded-lg cursor-pointer bg-gray-800 hover:bg-gray-700">
-                        <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                            <i class="fas fa-file-import text-2xl mb-2 text-gray-400"></i>
-                            <p class="text-xs text-gray-400">Datei antippen (Mehrfach möglich)</p>
-                        </div>
-                        <input id="dropzone-file" type="file" accept=".kml,.gpx,.xml" class="hidden" onchange="app.data.handleKML(this.files[0])" />
-                    </label>
+                    <label class="block text-sm text-gray-400 mb-2">Gemini API Key</label>
+                    <input type="password" id="api-key" placeholder="Key eingeben..." class="w-full bg-gray-800 border border-gray-600 rounded p-2 text-white text-xs">
                 </div>
             </div>
 
             <!-- Danger Zone -->
-            <div class="mt-8 pt-6 border-t border-gray-700">
-                <button onclick="app.data.clearAllData()" class="w-full bg-red-900/30 hover:bg-red-900/50 border border-red-800 text-red-300 py-3 rounded-lg text-sm font-bold transition-colors">
+            <div class="mt-4 pt-4 border-t border-gray-700 flex-shrink-0">
+                <button onclick="app.data.clearAllData()" class="w-full text-red-400 text-xs hover:text-red-200 flex items-center justify-center py-2">
                     <i class="fas fa-trash-alt mr-2"></i> Alles zurücksetzen
                 </button>
             </div>
             
-             <!-- Bottom padding for mobile scroll -->
-             <div class="h-12 md:hidden"></div>
+             <!-- Bottom padding for mobile scroll safety -->
+             <div class="h-6 md:hidden landscape:hidden"></div>
         </div>
     </div>
 
@@ -334,18 +357,15 @@
                 localStorage.setItem('an_map_layer', app.ui.currentLayerIndex);
             },
             load: () => {
-                // 1. Sim Mode
                 const savedSim = localStorage.getItem('an_sim_mode');
                 if (savedSim) state.mode = savedSim;
                 
-                // 2. HUD Opacity
                 const savedOpacity = localStorage.getItem('an_hud_opacity');
                 if (savedOpacity) {
                     app.ui.updateOpacity(savedOpacity);
                     document.querySelector('input[type=range]').value = savedOpacity;
                 }
 
-                // 3. Map Layer (handled in UI init, but index saved here)
                 const savedLayer = localStorage.getItem('an_map_layer');
                 if (savedLayer !== null) app.ui.currentLayerIndex = parseInt(savedLayer);
             }
@@ -431,21 +451,18 @@
                 this.baseLayers = {};
                 this.currentLayerIndex = 0; 
                 this.layerKeys = ['dark', 'light', 'sat'];
-                this.kmlVisible = true;
             }
 
             initMap() {
                 // SYSTEM THEME DETECTION
-                // If user hasn't manually set a layer preference (saved in LS), verify system theme
                 if (localStorage.getItem('an_map_layer') === null) {
                     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-                        this.currentLayerIndex = 1; // Light mode default
+                        this.currentLayerIndex = 1; 
                     }
                 } else {
                     this.currentLayerIndex = parseInt(localStorage.getItem('an_map_layer'));
                 }
 
-                // Define Layers
                 this.baseLayers.dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
                     attribution: '&copy; CARTO', subdomains: 'abcd', maxZoom: 19
                 });
@@ -456,7 +473,6 @@
                     attribution: '&copy; ESRI'
                 });
 
-                // Pick start layer based on index
                 const startLayerKey = this.layerKeys[this.currentLayerIndex];
 
                 this.map = L.map('map', { 
@@ -467,7 +483,7 @@
                 this.updateBalloonMarker();
                 this.markers.track = L.polyline([], {color: 'red', weight: 3}).addTo(this.map);
                 this.markers.vector = L.polyline([], {color: 'deepskyblue', dashArray: '5, 10', weight: 2}).addTo(this.map);
-                this.markers.kmlLayer = L.layerGroup().addTo(this.map);
+                // Main LayerGroup is handled by DataManager now
 
                 this.map.on('contextmenu', (e) => this.setTarget(e.latlng));
                 this.map.on('dragstart', () => {
@@ -512,35 +528,19 @@
                 reader.readAsDataURL(file);
             }
 
-            toggleOverlays() {
-                this.kmlVisible = !this.kmlVisible;
-                const btn = document.getElementById('btn-overlay');
-                if (this.kmlVisible) {
-                    this.map.addLayer(this.markers.kmlLayer);
-                    btn.classList.add('text-green-400');
-                    btn.classList.remove('text-gray-500');
-                } else {
-                    this.map.removeLayer(this.markers.kmlLayer);
-                    btn.classList.remove('text-green-400');
-                    btn.classList.add('text-gray-500');
-                }
-            }
-
             cycleMapLayer() {
                 const currentKey = this.layerKeys[this.currentLayerIndex];
                 this.map.removeLayer(this.baseLayers[currentKey]);
                 this.currentLayerIndex = (this.currentLayerIndex + 1) % this.layerKeys.length;
                 const nextKey = this.layerKeys[this.currentLayerIndex];
                 this.map.addLayer(this.baseLayers[nextKey]);
-                
-                // SAVE SETTING
                 Settings.save();
             }
 
             updateHUD() {
                 document.getElementById('hud-alt').innerText = Math.round(state.position.alt);
                 document.getElementById('hud-speed').innerText = Math.round(state.velocity.h);
-                document.getElementById('hud-heading').innerText = Math.round(state.velocity.heading) + '°';
+                document.getElementById('hud-heading').innerText = Math.round(state.velocity.heading);
                 
                 const varioEl = document.getElementById('hud-vario');
                 const v = state.velocity.v.toFixed(1);
@@ -622,78 +622,165 @@
                     el.style.borderColor = `rgba(255, 255, 255, ${borderAlpha})`;
                     el.style.boxShadow = val < 0.2 ? 'none' : '0 8px 32px 0 rgba(0, 0, 0, 0.37)';
                 });
-                // SAVE SETTING
                 Settings.save();
             }
         }
 
-        // --- DATA MANAGER ---
+        // --- DATA MANAGER WITH REAL LAYER MANAGEMENT ---
         class DataManager {
-            constructor() { this.separator = '<!--AERONAV_FILE_SEP-->'; }
-            loadStoredKML() {
-                const storedData = localStorage.getItem('aeronav_kml_data');
-                if (storedData) {
-                    try {
-                        const parts = storedData.split(this.separator);
-                        const parser = new DOMParser();
-                        parts.forEach(part => {
-                            if(part.trim()) this.parseKML(parser.parseFromString(part, 'text/xml'), true); 
-                        });
-                    } catch (e) { console.error(e); }
-                }
+            constructor() { 
+                this.layers = []; // { id, name, visible, data, leafletGroup }
             }
+
+            loadStoredLayers() {
+                const storedJSON = localStorage.getItem('aeronav_layers_v2');
+                if (storedJSON) {
+                    try {
+                        const data = JSON.parse(storedJSON);
+                        data.forEach(item => this.addLayer(item.name, item.data, item.visible, false));
+                    } catch (e) {
+                        console.error("Layer Load Error:", e);
+                    }
+                }
+                this.renderLayerList();
+            }
+
+            saveLayers() {
+                // Save only necessary data, exclude leaflet objects
+                const toSave = this.layers.map(l => ({
+                    name: l.name,
+                    visible: l.visible,
+                    data: l.data // XML String
+                }));
+                try {
+                    localStorage.setItem('aeronav_layers_v2', JSON.stringify(toSave));
+                } catch(e) {
+                    console.warn("Storage Full");
+                }
+                this.renderLayerList();
+            }
+
             handleKML(file) {
                 if (!file) return;
                 document.getElementById('loading-overlay').classList.remove('hidden');
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    try {
-                        const newText = e.target.result;
-                        try {
-                            const currentData = localStorage.getItem('aeronav_kml_data') || '';
-                            const newData = currentData ? (currentData + this.separator + newText) : newText;
-                            localStorage.setItem('aeronav_kml_data', newData);
-                        } catch (quotaErr) { alert("Speicher voll. Temporärer Modus."); }
-
-                        this.parseKML(new DOMParser().parseFromString(newText, 'text/xml'), false); 
-                    } catch(err) { alert("Fehler: " + err); } 
-                    finally {
-                        document.getElementById('loading-overlay').classList.add('hidden');
-                        app.toggleSettings(); 
-                    }
+                    const text = e.target.result;
+                    this.addLayer(file.name, text, true, true); // true = save & render
+                    document.getElementById('loading-overlay').classList.add('hidden');
                 };
                 reader.readAsText(file);
             }
-            clearAllData() {
-                if(confirm("Alles zurücksetzen?")) {
-                    localStorage.removeItem('aeronav_kml_data');
-                    localStorage.removeItem('aeronav_custom_icon');
-                    // Reset Settings too? Maybe not.
-                    app.ui.markers.kmlLayer.clearLayers();
-                    app.ui.updateBalloonMarker();
-                    alert("Daten bereinigt.");
+
+            addLayer(name, xmlString, visible, autoSave) {
+                const id = Date.now() + Math.random();
+                const group = L.layerGroup();
+                
+                // Parse and add to group
+                try {
+                    const parser = new DOMParser();
+                    const xml = parser.parseFromString(xmlString, 'text/xml');
+                    this.parseKMLToGroup(xml, group);
+                } catch(e) {
+                    console.error("Parse Error", e);
+                    return;
+                }
+
+                // Add to map if visible
+                if (visible) {
+                    group.addTo(app.ui.map);
+                }
+
+                this.layers.push({
+                    id: id,
+                    name: name,
+                    visible: visible,
+                    data: xmlString,
+                    leafletGroup: group
+                });
+
+                if (autoSave) this.saveLayers();
+            }
+
+            toggleLayer(id) {
+                const layer = this.layers.find(l => l.id == id);
+                if (layer) {
+                    layer.visible = !layer.visible;
+                    if (layer.visible) {
+                        layer.leafletGroup.addTo(app.ui.map);
+                    } else {
+                        app.ui.map.removeLayer(layer.leafletGroup);
+                    }
+                    this.saveLayers();
                 }
             }
-            parseKML(xmlDoc, silent = false) {
+
+            deleteLayer(id) {
+                const index = this.layers.findIndex(l => l.id == id);
+                if (index > -1) {
+                    app.ui.map.removeLayer(this.layers[index].leafletGroup);
+                    this.layers.splice(index, 1);
+                    this.saveLayers();
+                }
+            }
+
+            clearAllData() {
+                if(confirm("Alle Karten und Einstellungen löschen?")) {
+                    this.layers.forEach(l => app.ui.map.removeLayer(l.leafletGroup));
+                    this.layers = [];
+                    localStorage.removeItem('aeronav_layers_v2');
+                    localStorage.removeItem('aeronav_custom_icon');
+                    app.ui.updateBalloonMarker();
+                    this.renderLayerList();
+                    alert("Daten gelöscht.");
+                }
+            }
+
+            renderLayerList() {
+                const container = document.getElementById('layer-list');
+                container.innerHTML = '';
+                
+                if (this.layers.length === 0) {
+                    container.innerHTML = '<div class="text-xs text-gray-500 text-center py-2 italic">Keine Karten geladen</div>';
+                    return;
+                }
+
+                this.layers.forEach(l => {
+                    const div = document.createElement('div');
+                    div.className = 'flex items-center justify-between bg-gray-800 p-2 rounded border border-gray-700';
+                    div.innerHTML = `
+                        <div class="flex items-center gap-2 overflow-hidden">
+                            <input type="checkbox" ${l.visible ? 'checked' : ''} class="rounded bg-gray-700 border-gray-600 text-blue-600 focus:ring-blue-600 ring-offset-gray-800 focus:ring-2" onchange="app.data.toggleLayer(${l.id})">
+                            <span class="text-xs text-gray-200 truncate" title="${l.name}">${l.name}</span>
+                        </div>
+                        <button onclick="app.data.deleteLayer(${l.id})" class="text-gray-500 hover:text-red-400 ml-2">
+                            <i class="fas fa-trash-alt text-xs"></i>
+                        </button>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+
+            // Core Parsing Logic (modified to add to specific group)
+            parseKMLToGroup(xmlDoc, group) {
                 const placemarks = xmlDoc.getElementsByTagName('Placemark');
-                const layerGroup = app.ui.markers.kmlLayer;
-                let count = 0;
                 for (let i = 0; i < placemarks.length; i++) {
                     const pm = placemarks[i];
                     const name = this.getNodeValue(pm, 'name') || 'Unbenannt';
                     const desc = this.getNodeValue(pm, 'description') || '';
+                    
                     const popupContent = `
                         <div class="font-bold text-blue-400 mb-2 text-base border-b border-gray-600 pb-1 pr-4">${name}</div>
                         <div class="text-sm leading-relaxed max-h-60 overflow-y-auto text-gray-100 mt-1 space-y-1">
                             ${desc || '<span class="italic text-gray-400">Keine Details verfügbar.</span>'}
                         </div>
                     `;
+                    
                     const point = pm.getElementsByTagName('Point')[0];
                     if (point) {
                         const coords = this.getCoordinates(point);
                         if (coords) {
-                            L.circleMarker([coords.lat, coords.lng], { radius: 5, color: '#ffffff', fillColor: '#3b82f6', fillOpacity: 0.9, weight: 2 }).bindPopup(popupContent, {maxWidth: 300}).addTo(layerGroup);
-                            count++;
+                            L.circleMarker([coords.lat, coords.lng], { radius: 5, color: '#ffffff', fillColor: '#3b82f6', fillOpacity: 0.9, weight: 2 }).bindPopup(popupContent, {maxWidth: 300}).addTo(group);
                         }
                     }
                     const polygon = pm.getElementsByTagName('Polygon')[0];
@@ -707,12 +794,10 @@
                             } else if (n.includes('C ') || n.includes('D ')) {
                                 color = '#60a5fa'; weight = 1;
                             }
-                            L.polygon(coords, { color: color, fillColor: color, fillOpacity: 0.15, weight: weight, dashArray: dashArray }).bindTooltip(name, { permanent: true, direction: 'center', className: 'airspace-label' }).bindPopup(popupContent, {maxWidth: 300}).addTo(layerGroup);
-                            count++;
+                            L.polygon(coords, { color: color, fillColor: color, fillOpacity: 0.15, weight: weight, dashArray: dashArray }).bindTooltip(name, { permanent: true, direction: 'center', className: 'airspace-label' }).bindPopup(popupContent, {maxWidth: 300}).addTo(group);
                         }
                     }
                 }
-                if (!silent) alert(`${count} Elemente hinzugefügt.`);
             }
             getNodeValue(parent, tagName) { return parent.getElementsByTagName(tagName)[0]?.textContent || null; }
             getCoordinates(node) {
@@ -728,7 +813,7 @@
             }
         }
 
-        // --- AI & LOGBOOK (Unchanged logic, compacted for brevity) ---
+        // --- AI & LOGBOOK ---
         class AIAssistant {
             openAssistant() { document.getElementById('ai-panel').classList.remove('hidden'); }
             close() { document.getElementById('ai-panel').classList.add('hidden'); }
@@ -736,7 +821,6 @@
                 if (!state.target) return;
                 const msgEl = document.getElementById('ai-output');
                 msgEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Berechne optimalen Flugpfad...';
-                // (Mock Calculation Logic kept same)
                 setTimeout(() => msgEl.innerHTML = "Kurs berechnet.", 1000);
             }
             analyzeWind() { document.getElementById('ai-output').innerText = "Analysiere lokale Orographie... (Mock)"; }
@@ -769,17 +853,15 @@
                 this.logbook = new Logbook();
             }
             init() {
-                Settings.load(); // LOAD SETTINGS FIRST
+                Settings.load();
                 
                 this.ui.initMap();
                 this.ui.renderWindSidebar();
                 this.physics.start();
-                this.data.loadStoredKML();
+                this.data.loadStoredLayers(); // New method for layer management
                 
-                // Refresh UI based on loaded settings
                 this.updateSimModeUI();
                 
-                // Controls
                 const bB = document.getElementById('btn-burner');
                 const bV = document.getElementById('btn-valve');
                 const sB = () => this.physics.setControls(true, false);
@@ -811,7 +893,6 @@
             updateLocation(pos) { this.ui.updateMap(pos); this.ui.updateHUD(); }
             
             toggleSimulation() {
-                // Logic handles checkboxes internally, just needs to update state and UI
                 state.mode = state.mode === 'simulation' ? 'gps' : 'simulation';
                 this.updateSimModeUI();
                 Settings.save();
@@ -819,7 +900,6 @@
 
             updateSimModeUI() {
                 const el = document.getElementById('sim-toggle-check');
-                // Sync Checkbox
                 el.checked = (state.mode === 'simulation');
 
                 const simControls = document.getElementById('sim-controls');
@@ -828,12 +908,12 @@
                 if (state.mode === 'simulation') {
                     simControls.classList.remove('hidden'); recBtn.classList.add('hidden');
                     document.getElementById('gps-status').innerText = "SIMULATION";
-                    document.getElementById('gps-status').className = "text-xs text-blue-400 font-bold mb-1";
+                    document.getElementById('gps-status').className = "text-[9px] font-bold text-blue-400 border border-gray-700 bg-gray-800/80 px-2 py-0.5 rounded shadow";
                     if(state.recording) this.logbook.toggleRecording();
                 } else {
                     simControls.classList.add('hidden'); recBtn.classList.remove('hidden');
                     document.getElementById('gps-status').innerText = "WAITING GPS...";
-                    document.getElementById('gps-status').className = "text-xs text-red-400 font-bold mb-1";
+                    document.getElementById('gps-status').className = "text-[9px] font-bold text-red-400 border border-red-900 bg-red-900/30 px-2 py-0.5 rounded shadow";
                 }
             }
 
@@ -843,7 +923,6 @@
                 
                 if (!modal.classList.contains('hidden')) {
                    document.getElementById('api-key').value = state.apiKey;
-                   // Re-sync UI just in case
                    document.getElementById('sim-toggle-check').checked = (state.mode === 'simulation');
                 } else {
                    state.apiKey = document.getElementById('api-key').value;
