@@ -17,18 +17,29 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Stale-while-revalidate Strategie für Tiles und Assets
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
+      // Netzwerk-Request im Hintergrund starten (Stale-while-revalidate)
       const fetchPromise = fetch(event.request).then((networkResponse) => {
-        // Caching von OpenStreetMap/CartoDB Kacheln
-        if (event.request.url.includes('tile.openstreetmap') || event.request.url.includes('cartocdn')) {
+        
+        // Prüfen, ob es eine Karten-Kachel ist (OSM, CartoDB oder ArcGIS Satellit)
+        const url = event.request.url;
+        if (url.includes('tile.openstreetmap') || 
+            url.includes('cartocdn') || 
+            url.includes('arcgisonline')) { // Neu: Satellitenbilder cachen
+            
             caches.open(CACHE_NAME).then((cache) => {
+                // Klonen ist wichtig, da der Stream nur einmal gelesen werden kann
                 cache.put(event.request, networkResponse.clone());
             });
         }
         return networkResponse;
+      }).catch(() => {
+        // Wenn offline und Netzwerk fehlschlägt, ist das okay, 
+        // solange wir eine cachedResponse haben.
       });
+
+      // Wenn im Cache, sofort zurückgeben, sonst auf Netzwerk warten
       return cachedResponse || fetchPromise;
     })
   );
