@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aeronav-v7'; // WICHTIG: Version erhöht für Bugfix
+const CACHE_NAME = 'aeronav-v10'; // Update für Fahrtplanung & Bilder
 const ASSETS = [
   './',
   './index.html',
@@ -12,7 +12,7 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-  self.skipWaiting(); // Zwingt den neuen Worker sofort aktiv zu werden
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
   );
