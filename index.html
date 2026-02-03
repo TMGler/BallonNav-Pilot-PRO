@@ -16,7 +16,7 @@
     
     <style>
         /* Custom Glassmorphism & UI Tweaks */
-        body { overscroll-behavior: none; user-select: none; }
+        body { overscroll-behavior: none; user-select: none; background-color: #000; }
         .glass-panel {
             background: rgba(15, 23, 42, 0.85);
             backdrop-filter: blur(12px);
@@ -25,17 +25,9 @@
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         }
         .hud-value { font-variant-numeric: tabular-nums; letter-spacing: 0.05em; }
-        
-        /* Map Controls Override */
         .leaflet-control-zoom { display: none; } 
-        
-        /* Wind Layer Bar */
         .wind-bar-item.active { border-left: 4px solid #10b981; background: rgba(16, 185, 129, 0.2); }
-        
-        /* Physics Controls */
         .control-btn:active { transform: scale(0.95); }
-        
-        /* Utility */
         .hidden-ui { display: none !important; }
 
         /* KML & Map Styles */
@@ -63,7 +55,7 @@
             width: 0; height: 0;
             border-left: 100px solid transparent;
             border-right: 100px solid transparent;
-            border-top: 300px solid rgba(59, 130, 246, 0.15); /* Light Blue Fade */
+            border-top: 300px solid rgba(59, 130, 246, 0.15);
             filter: blur(10px);
             transform-origin: bottom center;
             opacity: 0.8;
@@ -90,6 +82,19 @@
             z-index: -1;
             animation: pulse-ring 2s infinite;
         }
+        
+        /* Speed Legend for Replay */
+        .speed-legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+        
+        /* Select styling */
+        select.unit-select {
+            background-color: #1f2937;
+            border: 1px solid #374151;
+            color: #e5e7eb;
+            font-size: 0.75rem;
+            border-radius: 0.25rem;
+            padding: 2px 4px;
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white h-screen w-screen overflow-hidden font-sans">
@@ -103,31 +108,26 @@
         <div id="loading-text">Verarbeite KML Daten...</div>
     </div>
 
-    <!-- HUD (Head Up Display) - Full Width -->
+    <!-- HUD (Head Up Display) -->
     <div id="hud-top" class="absolute top-0 left-0 right-0 p-2 z-20 flex justify-center pointer-events-none">
         <div class="glass-panel rounded-xl p-3 w-full max-w-4xl flex justify-between items-center pointer-events-auto shadow-lg relative">
-            <!-- Altitude -->
             <div class="flex-1 text-center border-r border-gray-700/50">
                 <div class="text-[10px] text-gray-400 uppercase tracking-widest">Höhe</div>
-                <div class="flex items-baseline justify-center"><span id="hud-alt" class="text-3xl font-bold hud-value">0</span><span class="text-xs text-gray-500 ml-1">m</span></div>
+                <div class="flex items-baseline justify-center"><span id="hud-alt" class="text-3xl font-bold hud-value">0</span><span id="unit-alt" class="text-xs text-gray-500 ml-1">m</span></div>
             </div>
-            <!-- Speed -->
             <div class="flex-1 text-center border-r border-gray-700/50">
                 <div class="text-[10px] text-gray-400 uppercase tracking-widest">Speed</div>
-                <div class="flex items-baseline justify-center"><span id="hud-speed" class="text-3xl font-bold hud-value">0</span><span class="text-xs text-gray-500 ml-1">km/h</span></div>
+                <div class="flex items-baseline justify-center"><span id="hud-speed" class="text-3xl font-bold hud-value">0</span><span id="unit-speed" class="text-xs text-gray-500 ml-1">km/h</span></div>
             </div>
-            <!-- Vario -->
             <div class="flex-1 text-center border-r border-gray-700/50 relative">
                 <div class="text-[10px] text-gray-400 uppercase tracking-widest">Vario</div>
-                <div class="flex items-baseline justify-center"><span id="hud-vario" class="text-3xl font-bold hud-value text-gray-300">0.0</span><span class="text-xs text-gray-500 ml-1">m/s</span></div>
+                <div class="flex items-baseline justify-center"><span id="hud-vario" class="text-3xl font-bold hud-value text-gray-300">0.0</span><span id="unit-vario" class="text-xs text-gray-500 ml-1">m/s</span></div>
                 <div id="baro-indicator" class="hidden absolute top-0 right-1 text-[8px] font-bold text-yellow-500 border border-yellow-600 rounded px-1" title="Barometer aktiv">BARO</div>
             </div>
-            <!-- Track -->
             <div class="flex-1 text-center">
                 <div class="text-[10px] text-gray-400 uppercase tracking-widest">Kurs</div>
                 <div class="flex items-baseline justify-center"><span id="hud-heading" class="text-3xl font-bold hud-value">0</span><span class="text-xs text-gray-500 ml-1">°</span></div>
             </div>
-            <!-- Status Icons -->
             <div class="absolute -bottom-2 right-2 flex gap-2">
                  <div id="gps-status" class="bg-gray-800/80 px-2 py-0.5 rounded text-[9px] font-bold text-blue-400 border border-gray-700 shadow">SIMULATION</div>
                  <div id="rec-status" class="hidden bg-red-900/80 px-2 py-0.5 rounded text-[9px] font-bold text-red-200 border border-red-700 shadow animate-pulse">REC</div>
@@ -135,15 +135,10 @@
         </div>
     </div>
 
-    <!-- Right Side: Wind Layer Sidebar & AI Button -->
-    <div class="absolute right-0 top-24 bottom-24 w-14 z-10 flex flex-col items-end pointer-events-none gap-4">
-        <!-- Wind Layers -->
+    <!-- Right Side: Wind & AI -->
+    <div class="absolute right-0 top-24 bottom-24 w-20 z-10 flex flex-col items-end pointer-events-none gap-4">
         <div id="wind-layers" class="glass-panel rounded-l-xl w-full flex flex-col pointer-events-auto overflow-y-auto text-xs border-r-0 flex-1 max-h-[60%]"></div>
-        
-        <!-- AI Button (Moved here) -->
-        <button onclick="app.ai.openAssistant()" class="glass-panel w-12 h-12 rounded-l-xl flex items-center justify-center bg-blue-600/80 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.5)] border-r-0 pointer-events-auto ai-pulse relative mr-0 transition-all transform hover:scale-105 active:scale-95" title="KI Assistent">
-            <i class="fas fa-sparkles text-lg"></i>
-        </button>
+        <button onclick="app.ai.openAssistant()" class="glass-panel w-12 h-12 rounded-l-xl flex items-center justify-center bg-blue-600/80 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.5)] border-r-0 pointer-events-auto ai-pulse relative mr-0 transition-all transform hover:scale-105 active:scale-95" title="KI Assistent"><i class="fas fa-robot text-xl"></i></button>
     </div>
 
     <!-- Controls -->
@@ -154,10 +149,10 @@
 
     <!-- Main Toolbar (Left Side) -->
     <div class="absolute bottom-6 left-4 z-30 flex flex-col gap-3">
-        <button onclick="app.toggleSettings()" class="glass-panel p-3 rounded-full hover:bg-gray-700 w-12 h-12 flex items-center justify-center text-gray-200 shadow-lg"><i class="fas fa-bars"></i></button>
-        <button id="btn-center" onclick="app.toggleFollow()" class="glass-panel p-3 rounded-full hover:bg-blue-900/50 w-12 h-12 flex items-center justify-center text-blue-400"><i class="fas fa-crosshairs"></i></button>
-        <button id="btn-record" onclick="app.logbook.toggleRecording()" class="glass-panel p-3 rounded-full hover:bg-red-900/50 w-12 h-12 flex items-center justify-center hidden"><i id="icon-record" class="fas fa-circle text-gray-400"></i></button>
-        <button onclick="app.ui.cycleMapLayer()" class="glass-panel p-3 rounded-full hover:bg-gray-700 w-12 h-12 flex items-center justify-center"><i class="fas fa-layer-group"></i></button>
+        <button id="btn-record" onclick="app.logbook.toggleRecording()" class="glass-panel p-3 rounded-full hover:bg-red-900/50 w-12 h-12 flex items-center justify-center hidden" title="Track aufzeichnen"><i id="icon-record" class="fas fa-circle text-gray-400"></i></button>
+        <button id="btn-center" class="glass-panel p-3 rounded-full hover:bg-blue-900/50 w-12 h-12 flex items-center justify-center text-blue-400 select-none touch-none" title="Kurz: Zentrieren | Lang: Verriegeln"><i id="icon-center" class="fas fa-crosshairs"></i></button>
+        <button onclick="app.ui.cycleMapLayer()" class="glass-panel p-3 rounded-full hover:bg-gray-700 w-12 h-12 flex items-center justify-center" title="Kartenstil wechseln"><i class="fas fa-layer-group"></i></button>
+        <button onclick="app.toggleSettings()" class="glass-panel p-3 rounded-full hover:bg-gray-700 w-12 h-12 flex items-center justify-center text-gray-200 shadow-lg" title="Menü / Setup"><i class="fas fa-bars"></i></button>
     </div>
 
     <!-- SETTINGS MODAL -->
@@ -170,15 +165,49 @@
             </div>
             
             <div class="space-y-6 flex-1 overflow-y-auto">
+                <!-- Units (NEW) -->
+                <div>
+                    <label class="block text-sm text-gray-300 font-bold mb-2">Einheiten</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div class="bg-gray-800 p-2 rounded border border-gray-700">
+                            <div class="text-[10px] text-gray-400 mb-1">Höhe</div>
+                            <select id="sel-alt" class="unit-select w-full" onchange="app.units.setUnit('alt', this.value)">
+                                <option value="m">Meter (m)</option>
+                                <option value="ft">Fuß (ft)</option>
+                            </select>
+                        </div>
+                        <div class="bg-gray-800 p-2 rounded border border-gray-700">
+                            <div class="text-[10px] text-gray-400 mb-1">Speed</div>
+                            <select id="sel-spd" class="unit-select w-full" onchange="app.units.setUnit('spd', this.value)">
+                                <option value="kmh">km/h</option>
+                                <option value="kt">Knoten</option>
+                            </select>
+                        </div>
+                        <div class="bg-gray-800 p-2 rounded border border-gray-700">
+                            <div class="text-[10px] text-gray-400 mb-1">Vario</div>
+                            <select id="sel-var" class="unit-select w-full" onchange="app.units.setUnit('var', this.value)">
+                                <option value="ms">m/s</option>
+                                <option value="fts">ft/s</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="border-gray-700/50">
+
                 <!-- Logbook Section -->
                 <div>
                     <label class="block text-sm text-green-400 font-bold mb-2"><i class="fas fa-book mr-2"></i> Flug-Logbuch</label>
                     <div id="log-list" class="space-y-2 mb-3 max-h-40 overflow-y-auto pr-1 bg-gray-900/50 rounded-lg p-2 border border-gray-700/50">
                         <div class="text-xs text-gray-500 text-center py-2 italic">Keine Aufzeichnungen</div>
                     </div>
+                    <div class="flex gap-4 text-[10px] text-gray-400 justify-center">
+                        <div class="flex items-center"><span class="speed-legend-dot bg-blue-500"></span>&lt;<span id="leg-1">10</span></div>
+                        <div class="flex items-center"><span class="speed-legend-dot bg-green-500"></span><span id="leg-2">10-25</span></div>
+                        <div class="flex items-center"><span class="speed-legend-dot bg-orange-500"></span><span id="leg-3">25-45</span></div>
+                        <div class="flex items-center"><span class="speed-legend-dot bg-red-500"></span>&gt;<span id="leg-4">45</span> <span id="leg-u">km/h</span></div>
+                    </div>
                 </div>
-
-                <hr class="border-gray-700/50">
 
                 <!-- Compass Toggle -->
                 <div class="flex justify-between items-center">
@@ -216,14 +245,9 @@
                     </label>
                 </div>
 
-                <!-- Basic Settings -->
                 <div>
                     <label class="block text-sm text-gray-400 mb-2">HUD Transparenz</label>
                     <input type="range" min="0.0" max="0.95" step="0.05" value="0.85" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer" oninput="app.ui.updateOpacity(this.value)">
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-400 mb-2">Eigenes Ballon Icon</label>
-                    <div class="flex items-center gap-2"><label class="flex-1 flex flex-col items-center justify-center h-10 bg-gray-800 text-gray-300 rounded border border-gray-600 cursor-pointer hover:bg-gray-700"><span class="text-xs">Bild wählen...</span><input type='file' class="hidden" accept="image/*" onchange="app.ui.loadCustomIcon(this.files[0])" /></label></div>
                 </div>
                 <div>
                     <label class="block text-sm text-gray-400 mb-2">Gemini API Key</label>
@@ -238,7 +262,7 @@
         </div>
     </div>
 
-    <!-- AI Panel (Right Side) -->
+    <!-- AI Panel -->
     <div id="ai-panel" class="hidden absolute right-16 bottom-24 z-40 w-80">
         <div class="glass-panel p-4 rounded-xl">
             <div class="flex justify-between items-center mb-2"><h3 class="font-bold text-blue-300"><i class="fas fa-robot mr-1"></i> Gemini Co-Pilot</h3><button onclick="app.ai.close()" class="text-gray-400 hover:text-white"><i class="fas fa-times"></i></button></div>
@@ -250,23 +274,102 @@
     <!-- JAVASCRIPT LOGIC -->
     <script>
         const CONSTANTS = { GRAVITY: 9.81, OSM_API: 'https://overpass-api.de/api/interpreter' };
-        const state = { mode: 'simulation', recording: false, gpsLocked: false, position: { lat: 50.1109, lng: 8.6821, alt: 0 }, velocity: { h: 0, v: 0, heading: 0 }, history: [], windLayers: [], target: null, trackPoints: [], apiKey: localStorage.getItem('gemini_key') || '', autoFollow: true };
+        
+        // Initial state with units
+        const state = { 
+            mode: 'simulation', recording: false, gpsLocked: false, 
+            position: { lat: 50.1109, lng: 8.6821, alt: 0 }, 
+            velocity: { h: 0, v: 0, heading: 0 }, 
+            history: [], windLayers: [], target: null, trackPoints: [], 
+            apiKey: localStorage.getItem('gemini_key') || '', 
+            autoFollow: true, mapLocked: false, lastRecordTime: 0,
+            units: { alt: 'm', spd: 'kmh', var: 'ms' } // Defaults
+        };
 
         const Settings = {
             save: () => {
                 localStorage.setItem('an_sim_mode', state.mode);
                 localStorage.setItem('an_hud_opacity', document.querySelector('input[type=range]').value);
                 localStorage.setItem('an_map_layer', app.ui.currentLayerIndex);
+                localStorage.setItem('an_units', JSON.stringify(state.units));
             },
             load: () => {
                 if (localStorage.getItem('an_sim_mode')) state.mode = localStorage.getItem('an_sim_mode');
                 if (localStorage.getItem('an_hud_opacity')) {
-                    app.ui.updateOpacity(localStorage.getItem('an_hud_opacity'));
-                    document.querySelector('input[type=range]').value = localStorage.getItem('an_hud_opacity');
+                    const op = localStorage.getItem('an_hud_opacity');
+                    app.ui.updateOpacity(op);
+                    document.querySelector('input[type=range]').value = op;
                 }
                 if (localStorage.getItem('an_map_layer')) app.ui.currentLayerIndex = parseInt(localStorage.getItem('an_map_layer'));
+                if (localStorage.getItem('an_units')) {
+                    try { state.units = JSON.parse(localStorage.getItem('an_units')); } catch(e){}
+                }
             }
         };
+
+        // --- UNIT MANAGER ---
+        class UnitManager {
+            constructor() {
+                // Formatting constants
+                this.M_TO_FT = 3.28084;
+                this.KMH_TO_KT = 0.539957;
+            }
+
+            setUnit(type, value) {
+                state.units[type] = value;
+                Settings.save();
+                app.ui.updateHUD(); // Refresh HUD
+                app.ui.renderWindSidebar(); // Refresh Wind
+                this.updateLegend(); // Refresh Legend
+            }
+
+            // Converter Helpers
+            formatAlt(meters) {
+                if (state.units.alt === 'ft') return Math.round(meters * this.M_TO_FT);
+                return Math.round(meters);
+            }
+            
+            formatSpeed(kmh) {
+                if (state.units.spd === 'kt') return Math.round(kmh * this.KMH_TO_KT);
+                return Math.round(kmh);
+            }
+
+            formatVario(ms) {
+                if (state.units.var === 'fts') return (ms * this.M_TO_FT).toFixed(1);
+                return ms.toFixed(1);
+            }
+
+            // Sync UI dropdowns
+            syncUI() {
+                document.getElementById('sel-alt').value = state.units.alt;
+                document.getElementById('sel-spd').value = state.units.spd;
+                document.getElementById('sel-var').value = state.units.var;
+                this.updateLegend();
+            }
+
+            updateLegend() {
+                const u = state.units.spd;
+                const legU = document.getElementById('leg-u');
+                const leg1 = document.getElementById('leg-1');
+                const leg2 = document.getElementById('leg-2');
+                const leg3 = document.getElementById('leg-3');
+                const leg4 = document.getElementById('leg-4');
+
+                if (u === 'kt') {
+                    legU.innerText = 'kt';
+                    leg1.innerText = '5';
+                    leg2.innerText = '5-13';
+                    leg3.innerText = '13-24';
+                    leg4.innerText = '24';
+                } else {
+                    legU.innerText = 'km/h';
+                    leg1.innerText = '10';
+                    leg2.innerText = '10-25';
+                    leg3.innerText = '25-45';
+                    leg4.innerText = '45';
+                }
+            }
+        }
 
         class WindManager {
             constructor() { this.generateWindProfile(state.position.lat, state.position.lng, false); }
@@ -314,7 +417,6 @@
                     if(this.active) app.ui.updateViewCone(heading);
                 };
                 this.handleOrientation = handler;
-
                 if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                     DeviceOrientationEvent.requestPermission().then(r => {
                         if (r === 'granted') { window.addEventListener('deviceorientation', this.handleOrientation); this.active = true; app.ui.toggleViewCone(true); }
@@ -339,8 +441,7 @@
                 this.valveOpen = false; 
                 this.lastUpdate = Date.now(); 
                 this.loop = this.loop.bind(this);
-                // NEW: Envelope Thermodynamics
-                this.envelopeTemp = 50; // Arbitrary "Heat Units". 50 = Equilibrium
+                this.envelopeTemp = 50; 
             }
             start() { this.lastUpdate = Date.now(); requestAnimationFrame(this.loop); }
             setControls(burner, valve) { this.burnerOn = burner; this.valveOpen = valve; }
@@ -350,69 +451,28 @@
                 this.lastUpdate = now;
 
                 if (state.mode === 'simulation') {
-                    // --- ENHANCED PHYSICS (Thermodynamics) ---
-                    // 1. Heating (Burner)
-                    // Burner adds heat rapidly. 
-                    if (this.burnerOn) {
-                        this.envelopeTemp += 30 * dt; // Heating rate
-                    }
-
-                    // 2. Cooling (Newton's Law of Cooling approx)
-                    // The hotter it is (relative to ambient), the faster it cools.
-                    // Base cooling + dynamic cooling
-                    // Ambient is roughly 0 in this scale.
+                    if (this.burnerOn) this.envelopeTemp += 30 * dt; 
                     const coolingRate = 0.5 + (this.envelopeTemp * 0.02); 
                     this.envelopeTemp -= coolingRate * dt;
-
-                    // 3. Venting (Valve)
-                    // Releases heat very fast
-                    if (this.valveOpen) {
-                        this.envelopeTemp -= 40 * dt;
-                    }
-
-                    // Clamp Temp
+                    if (this.valveOpen) this.envelopeTemp -= 40 * dt;
                     if (this.envelopeTemp < 0) this.envelopeTemp = 0; 
-                    if (this.envelopeTemp > 150) this.envelopeTemp = 150; // Safety limit
+                    if (this.envelopeTemp > 150) this.envelopeTemp = 150; 
 
-                    // 4. Calculate Lift based on Temp Delta from Equilibrium (50)
-                    // If Temp > 50 -> Climb. Temp < 50 -> Sink.
-                    // Scale factor 0.1 gives reasonable vario response
                     const buoyancyLift = (this.envelopeTemp - 50) * 0.15;
-
-                    // Apply acceleration
-                    // Gravity is already "counteracted" at equilibrium 50.
-                    // So buoyancyLift is net acceleration.
-                    
-                    // Dampening (Air resistance) varies with speed squared typically, 
-                    // but simple linear drag (0.5 * v) is stable for sim.
                     const drag = state.velocity.v * 0.3; 
-                    
                     state.velocity.v += (buoyancyLift - drag) * dt; 
 
-                    // Update Altitude
                     state.position.alt += state.velocity.v * dt;
-                    
-                    // Ground Collision
-                    if (state.position.alt < 0) { 
-                        state.position.alt = 0; 
-                        state.velocity.v = 0; 
-                        // If on ground, temp doesn't reset, but velocity stops.
-                    }
+                    if (state.position.alt < 0) { state.position.alt = 0; state.velocity.v = 0; }
 
-                    // Horizontal Movement (Wind)
                     if (state.position.alt > 10) { 
                         const wind = app.wind.getCurrentWind(state.position.alt);
                         state.velocity.h = wind.speed;
                         state.velocity.heading = wind.dir;
                         const dist = (state.velocity.h / 3.6) * dt; 
-                        const R = 6378137; 
-                        const dn = dist * Math.cos(wind.dir * Math.PI / 180);
-                        const de = dist * Math.sin(wind.dir * Math.PI / 180);
-                        state.position.lat += (dn / R) * (180 / Math.PI);
-                        state.position.lng += (de / R) * (180 / Math.PI) / Math.cos(state.position.lat * Math.PI / 180);
-                    } else {
-                        state.velocity.h = 0;
-                    }
+                        state.position.lat += (dist * Math.cos(wind.dir * Math.PI / 180) / 6378137) * (180 / Math.PI);
+                        state.position.lng += (dist * Math.sin(wind.dir * Math.PI / 180) / 6378137) * (180 / Math.PI) / Math.cos(state.position.lat * Math.PI / 180);
+                    } else { state.velocity.h = 0; }
                     app.updateLocation(state.position);
                 }
                 requestAnimationFrame(this.loop);
@@ -439,31 +499,25 @@
                 this.markers.playbackLayer = L.layerGroup().addTo(this.map);
 
                 this.map.on('contextmenu', (e) => this.setTarget(e.latlng));
-                this.map.on('dragstart', () => { state.autoFollow = false; app.ui.updateFollowButton(); });
+                this.map.on('dragstart', () => { 
+                    if (!state.mapLocked) {
+                        state.autoFollow = false; 
+                        app.ui.updateFollowButton(); 
+                    }
+                });
             }
             updateBalloonMarker() {
                 if (this.markers.balloon) this.map.removeLayer(this.markers.balloon);
-                if (this.markers.cone) this.map.removeLayer(this.markers.cone); // Remove old cone
-
+                if (this.markers.cone) this.map.removeLayer(this.markers.cone); 
                 const storedIcon = localStorage.getItem('aeronav_custom_icon');
                 let iconObj = storedIcon ? L.icon({ iconUrl: storedIcon, iconSize: [48, 48], iconAnchor: [24, 24], popupAnchor: [0, -24] }) : 
                                            L.divIcon({ html: '<div style="font-size: 24px; color: #ff4500; text-shadow: 0 0 10px #ff0000; transition: transform 0.5s;"><i class="fas fa-hotair-balloon"></i></div>', className: 'balloon-marker', iconSize: [24, 30], iconAnchor: [12, 30] });
-                
-                // Add Compass Cone First (so it's under balloon)
                 const coneIcon = L.divIcon({ className: 'hidden', html: '<div class="compass-cone"></div>', iconSize: [0,0], iconAnchor: [0, 0] });
                 this.markers.cone = L.marker([state.position.lat, state.position.lng], {icon: coneIcon}).addTo(this.map);
-                
-                // Add Balloon
                 this.markers.balloon = L.marker([state.position.lat, state.position.lng], {icon: iconObj}).addTo(this.map);
             }
-            toggleViewCone(show) {
-                const el = document.querySelector('.compass-cone');
-                if(el) el.parentElement.classList.toggle('hidden', !show);
-            }
-            updateViewCone(heading) {
-                const el = document.querySelector('.compass-cone');
-                if(el) el.style.transform = `rotate(${heading}deg)`;
-            }
+            toggleViewCone(show) { const el = document.querySelector('.compass-cone'); if(el) el.parentElement.classList.toggle('hidden', !show); }
+            updateViewCone(heading) { const el = document.querySelector('.compass-cone'); if(el) el.style.transform = `rotate(${heading}deg)`; }
             loadCustomIcon(file) {
                 if (!file) return;
                 const reader = new FileReader();
@@ -477,14 +531,30 @@
                 Settings.save();
             }
             updateHUD() {
-                document.getElementById('hud-alt').innerText = Math.round(state.position.alt);
-                document.getElementById('hud-speed').innerText = Math.round(state.velocity.h);
+                // Convert Units
+                document.getElementById('hud-alt').innerText = app.units.formatAlt(state.position.alt);
+                document.getElementById('unit-alt').innerText = state.units.alt;
+
+                document.getElementById('hud-speed').innerText = app.units.formatSpeed(state.velocity.h);
+                document.getElementById('unit-speed').innerText = state.units.spd === 'kmh' ? 'km/h' : 'kt';
+
                 document.getElementById('hud-heading').innerText = Math.round(state.velocity.heading);
-                const vario = (state.mode === 'gps' && app.barometer.available && app.barometer.vario !== 0) ? app.barometer.vario : state.velocity.v;
+                
+                // Vario Logic
+                let varioRaw = state.velocity.v;
+                if (state.mode === 'gps' && app.barometer.available && app.barometer.vario !== 0) {
+                    varioRaw = app.barometer.vario;
+                }
+                
+                const varioVal = app.units.formatVario(varioRaw);
                 const varioEl = document.getElementById('hud-vario');
-                varioEl.innerText = (vario > 0 ? '+' : '') + vario.toFixed(1);
-                varioEl.className = `text-3xl font-bold hud-value ${vario > 0.5 ? 'text-green-400' : (vario < -0.5 ? 'text-red-400' : 'text-gray-300')}`;
+                varioEl.innerText = (varioRaw > 0 ? '+' : '') + varioVal;
+                document.getElementById('unit-vario').innerText = state.units.var === 'ms' ? 'm/s' : 'ft/s';
+
+                varioEl.className = `text-3xl font-bold hud-value ${varioRaw > 0.5 ? 'text-green-400' : (varioRaw < -0.5 ? 'text-red-400' : 'text-gray-300')}`;
+                
                 document.getElementById('baro-indicator').classList.toggle('hidden', !(state.mode === 'gps' && app.barometer.available));
+                
                 const activeWind = app.wind.getCurrentWind(state.position.alt);
                 document.querySelectorAll('.wind-bar-item').forEach(el => el.classList.remove('active'));
                 if (document.getElementById(`wind-${activeWind.min}`)) document.getElementById(`wind-${activeWind.min}`).classList.add('active');
@@ -492,7 +562,9 @@
             renderWindSidebar() {
                 const container = document.getElementById('wind-layers'); container.innerHTML = '';
                 [...state.windLayers].reverse().forEach(layer => {
-                    container.innerHTML += `<div id="wind-${layer.min}" class="wind-bar-item p-2 border-b border-gray-700/50 flex flex-col justify-center h-16 transition-all"><div class="text-[10px] text-gray-400">${layer.label}</div><div class="flex items-center justify-between"><i class="fas fa-arrow-up transform text-gray-200" style="transform: rotate(${layer.dir}deg)"></i><span class="font-bold text-gray-200">${layer.speed} <span class="text-[9px]">km/h</span></span></div></div>`;
+                    const spd = app.units.formatSpeed(layer.speed);
+                    const unit = state.units.spd === 'kmh' ? 'km/h' : 'kt';
+                    container.innerHTML += `<div id="wind-${layer.min}" class="wind-bar-item p-2 border-b border-gray-700/50 flex flex-col justify-center h-16 transition-all"><div class="text-[10px] text-gray-400">${layer.label}</div><div class="flex items-center justify-between"><i class="fas fa-arrow-up transform text-gray-200" style="transform: rotate(${layer.dir}deg)"></i><span class="font-bold text-gray-200">${spd} <span class="text-[9px]">${unit}</span></span></div></div>`;
                 });
             }
             updateMap(pos) {
@@ -500,20 +572,58 @@
                 const latLng = [pos.lat, pos.lng];
                 this.markers.balloon.setLatLng(latLng);
                 this.markers.cone.setLatLng(latLng);
+                
+                // Track Logic: Every 5 seconds
                 if (state.recording) {
-                    this.markers.track.addLatLng(latLng);
-                    state.trackPoints.push({ lat: pos.lat, lng: pos.lng, alt: pos.alt, time: new Date().toISOString() });
+                    const now = Date.now();
+                    if (now - state.lastRecordTime > 5000) {
+                        this.markers.track.addLatLng(latLng);
+                        state.trackPoints.push({ 
+                            lat: pos.lat, lng: pos.lng, alt: pos.alt, 
+                            speed: state.velocity.h, time: new Date().toISOString() 
+                        });
+                        state.lastRecordTime = now;
+                    }
                 }
+
                 const wind = app.wind.getCurrentWind(pos.alt);
                 const dist5min = (wind.speed / 3.6) * 300; 
                 const pLat = pos.lat + (dist5min * Math.cos(wind.dir * Math.PI / 180) / 6378137) * (180 / Math.PI);
                 const pLng = pos.lng + (dist5min * Math.sin(wind.dir * Math.PI / 180) / 6378137) * (180 / Math.PI) / Math.cos(pos.lat * Math.PI / 180);
                 this.markers.vector.setLatLngs([latLng, [pLat, pLng]]);
-                if (state.mode === 'simulation' && state.autoFollow) this.map.panTo(latLng);
+                
+                if (state.mapLocked) {
+                    this.map.panTo(latLng);
+                } else if (state.mode === 'simulation' && state.autoFollow) {
+                    this.map.panTo(latLng);
+                }
             }
             updateFollowButton() {
                 const btn = document.getElementById('btn-center');
-                btn.className = `glass-panel p-3 rounded-full w-12 h-12 flex items-center justify-center ${state.autoFollow ? 'text-blue-400 hover:bg-blue-900/50' : 'text-gray-400 hover:bg-gray-700'}`;
+                const icon = document.getElementById('icon-center');
+                btn.className = 'glass-panel p-3 rounded-full w-12 h-12 flex items-center justify-center select-none touch-none';
+                if (state.mapLocked) {
+                    btn.classList.add('text-red-400', 'border', 'border-red-500/50', 'bg-red-900/20');
+                    icon.className = 'fas fa-lock';
+                } else if (state.autoFollow) {
+                    btn.classList.add('text-blue-400', 'hover:bg-blue-900/50');
+                    icon.className = 'fas fa-crosshairs';
+                } else {
+                    btn.classList.add('text-gray-400', 'hover:bg-gray-700');
+                    icon.className = 'fas fa-crosshairs';
+                }
+            }
+            toggleMapLock(forceState) {
+                const newState = (typeof forceState !== 'undefined') ? forceState : !state.mapLocked;
+                if (newState === state.mapLocked) return;
+                state.mapLocked = newState;
+                if (state.mapLocked) {
+                    this.map.dragging.disable(); this.map.touchZoom.disable(); this.map.doubleClickZoom.disable(); this.map.scrollWheelZoom.disable(); this.map.boxZoom.disable(); this.map.keyboard.disable(); if (this.map.tap) this.map.tap.disable();
+                    state.autoFollow = true; 
+                } else {
+                    this.map.dragging.enable(); this.map.touchZoom.enable(); this.map.doubleClickZoom.enable(); this.map.scrollWheelZoom.enable(); this.map.boxZoom.enable(); this.map.keyboard.enable(); if (this.map.tap) this.map.tap.enable();
+                }
+                this.updateFollowButton();
             }
             setTarget(latlng) {
                 if (this.markers.target) this.map.removeLayer(this.markers.target);
@@ -618,10 +728,10 @@
                 const btn = document.getElementById('rec-status'); const btnUi = document.getElementById('btn-record'); const icon = document.getElementById('icon-record');
                 if (state.recording) {
                     btn.classList.remove('hidden'); icon.classList.remove('text-gray-400'); icon.classList.add('text-red-500'); btnUi.classList.add('bg-red-900/50');
-                    state.trackPoints = []; app.ui.markers.track.setLatLngs([]);
+                    state.trackPoints = []; state.lastRecordTime = 0; app.ui.markers.track.setLatLngs([]);
                 } else {
                     btn.classList.add('hidden'); icon.classList.add('text-gray-400'); icon.classList.remove('text-red-500'); btnUi.classList.remove('bg-red-900/50');
-                    if (state.trackPoints.length > 5) this.saveFlight(state.trackPoints);
+                    if (state.trackPoints.length > 2) this.saveFlight(state.trackPoints);
                 }
             }
             saveFlight(points) {
@@ -647,19 +757,36 @@
             }
             loadLogToMap(id) {
                 const log = this.logs.find(l => l.id === id);
-                if(log) {
-                    const latlngs = log.points.map(p => [p.lat, p.lng]);
-                    app.ui.markers.playbackLayer.clearLayers();
-                    L.polyline(latlngs, {color: 'violet', weight: 4, opacity: 0.7}).addTo(app.ui.markers.playbackLayer);
-                    app.ui.map.fitBounds(L.polyline(latlngs).getBounds());
-                    app.toggleSettings(); 
+                if(!log) return;
+                
+                app.ui.markers.playbackLayer.clearLayers();
+                const points = log.points;
+                if(points.length < 2) return;
+
+                // Color Coded Path
+                for(let i=0; i<points.length-1; i++) {
+                    const p1 = points[i];
+                    const p2 = points[i+1];
+                    const speed = p1.speed || 0;
+                    
+                    let color = '#3b82f6'; // Blue < 10
+                    if(speed >= 10 && speed < 25) color = '#22c55e'; // Green
+                    else if(speed >= 25 && speed < 45) color = '#f97316'; // Orange
+                    else if(speed >= 45) color = '#ef4444'; // Red
+
+                    L.polyline([[p1.lat, p1.lng], [p2.lat, p2.lng]], {color: color, weight: 5, opacity: 0.8}).addTo(app.ui.markers.playbackLayer);
                 }
+
+                // Fit bounds
+                const latlngs = points.map(p => [p.lat, p.lng]);
+                app.ui.map.fitBounds(L.polyline(latlngs).getBounds());
+                app.toggleSettings(); 
             }
             exportGPX(id) {
                 const log = this.logs.find(l => l.id === id);
                 if(!log) return;
                 let gpx = `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="AeroNav"><trk><name>Flight ${log.date}</name><trkseg>`;
-                log.points.forEach(p => { gpx += `<trkpt lat="${p.lat}" lon="${p.lng}"><ele>${p.alt}</ele><time>${p.time}</time></trkpt>`; });
+                log.points.forEach(p => { gpx += `<trkpt lat="${p.lat}" lon="${p.lng}"><ele>${p.alt}</ele><time>${p.time}</time><speed>${p.speed}</speed></trkpt>`; });
                 gpx += `</trkseg></trk></gpx>`;
                 const blob = new Blob([gpx], {type: 'application/gpx+xml'});
                 const link = document.createElement('a');
@@ -692,6 +819,7 @@
                 this.wind = new WindManager();
                 this.barometer = new BarometerManager();
                 this.physics = new Physics();
+                this.units = new UnitManager(); // NEW
                 this.ui = new UIManager();
                 this.data = new DataManager();
                 this.ai = new AIAssistant();
@@ -699,33 +827,113 @@
                 this.compass = new CompassManager();
             }
             init() {
-                Settings.load();
-                this.ui.initMap();
-                this.ui.renderWindSidebar();
-                this.physics.start();
-                this.barometer.init();
-                this.data.loadStoredLayers();
-                this.logbook.renderLogList();
-                this.updateSimModeUI();
-                
-                const bB = document.getElementById('btn-burner'), bV = document.getElementById('btn-valve');
-                const sB = () => this.physics.setControls(true, false), eB = () => this.physics.setControls(false, false);
-                const sV = () => this.physics.setControls(false, true), eV = () => this.physics.setControls(false, false);
-                bB.addEventListener('mousedown', sB); bB.addEventListener('mouseup', eB); bB.addEventListener('touchstart', (e)=>{e.preventDefault();sB()}); bB.addEventListener('touchend', eB);
-                bV.addEventListener('mousedown', sV); bV.addEventListener('mouseup', eV); bV.addEventListener('touchstart', (e)=>{e.preventDefault();sV()}); bV.addEventListener('touchend', eV);
+                try {
+                    Settings.load();
+                    this.units.syncUI(); // Update Selectors
+                    this.ui.initMap();
+                    this.ui.renderWindSidebar();
+                    this.physics.start();
+                    this.barometer.init();
+                    this.data.loadStoredLayers();
+                    this.logbook.renderLogList();
+                    this.updateSimModeUI();
+                    
+                    const bB = document.getElementById('btn-burner'), bV = document.getElementById('btn-valve');
+                    const sB = () => this.physics.setControls(true, false), eB = () => this.physics.setControls(false, false);
+                    const sV = () => this.physics.setControls(false, true), eV = () => this.physics.setControls(false, false);
+                    bB.addEventListener('mousedown', sB); bB.addEventListener('mouseup', eB); bB.addEventListener('touchstart', (e)=>{e.preventDefault();sB()}); bB.addEventListener('touchend', eB);
+                    bV.addEventListener('mousedown', sV); bV.addEventListener('mouseup', eV); bV.addEventListener('touchstart', (e)=>{e.preventDefault();sV()}); bV.addEventListener('touchend', eV);
 
-                if ("geolocation" in navigator) {
-                    navigator.geolocation.watchPosition((pos) => {
-                        if (state.mode === 'gps') {
-                            state.gpsLocked = true;
-                            document.getElementById('gps-status').innerText = "GPS OK";
-                            document.getElementById('gps-status').className = "text-[9px] font-bold text-green-400 border border-green-700 bg-gray-800/80 px-2 py-0.5 rounded shadow";
-                            state.position.lat = pos.coords.latitude; state.position.lng = pos.coords.longitude;
-                            if (pos.coords.altitude) state.position.alt = pos.coords.altitude;
-                            if (pos.coords.speed) state.velocity.h = pos.coords.speed * 3.6;
-                            if (pos.coords.heading) state.velocity.heading = pos.coords.heading;
-                            this.updateLocation(state.position);
-                        }
-                    }, (err) => console.warn("GPS Error"), { enableHighAccuracy: true });
+                    this.setupCenterButton();
+
+                    if ("geolocation" in navigator) {
+                        navigator.geolocation.watchPosition((pos) => {
+                            if (state.mode === 'gps') {
+                                state.gpsLocked = true;
+                                document.getElementById('gps-status').innerText = "GPS OK";
+                                document.getElementById('gps-status').className = "text-[9px] font-bold text-green-400 border border-green-700 bg-gray-800/80 px-2 py-0.5 rounded shadow";
+                                state.position.lat = pos.coords.latitude; state.position.lng = pos.coords.longitude;
+                                if (pos.coords.altitude) state.position.alt = pos.coords.altitude;
+                                if (pos.coords.speed) state.velocity.h = pos.coords.speed * 3.6;
+                                if (pos.coords.heading) state.velocity.heading = pos.coords.heading;
+                                this.updateLocation(state.position);
+                            }
+                        }, (err) => console.warn("GPS Error"), { enableHighAccuracy: true });
+                    }
+                    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('./sw.js').catch(console.log);
+                } catch(e) {
+                    console.error("Critical Start Error", e);
+                    alert("Kritischer Start-Fehler: " + e.message + "\nDie App wird zurückgesetzt.");
+                    localStorage.clear();
+                    window.location.reload();
                 }
-                if ('serviceWorker
+            }
+
+            setupCenterButton() {
+                const btn = document.getElementById('btn-center');
+                let timer;
+                let isLongPress = false;
+
+                const start = (e) => {
+                    if(e.type === 'touchstart') e.preventDefault(); 
+                    isLongPress = false;
+                    timer = setTimeout(() => {
+                        isLongPress = true;
+                        if (!state.mapLocked) {
+                            app.ui.toggleMapLock(true); 
+                            if(navigator.vibrate) navigator.vibrate(50);
+                        }
+                    }, 800);
+                };
+
+                const end = (e) => {
+                    if(e.type === 'touchend') e.preventDefault();
+                    clearTimeout(timer);
+                    if (!isLongPress) {
+                        if (state.mapLocked) {
+                            app.ui.toggleMapLock(false); 
+                        } else {
+                            app.toggleFollow(); 
+                        }
+                    }
+                };
+
+                btn.addEventListener('mousedown', start);
+                btn.addEventListener('touchstart', start);
+                btn.addEventListener('mouseup', end);
+                btn.addEventListener('touchend', end);
+                btn.addEventListener('mouseleave', () => clearTimeout(timer));
+            }
+
+            updateLocation(pos) { this.ui.updateMap(pos); this.ui.updateHUD(); }
+            toggleSimulation() { state.mode = state.mode === 'simulation' ? 'gps' : 'simulation'; this.updateSimModeUI(); Settings.save(); }
+            updateSimModeUI() {
+                document.getElementById('sim-toggle-check').checked = (state.mode === 'simulation');
+                const simControls = document.getElementById('sim-controls'), recBtn = document.getElementById('btn-record'), status = document.getElementById('gps-status');
+                if (state.mode === 'simulation') {
+                    simControls.classList.remove('hidden'); recBtn.classList.add('hidden');
+                    status.innerText = "SIMULATION"; status.className = "text-[9px] font-bold text-blue-400 border border-gray-700 bg-gray-800/80 px-2 py-0.5 rounded shadow";
+                    if(state.recording) this.logbook.toggleRecording();
+                } else {
+                    simControls.classList.add('hidden'); recBtn.classList.remove('hidden');
+                    status.innerText = "WAITING GPS..."; status.className = "text-[9px] font-bold text-red-400 border border-red-900 bg-red-900/30 px-2 py-0.5 rounded shadow";
+                }
+            }
+            toggleSettings() {
+                const modal = document.getElementById('settings-modal');
+                modal.classList.toggle('hidden');
+                if (!modal.classList.contains('hidden')) {
+                   document.getElementById('api-key').value = state.apiKey;
+                   document.getElementById('sim-toggle-check').checked = (state.mode === 'simulation');
+                } else {
+                   state.apiKey = document.getElementById('api-key').value;
+                   localStorage.setItem('gemini_key', state.apiKey);
+                }
+            }
+            toggleFollow() { state.autoFollow = !state.autoFollow; this.ui.updateFollowButton(); if (state.autoFollow) this.ui.map.panTo([state.position.lat, state.position.lng]); }
+        }
+        const app = new App();
+        window.addEventListener('load', () => app.init());
+    </script>
+</body>
+</html>
