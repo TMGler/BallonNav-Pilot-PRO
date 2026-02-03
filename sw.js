@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aeronav-v10'; // Update für Fahrtplanung & Bilder
+const CACHE_NAME = 'aeronav-v11'; // Update für Fahrtplanung & Bilder
 const ASSETS = [
   './',
   './index.html',
