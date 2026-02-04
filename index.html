@@ -59,7 +59,7 @@
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        /* --- HUD TOP CONTAINER --- */
+        /* --- HUD TOP --- */
         .hud-top-container {
             position: absolute;
             top: 10px;
@@ -71,7 +71,7 @@
             display: flex;
             justify-content: center;
             transition: all 0.3s ease;
-            pointer-events: none; /* Allow clicks pass through wrapper */
+            pointer-events: none;
         }
 
         .hud-top {
@@ -91,10 +91,9 @@
             pointer-events: none;
         }
 
-        /* Toggle Button for Top HUD */
         #btn-top-toggle-wrapper {
             position: absolute;
-            left: 0; /* Align to left edge of container */
+            left: 0;
             top: 50%;
             transform: translateY(-50%);
             z-index: 1001;
@@ -159,25 +158,36 @@
             gap: 10px; 
         }
         
+        /* --- WIND PANEL (RIGHT) --- */
         .sidebar-right-container { 
             position: absolute; 
-            top: 190px;
+            top: 190px; 
             right: 10px; 
             z-index: 1000; 
             display: flex; 
             flex-direction: column; 
             align-items: end;
             gap: 5px;
-            transition: top 0.3s ease;
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
-        /* --- WIND PANEL --- */
+        .sidebar-right-container.minimized {
+            transform: translateX(120%); /* Slide out to right */
+        }
+        
+        /* Toggle button for Wind attached to left side of panel */
+        #btn-wind-toggle-wrapper {
+            position: absolute;
+            left: -35px;
+            top: 0;
+            z-index: 1001;
+        }
+
         #wind-panel {
-            width: 80px;
+            width: 90px;
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            transition: height 0.3s ease; /* Animate container height */
         }
         
         #wind-content-wrapper {
@@ -185,20 +195,6 @@
             overflow: hidden;
             max-height: 400px;
             opacity: 1;
-        }
-        
-        #wind-content-wrapper.collapsed {
-            max-height: 0;
-            opacity: 0;
-            border: none;
-            padding: 0;
-        }
-        
-        #wind-chevron {
-            transition: transform 0.3s ease;
-        }
-        #wind-chevron.collapsed {
-            transform: rotate(180deg);
         }
 
         .btn-round { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: all 0.2s; cursor: pointer; }
@@ -229,24 +225,12 @@
         .leaflet-tile { filter: brightness(0.85); }
         .satellite-layer .leaflet-tile { filter: none; }
 
-        .compass-arrow { width: 0; height: 0; border-left: 5px solid solid transparent; border-right: 5px solid solid transparent; border-bottom: 10px solid var(--accent-blue); transition: transform 0.3s; }
+        .compass-arrow { width: 0; height: 0; border-left: 5px solid solid transparent; border-right: 5px solid transparent; border-bottom: 10px solid var(--accent-blue); transition: transform 0.3s; }
         .arrow-green { border-bottom-color: #4ade80 !important; }
 
         .balloon-marker-img { width: 44px; height: 44px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5); object-fit: cover; background: #fff; }
 
-        /* Report Generator Styles */
-        #report-stage { 
-            background: #0f172a; 
-            color: #f8fafc; 
-            width: 800px; 
-            padding: 30px; 
-            /* Hidden but renderable position */
-            position: fixed; 
-            left: 0; 
-            top: 0; 
-            z-index: 5000; /* Behind loading overlay */
-            visibility: hidden;
-        }
+        #report-stage { background: #0f172a; color: #f8fafc; width: 800px; padding: 30px; position: fixed; left: -9999px; top: 0; z-index: 9999; }
 
         /* Status Bar (Right Edge) */
         .status-area { position: absolute; top: 10px; right: 0px; display: flex; flex-direction: column; gap: 5px; align-items: flex-end; z-index: 2000; }
@@ -277,34 +261,17 @@
 
         /* --- LANDSCAPE MODE: Compact HUDs --- */
         @media (orientation: landscape) and (max-height: 500px) {
-            .hud-top-container {
-                top: 0;
-                width: 60%; 
-            }
-            .hud-top {
-                padding: 4px;
-                gap: 4px;
-            }
+            .hud-top-container { top: 0; width: 60%; }
+            .hud-top { padding: 4px; gap: 4px; }
             .hud-num { font-size: 1.1rem; } 
             .hud-label { font-size: 0.6rem; }
-            
-            .hud-nav-container {
-                top: 60px; /* Pull up closer to main HUD */
-                width: 50%;
-            }
+            .hud-nav-container { top: 60px; width: 50%; }
             .hud-nav { padding: 4px; gap: 4px; }
             .hud-nav .hud-num { font-size: 1rem; }
-            
             .sidebar-left { bottom: 10px; gap: 5px; }
             .btn-round { width: 38px; height: 38px; font-size: 0.9rem; }
-            
-            .sidebar-right-container { 
-                top: 120px; 
-                right: 5px; 
-            }
-            #wind-content-wrapper {
-                max-height: calc(100vh - 150px);
-            }
+            .sidebar-right-container { top: 120px; right: 5px; }
+            #wind-content-wrapper { max-height: calc(100vh - 150px); }
         }
         
         @media (orientation: portrait) and (max-width: 640px) {
@@ -321,14 +288,12 @@
 
     <div id="map"></div>
     
-    <!-- Fullscreen Loading Overlay for Report Gen -->
     <div id="loading-overlay" class="fixed inset-0 z-[6000] bg-slate-900/95 flex flex-col items-center justify-center hidden backdrop-blur-sm">
         <div class="loader mb-4" style="width: 40px; height: 40px; border-width: 4px;"></div>
         <div class="text-white font-bold text-lg">Erstelle Bericht...</div>
         <div class="text-slate-400 text-sm">Bitte warten, Karte wird gerendert</div>
     </div>
     
-    <!-- Photo View Overlay -->
     <div id="photo-overlay" onclick="this.style.display='none'">
         <img id="photo-overlay-img" src="">
     </div>
@@ -339,7 +304,7 @@
 
     <!-- HUD TOP CONTAINER -->
     <div id="hud-top-container" class="hud-top-container">
-         <!-- Collapse Button - Attached to Left -->
+         <!-- Collapse Button -->
         <div id="btn-top-toggle-wrapper">
             <button onclick="ui.toggleTopHUD()" class="bg-slate-800 text-slate-400 hover:text-white rounded-full w-8 h-8 flex items-center justify-center text-xs shadow border border-white/20" title="Ein/Ausblenden">
                 <i class="fas fa-chevron-up transition-transform duration-300" id="icon-top-hud-toggle"></i>
@@ -381,7 +346,7 @@
 
     <!-- HUD NAVIGATION CONTAINER -->
     <div id="hud-nav-container" class="hud-nav-container hidden">
-        <!-- Collapse Button - Outside but attached -->
+        <!-- Collapse Button -->
         <div id="btn-nav-toggle-wrapper">
             <button onclick="ui.toggleNavHUD()" class="bg-slate-800 text-slate-400 hover:text-white rounded-full w-8 h-8 flex items-center justify-center text-xs shadow border border-white/20" title="Ein/Ausblenden">
                 <i class="fas fa-chevron-left transition-transform duration-300" id="icon-nav-hud-toggle"></i>
@@ -451,17 +416,22 @@
     </div>
 
     <!-- SIDEBAR RIGHT (Wind) -->
-    <div class="sidebar-right-container">
-        <!-- Unified Wind Panel -->
+    <!-- Added ID for sliding -->
+    <div id="sidebar-right-container" class="sidebar-right-container">
+        <!-- Collapse Button attached to panel -->
+        <div id="btn-wind-toggle-wrapper">
+             <button onclick="ui.toggleWindPanel()" class="bg-slate-800 text-slate-400 hover:text-white rounded-full w-8 h-8 flex items-center justify-center text-xs shadow border border-white/20" title="Wind">
+                <i class="fas fa-chevron-right transition-transform duration-300" id="icon-wind-toggle"></i>
+            </button>
+        </div>
+
         <div id="wind-panel" class="glass-panel">
-            <!-- Header with integrated Toggle -->
-            <div class="flex justify-between items-center p-2 cursor-pointer border-b border-white/10" onclick="ui.toggleWindPanel()">
-                <i class="fas fa-wind text-blue-400 text-lg"></i>
-                <i class="fas fa-chevron-up text-[10px] text-slate-500 transition-transform duration-300" id="wind-chevron"></i>
+            <!-- Header removed, only content used now -->
+            <div class="p-2 border-b border-white/10 flex justify-center">
+                 <i class="fas fa-wind text-blue-400"></i>
             </div>
             
-            <!-- Collapsible Content -->
-            <div id="wind-content-wrapper" class="overflow-hidden transition-all duration-300" style="max-height: 400px;">
+            <div id="wind-content-wrapper" class="overflow-hidden transition-all duration-300">
                 <div class="p-1 border-b border-white/5 flex justify-around bg-slate-800/30">
                      <button onclick="event.stopPropagation(); weatherService.fetchLiveWind()" class="text-[0.65rem] text-green-400 hover:text-white flex flex-col items-center"><i class="fas fa-sync-alt mb-0.5"></i>Live</button>
                 </div>
@@ -534,7 +504,25 @@
             }
         };
 
-        if(!state.settings.imageRetention) state.settings.imageRetention = 30;
+        // Migration logic
+        if(!state.settings.unitVario) state.settings.unitVario = 'ms';
+        if(!state.settings.trackColor) state.settings.trackColor = '#3b82f6';
+        if(!state.settings.trackWidth) state.settings.trackWidth = 4;
+        if(!state.settings.mapStyle) state.settings.mapStyle = 'dark';
+        if(!state.settings.mode) state.settings.mode = 'sim';
+        if(!state.measuredWindLayers) state.measuredWindLayers = [];
+        if(state.settings.activeBalloonId === undefined) state.settings.activeBalloonId = null;
+        if(!state.plannings) state.plannings = [];
+        if(!state.archive) state.archive = [];
+        if(state.pilot.initialFlights === undefined) state.pilot.initialFlights = 0;
+        if(state.pilot.initialHours === undefined) state.pilot.initialHours = 0;
+        if(state.activeWaypointId) delete state.activeWaypointId;
+        if(state.targetWaypoint === undefined) state.targetWaypoint = null;
+        if(state.waypointLocked === undefined) state.waypointLocked = false;
+        if(state.waypoints) delete state.waypoints; 
+        if(state.settings.windThreshold === undefined) state.settings.windThreshold = 5;
+        if(state.settings.imageRetention === undefined) state.settings.imageRetention = 30;
+        if(state.settings.useUTC === undefined) state.settings.useUTC = false;
 
         function saveState() {
             try {
@@ -606,11 +594,13 @@
                 overlay.style.display = 'block';
                 content.innerHTML = '<div class="loader"></div> Berechne Wind-Vektoren...';
 
+                // Construct Prompt Data
                 const currentPos = { lat: simulation.lat, lng: simulation.lng, alt: simulation.alt };
                 const target = state.targetWaypoint;
                 const bearingToTarget = getBearing(currentPos.lat, currentPos.lng, target.lat, target.lng);
                 const distanceToTarget = getDistance(currentPos.lat, currentPos.lng, target.lat, target.lng);
                 
+                // Prioritize Measured Winds
                 const winds = [...state.windLayers];
                 state.measuredWindLayers.forEach(m => {
                     const idx = winds.findIndex(w => Math.abs(w.alt - m.alt) < 25);
@@ -1237,10 +1227,14 @@
             },
             
             toggleWindPanel() {
-                const wrapper = document.getElementById('wind-content-wrapper');
-                const chevron = document.getElementById('wind-chevron');
-                wrapper.classList.toggle('collapsed');
-                chevron.classList.toggle('collapsed');
+                const wrapper = document.getElementById('sidebar-right-container');
+                const chevron = document.getElementById('icon-wind-toggle');
+                wrapper.classList.toggle('minimized');
+                if (wrapper.classList.contains('minimized')) {
+                    chevron.className = 'fas fa-chevron-left transition-transform duration-300';
+                } else {
+                    chevron.className = 'fas fa-chevron-right transition-transform duration-300';
+                }
             },
             
             toggleTopHUD() {
