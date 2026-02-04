@@ -189,34 +189,72 @@
             z-index: 9999;
         }
 
-        /* Status Bar (Right Edge) */
-        .status-area {
+        /* Collapsible Status Bar (Right Edge) */
+        .status-container {
             position: absolute;
-            top: 10px;
-            right: 10px;
+            top: 90px; /* Below HUD */
+            right: 0;
+            z-index: 1000;
             display: flex;
             flex-direction: column;
-            gap: 5px;
+            gap: 4px;
             align-items: flex-end;
-            z-index: 2000;
+            pointer-events: auto;
         }
-        .status-badge {
-            background: rgba(15, 23, 42, 0.9);
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 4px;
-            padding: 4px 8px;
+
+        .status-item {
+            background: rgba(15, 23, 42, 0.95);
+            border-left: 4px solid #ccc;
+            border-top-left-radius: 8px;
+            border-bottom-left-radius: 8px;
             color: white;
             font-size: 0.7rem;
             font-weight: bold;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            white-space: nowrap;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
+            box-shadow: -2px 2px 8px rgba(0,0,0,0.3);
+            
+            /* Collapsed State */
+            width: 10px; 
+            overflow: hidden;
+            padding: 6px 0; /* Hide text */
+            transition: width 0.3s ease, padding 0.3s ease;
+            cursor: pointer;
         }
-        .status-badge.red { background: rgba(220, 38, 38, 0.9); border-color: #f87171; }
-        .status-badge.green { background: rgba(22, 163, 74, 0.9); border-color: #4ade80; }
-        .status-badge.blue { background: rgba(37, 99, 235, 0.9); border-color: #60a5fa; }
-        .status-badge.yellow { background: rgba(202, 138, 4, 0.9); border-color: #facc15; color: #fff; }
+
+        .status-item:hover, .status-item.expanded {
+            width: auto;
+            padding: 6px 12px 6px 8px;
+        }
+
+        .status-item i { margin-left: 8px; flex-shrink: 0; }
+        .status-item span { margin-right: 4px; opacity: 0; transition: opacity 0.2s; }
+        .status-item:hover span, .status-item.expanded span { opacity: 1; }
+
+        .status-item.red { border-color: #ef4444; }
+        .status-item.green { border-color: #22c55e; }
+        .status-item.blue { border-color: #3b82f6; }
+        .status-item.yellow { border-color: #eab308; }
+
+        /* AI Nav Overlay */
+        #ai-nav-overlay {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 600px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid var(--accent-blue);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+            border-radius: 12px;
+            padding: 12px;
+            z-index: 1000;
+            display: none;
+            backdrop-filter: blur(8px);
+        }
 
         /* Form Controls */
         input, select, textarea { background: rgba(30, 41, 59, 0.5) !important; border: 1px solid rgba(255,255,255,0.1) !important; color: white !important; border-radius: 6px; padding: 8px 12px; width: 100%; }
@@ -291,8 +329,7 @@
             .sidebar-right-container { right: 5px; top: 75px; }
             .btn-round { width: 44px; height: 44px; font-size: 1rem; }
             .toast-notification { top: 70px; }
-            /* Mobile adjustment for status area to not overlap HUD too much if HUD is wide */
-            .status-area { top: 5px; right: 5px; }
+            .status-container { top: 80px; }
         }
     </style>
 </head>
@@ -336,16 +373,16 @@
         </div>
     </div>
 
-    <!-- STATUS AREA (Right Edge, outside HUD) -->
-    <div class="status-area">
-        <div id="sb-rec" class="status-badge hidden red">
-            <i class="fas fa-circle text-[8px]"></i> REC
+    <!-- COLLAPSIBLE STATUS BAR (Right Edge) -->
+    <div class="status-container">
+        <div id="sb-rec" class="status-item hidden red" onclick="this.classList.toggle('expanded')">
+             <span id="sb-rec-text">REC</span> <i class="fas fa-circle text-[8px]"></i>
         </div>
-        <div id="sb-gps" class="status-badge blue">
-            <i class="fas fa-satellite-dish text-[10px]"></i> <span id="sb-gps-text">NO GPS</span>
+        <div id="sb-gps" class="status-item blue" onclick="this.classList.toggle('expanded')">
+             <span id="sb-gps-text">NO GPS</span> <i class="fas fa-satellite-dish text-[10px]"></i>
         </div>
-        <div id="sb-screen" class="status-badge hidden yellow">
-            <i class="fas fa-sun text-[10px]"></i> SCREEN ON
+        <div id="sb-screen" class="status-item hidden yellow" onclick="this.classList.toggle('expanded')">
+             <span>SCREEN ON</span> <i class="fas fa-sun text-[10px]"></i>
         </div>
     </div>
 
@@ -368,7 +405,20 @@
             <div class="hud-num" id="nav-ete">--:--</div>
         </div>
         
+        <button onclick="aiService.getNavigationAdvice()" id="btn-ai-nav" class="absolute -right-2 top-8 bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-xs shadow border border-white/20" title="KI Ratschlag"><i class="fas fa-magic"></i></button>
         <button onclick="ui.clearTarget()" class="absolute -right-2 -top-2 bg-slate-800 text-slate-400 hover:text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow border border-white/20"><i class="fas fa-times"></i></button>
+    </div>
+
+    <!-- AI NAV ADVICE OVERLAY -->
+    <div id="ai-nav-overlay">
+        <div class="flex justify-between items-start mb-2">
+            <h4 class="text-blue-400 font-bold text-xs uppercase flex items-center gap-2"><i class="fas fa-robot"></i> AeroNav AI</h4>
+            <button onclick="document.getElementById('ai-nav-overlay').style.display='none'" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="ai-nav-content" class="text-sm text-white font-mono leading-relaxed">
+            Berechne Route...
+        </div>
+        <div class="text-[10px] text-slate-500 mt-2 text-right" id="ai-nav-time"></div>
     </div>
 
     <!-- TOAST CONTAINER -->
@@ -466,6 +516,7 @@
          * STATE & CONSTANTS
          */
         const STORAGE_KEY = "AERONAV_PRO_DATA";
+        const apiKey = ""; // Injected by env
         
         let state = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
             pilot: { name: "Max Mustermann", weight: 85, initialFlights: 0, initialHours: 0 }, 
@@ -495,7 +546,7 @@
                 mode: 'sim', 
                 activeBalloonId: null,
                 windThreshold: 5,
-                imageRetention: 30 // Days
+                imageRetention: 30
             }
         };
 
@@ -544,6 +595,77 @@
             const brg = toDeg(Math.atan2(y, x));
             return (brg + 360) % 360;
         }
+
+        /**
+         * AI SERVICE (GEMINI)
+         */
+        const aiService = {
+            async getNavigationAdvice() {
+                if (!state.settings.apiKey) {
+                    ui.showToast("Kein API Key in Einstellungen!", "error");
+                    return;
+                }
+                if (!state.targetWaypoint) {
+                    ui.showToast("Kein Ziel gesetzt!", "error");
+                    return;
+                }
+
+                const overlay = document.getElementById('ai-nav-overlay');
+                const content = document.getElementById('ai-nav-content');
+                const time = document.getElementById('ai-nav-time');
+                
+                overlay.style.display = 'block';
+                content.innerHTML = '<div class="loader"></div> Berechne Wind-Vektoren...';
+
+                // Construct Prompt Data
+                const currentPos = { lat: simulation.lat, lng: simulation.lng, alt: simulation.alt };
+                const target = state.targetWaypoint;
+                const bearingToTarget = getBearing(currentPos.lat, currentPos.lng, target.lat, target.lng);
+                const distanceToTarget = getDistance(currentPos.lat, currentPos.lng, target.lat, target.lng);
+                
+                // Prioritize Measured Winds
+                const winds = [...state.windLayers];
+                state.measuredWindLayers.forEach(m => {
+                    const idx = winds.findIndex(w => Math.abs(w.alt - m.alt) < 25);
+                    if (idx >= 0) winds[idx] = m; else winds.push(m);
+                });
+                
+                const promptText = `
+                    Du bist Co-Pilot in einem Heißluftballon. Gib eine kurze, präzise Anweisung an den Piloten.
+                    
+                    Aktuelle Lage:
+                    - Position: ${currentPos.lat.toFixed(4)}, ${currentPos.lng.toFixed(4)}
+                    - Höhe: ${Math.round(currentPos.alt)}m
+                    - Ziel-Peilung (Soll-Kurs): ${Math.round(bearingToTarget)}°
+                    - Distanz zum Ziel: ${distanceToTarget.toFixed(1)} km
+                    
+                    Verfügbare Windschichten (Höhe -> Richtung):
+                    ${winds.sort((a,b)=>a.alt-b.alt).map(w => `- ${w.alt}m: ${w.dir}°`).join('\n')}
+                    
+                    Aufgabe:
+                    Welche Höhe ist am besten, um dem Zielkurs (${Math.round(bearingToTarget)}°) am nächsten zu kommen?
+                    Antworte extrem kurz (max 15 Wörter) im Format: "Steige/Sinke auf X m (Wind Y°)." oder "Bleibe auf aktueller Höhe."
+                `;
+
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${state.settings.apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
+                    });
+                    
+                    const result = await response.json();
+                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "Keine Antwort.";
+                    
+                    content.innerHTML = text;
+                    time.innerText = "Stand: " + new Date().toLocaleTimeString();
+
+                } catch (e) {
+                    content.innerText = "Fehler bei AI Anfrage.";
+                    console.error(e);
+                }
+            }
+        };
 
         /**
          * WAKE LOCK MANAGER
@@ -605,23 +727,15 @@
                 if (mode === 'gps') {
                     simPanel.classList.add('hidden'); 
                     badgeGPS.classList.remove('hidden');
-                    
-                    // Safe removal of color classes
-                    badgeGPS.classList.remove('blue', 'green'); 
-                    badgeGPS.classList.add('red');
-                    
-                    // Reset text
+                    // Update class logic safely
+                    badgeGPS.className = "status-item red";
                     document.getElementById('sb-gps-text').innerText = "NO GPS";
                     this.startGPS();
                 } else {
                     simPanel.classList.remove('hidden');
                     badgeGPS.classList.remove('hidden');
                     document.getElementById('sb-gps-text').innerText = "SIMULATION";
-                    
-                    // Safe removal
-                    badgeGPS.classList.remove('red', 'green');
-                    badgeGPS.classList.add('blue');
-                    
+                    badgeGPS.className = "status-item blue";
                     this.stopGPS();
                 }
             },
@@ -633,10 +747,9 @@
                     if (this.gpsWatchId) navigator.geolocation.clearWatch(this.gpsWatchId);
                     this.gpsWatchId = navigator.geolocation.watchPosition(pos => {
                         document.getElementById('sb-gps-text').innerText = "GPS OK";
-                        badgeGPS.classList.remove('red', 'blue');
-                        badgeGPS.classList.add('green');
-                        this.lat = pos.coords.latitude;
-                        this.lng = pos.coords.longitude;
+                        badgeGPS.className = "status-item green";
+                        this.lat = c.latitude;
+                        this.lng = c.longitude;
                         const c = pos.coords;
                         if(c.altitude !== null) this.alt = c.altitude;
                         this.speed = (c.speed || 0) * 1.94384; 
@@ -645,13 +758,11 @@
                     }, err => {
                         console.warn("GPS Fehler:", err.message);
                         document.getElementById('sb-gps-text').innerText = "NO GPS";
-                        badgeGPS.classList.remove('green', 'blue');
-                        badgeGPS.classList.add('red');
+                        badgeGPS.className = "status-item red";
                     }, { enableHighAccuracy: true });
                 } else {
                     document.getElementById('sb-gps-text').innerText = "NO SUPP";
-                    badgeGPS.classList.remove('green', 'blue');
-                    badgeGPS.classList.add('red');
+                    badgeGPS.className = "status-item red";
                 }
             },
 
