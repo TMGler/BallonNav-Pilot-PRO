@@ -56,8 +56,10 @@
             border: 1px solid var(--glass-border);
             border-radius: 12px;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
+        /* --- HUD TOP --- */
         .hud-top {
             position: absolute;
             top: 10px;
@@ -70,24 +72,52 @@
             grid-template-columns: repeat(4, 1fr);
             gap: 8px;
             padding: 10px;
+            transition: all 0.3s ease;
         }
 
-        /* Navigation HUD Styles */
-        .hud-nav {
+        /* --- NAVIGATION HUD --- */
+        .hud-nav-container {
             position: absolute;
-            top: 100px; 
+            top: 100px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 990;
             width: 90%;
             max-width: 600px;
+            transition: all 0.3s ease;
+            pointer-events: none; /* Let clicks pass through container area */
+            display: flex;
+            justify-content: center;
+        }
+
+        .hud-nav {
+            pointer-events: auto; /* Re-enable clicks on the HUD itself */
             display: grid;
-            grid-template-columns: repeat(3, 1fr); 
+            grid-template-columns: 1fr 1fr 1fr;
             gap: 8px;
             padding: 8px;
             border-color: var(--accent-yellow);
             border-width: 1px;
-            transition: all 0.3s ease;
+            width: 100%;
+            position: relative;
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
+        }
+        
+        /* Collapsed state for Nav HUD: Slide to left */
+        .hud-nav.minimized {
+            transform: translateX(-120%);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Toggle Button for Nav HUD - Positioned relative to the container */
+        #btn-nav-toggle-wrapper {
+            position: absolute;
+            left: -15px; /* Stick out to the left */
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 991;
+            pointer-events: auto;
         }
 
         .hud-value { text-align: center; }
@@ -114,27 +144,30 @@
             flex-direction: column; 
             align-items: end;
             gap: 5px;
+            transition: top 0.3s ease;
         }
 
-        /* Updated Wind Panel Styles */
+        /* --- WIND PANEL --- */
         #wind-panel {
-            width: 80px; /* Fixed width */
-            transition: all 0.3s ease;
-            overflow: hidden;
+            width: 80px;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
+            /* Height is handled by content, but we animate max-height of content */
         }
         
         #wind-content-wrapper {
-            transition: max-height 0.3s ease, opacity 0.3s ease;
+            transition: max-height 0.4s ease, opacity 0.3s ease, padding 0.3s ease;
             overflow: hidden;
-            max-height: 400px; /* Max expanded height */
+            max-height: 400px;
             opacity: 1;
         }
         
         #wind-content-wrapper.collapsed {
             max-height: 0;
             opacity: 0;
+            padding: 0; /* Remove padding to fully collapse height */
+            border: none;
         }
         
         #wind-chevron {
@@ -150,13 +183,6 @@
         .btn-round.recording { background: var(--accent-red); animation: pulse 2s infinite; }
         .btn-round.locked { color: var(--accent-red); border-color: var(--accent-red); background: rgba(239, 68, 68, 0.2); }
         
-        .btn-small-toggle {
-            width: 36px; height: 36px; border-radius: 50%; 
-            display: flex; align-items: center; justify-content: center;
-            font-size: 0.9rem; cursor: pointer;
-            background: var(--glass-bg); border: 1px solid var(--glass-border);
-        }
-
         @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
             70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
@@ -170,8 +196,6 @@
         .tab-btn.active { border-color: var(--accent-blue); color: var(--accent-blue); opacity: 1; }
 
         .wind-layer { display: flex; flex-direction: column; align-items: center; font-size: 0.7rem; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.1); transition: background-color 0.3s; }
-        
-        /* Active Altitude Highlight */
         .wind-layer.active-altitude {
             background-color: rgba(34, 197, 94, 0.3);
             border-radius: 6px;
@@ -182,94 +206,20 @@
         .satellite-layer .leaflet-tile { filter: none; }
 
         .compass-arrow { width: 0; height: 0; border-left: 5px solid solid transparent; border-right: 5px solid transparent; border-bottom: 10px solid var(--accent-blue); transition: transform 0.3s; }
-        
-        /* Green arrow for measured wind */
         .arrow-green { border-bottom-color: #4ade80 !important; }
 
-        /* Custom Balloon Marker Image Style */
-        .balloon-marker-img {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            border: 2px solid white;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-            object-fit: cover;
-            background: #fff;
-        }
+        .balloon-marker-img { width: 44px; height: 44px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5); object-fit: cover; background: #fff; }
 
-        /* Report Generator Styles */
-        #report-stage {
-            background: #0f172a;
-            color: #f8fafc;
-            width: 800px;
-            padding: 30px;
-            position: fixed;
-            left: -9999px; 
-            top: 0;
-            z-index: 9999;
-        }
+        #report-stage { background: #0f172a; color: #f8fafc; width: 800px; padding: 30px; position: fixed; left: -9999px; top: 0; z-index: 9999; }
 
         /* Status Bar (Right Edge) */
-        .status-area {
-            position: absolute;
-            top: 10px;
-            right: 0px;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-            align-items: flex-end;
-            z-index: 2000;
-        }
-        .status-badge {
-            background: rgba(15, 23, 42, 0.95);
-            border-left: 4px solid #ccc;
-            border-top-left-radius: 8px;
-            border-bottom-left-radius: 8px;
-            padding: 6px;
-            color: white;
-            font-size: 0.7rem;
-            font-weight: bold;
-            box-shadow: -2px 2px 8px rgba(0,0,0,0.3);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            width: 12px; /* Collapsed */
-            overflow: hidden;
-            transition: width 0.3s ease, padding 0.3s ease;
-            white-space: nowrap;
-        }
-        .status-badge:hover, .status-badge.active {
-            width: auto;
-            padding: 6px 12px 6px 8px;
-        }
-        .status-badge.red { border-color: #ef4444; }
-        .status-badge.green { border-color: #22c55e; }
-        .status-badge.blue { border-color: #3b82f6; }
-        .status-badge.yellow { border-color: #eab308; }
+        .status-area { position: absolute; top: 10px; right: 0px; display: flex; flex-direction: column; gap: 5px; align-items: flex-end; z-index: 2000; }
+        .status-badge { background: rgba(15, 23, 42, 0.95); border-left: 4px solid #ccc; border-top-left-radius: 8px; border-bottom-left-radius: 8px; padding: 6px; color: white; font-size: 0.7rem; font-weight: bold; box-shadow: -2px 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 8px; cursor: pointer; width: 12px; overflow: hidden; transition: width 0.3s ease, padding 0.3s ease; white-space: nowrap; }
+        .status-badge:hover, .status-badge.active { width: auto; padding: 6px 12px 6px 8px; }
+        .status-badge.red { border-color: #ef4444; } .status-badge.green { border-color: #22c55e; } .status-badge.blue { border-color: #3b82f6; } .status-badge.yellow { border-color: #eab308; }
 
-        /* AI Nav Overlay */
-        #ai-nav-overlay {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 90%;
-            max-width: 600px;
-            background: rgba(15, 23, 42, 0.95);
-            border: 1px solid var(--accent-blue);
-            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
-            border-radius: 12px;
-            padding: 12px;
-            z-index: 1000;
-            display: none;
-            backdrop-filter: blur(8px);
-        }
-        
-        #photo-overlay {
-            position: fixed; inset: 0; z-index: 7000; background: rgba(0,0,0,0.9);
-            display: none; justify-content: center; align-items: center; padding: 20px;
-        }
+        #ai-nav-overlay { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 600px; background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent-blue); box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); border-radius: 12px; padding: 12px; z-index: 1000; display: none; backdrop-filter: blur(8px); }
+        #photo-overlay { position: fixed; inset: 0; z-index: 7000; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; padding: 20px; }
         #photo-overlay img { max-width: 95%; max-height: 95%; border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
 
         /* Form Controls */
@@ -277,22 +227,59 @@
         input[type="color"] { padding: 0; height: 40px; }
         input:focus { border-color: var(--accent-blue) !important; outline: none; }
         label { font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; display: block; }
-        
         .perf-grid input { padding: 4px; text-align: center; font-size: 0.8rem; }
 
-        /* --- MOBILE OPTIMIZATIONS --- */
+        /* --- MOBILE & LANDSCAPE OPTIMIZATIONS --- */
         @media (max-width: 640px) {
-            .hud-top { width: 98%; top: 5px; padding: 6px 4px; gap: 2px; }
-            .hud-num { font-size: 1.4rem; }
-            .hud-label { font-size: 0.7rem; }
-            .hud-nav { top: 75px; width: 98%; gap: 4px; padding: 6px; }
-            .hud-nav .hud-num { font-size: 1.2rem; }
             .modal-content { width: 100%; height: 100%; min-height: 100vh; border-radius: 0; border: none; margin: 0; padding: 15px; }
             .sidebar-left { left: 5px; bottom: 20px; gap: 8px; }
             .status-area { top: 5px; right: 0; }
-            .sidebar-right-container { top: 170px; right: 5px; }
+            .sidebar-right-container { right: 5px; }
             .btn-round { width: 44px; height: 44px; font-size: 1rem; }
             .toast-notification { top: 70px; }
+        }
+
+        /* --- LANDSCAPE MODE: Make HUDs Smaller --- */
+        @media (orientation: landscape) and (max-height: 500px) {
+            .hud-top {
+                top: 0;
+                padding: 4px;
+                gap: 4px;
+                width: 60%; /* Significantly narrower */
+                left: 50%;
+                transform: translateX(-50%);
+            }
+            .hud-num { font-size: 1rem; } /* Smaller font */
+            .hud-label { font-size: 0.55rem; }
+            
+            .hud-nav-container {
+                top: 55px; /* Pull up closer to small main HUD */
+                width: 50%;
+            }
+            .hud-nav { padding: 4px; gap: 4px; }
+            .hud-nav .hud-num { font-size: 0.9rem; }
+            
+            /* Sidebar items also slightly smaller/adjusted */
+            .sidebar-left { bottom: 10px; gap: 5px; }
+            .btn-round { width: 38px; height: 38px; font-size: 0.9rem; }
+            
+            /* Give Wind Panel more vertical space in landscape */
+            .sidebar-right-container { 
+                top: 130px; /* Pull up */
+                right: 5px; 
+            }
+            #wind-content-wrapper {
+                max-height: calc(100vh - 160px); /* Fill available height */
+            }
+        }
+        
+        /* Regular Mobile Portrait adjustments */
+        @media (orientation: portrait) and (max-width: 640px) {
+            .hud-top { width: 98%; top: 5px; padding: 6px 4px; gap: 2px; }
+            .hud-num { font-size: 1.4rem; }
+            .hud-label { font-size: 0.7rem; }
+            .hud-nav-container { top: 75px; width: 98%; }
+            .sidebar-right-container { top: 180px; }
         }
     </style>
 </head>
@@ -349,26 +336,32 @@
         </div>
     </div>
 
-    <!-- HUD NAVIGATION (Hidden by default) -->
-    <div id="hud-nav" class="hud-nav glass-panel hidden">
-        <div class="hud-value">
-            <div class="hud-label">Distanz</div>
-            <div class="hud-num"><span id="nav-dist">0.0</span> <small class="text-[0.6rem] font-normal" id="lbl-nav-dist">km</small></div>
+    <!-- HUD NAVIGATION CONTAINER -->
+    <div id="hud-nav-container" class="hud-nav-container hidden">
+        <!-- Collapse Button - Outside but attached -->
+        <div id="btn-nav-toggle-wrapper">
+            <button onclick="ui.toggleNavHUD()" class="bg-slate-800 text-slate-400 hover:text-white rounded-full w-8 h-8 flex items-center justify-center text-xs shadow border border-white/20" title="Ein/Ausblenden">
+                <i class="fas fa-chevron-left transition-transform duration-300" id="icon-nav-hud-toggle"></i>
+            </button>
         </div>
-        <div class="hud-value">
-            <div class="hud-label">Peilung</div>
-            <div class="hud-num"><span id="nav-brg">0</span>°</div>
-        </div>
-        <div class="hud-value">
-            <div class="hud-label">ETE</div>
-            <div class="hud-num" id="nav-ete">--:--</div>
-        </div>
-        
-        <!-- Collapse Button -->
-        <button onclick="document.getElementById('hud-nav').classList.toggle('opacity-50')" class="absolute -left-3 top-1/2 -translate-y-1/2 bg-slate-800 text-slate-400 hover:text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow border border-white/20" title="Dimmen"><i class="fas fa-adjust"></i></button>
 
-        <button onclick="aiService.getNavigationAdvice()" id="btn-ai-nav" class="absolute -right-2 top-8 bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-xs shadow border border-white/20" title="KI Ratschlag"><i class="fas fa-magic"></i></button>
-        <button onclick="ui.clearTarget()" class="absolute -right-2 -top-2 bg-slate-800 text-slate-400 hover:text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow border border-white/20"><i class="fas fa-times"></i></button>
+        <div id="hud-nav" class="hud-nav glass-panel">
+            <div class="hud-value">
+                <div class="hud-label">Distanz</div>
+                <div class="hud-num"><span id="nav-dist">0.0</span> <small class="text-[0.6rem] font-normal" id="lbl-nav-dist">km</small></div>
+            </div>
+            <div class="hud-value">
+                <div class="hud-label">Peilung</div>
+                <div class="hud-num"><span id="nav-brg">0</span>°</div>
+            </div>
+            <div class="hud-value">
+                <div class="hud-label">ETE</div>
+                <div class="hud-num" id="nav-ete">--:--</div>
+            </div>
+            
+            <button onclick="aiService.getNavigationAdvice()" id="btn-ai-nav" class="absolute -right-2 top-8 bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-xs shadow border border-white/20" title="KI Ratschlag"><i class="fas fa-magic"></i></button>
+            <button onclick="ui.clearTarget()" class="absolute -right-2 -top-2 bg-slate-800 text-slate-400 hover:text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow border border-white/20"><i class="fas fa-times"></i></button>
+        </div>
     </div>
 
     <!-- AI NAV ADVICE OVERLAY -->
@@ -430,7 +423,7 @@
                      <button onclick="event.stopPropagation(); weatherService.fetchLiveWind()" class="text-[0.65rem] text-green-400 hover:text-white flex flex-col items-center"><i class="fas fa-sync-alt mb-0.5"></i>Live</button>
                      <button onclick="event.stopPropagation(); ui.editWindSettings()" class="text-[0.65rem] text-blue-400 hover:text-white flex flex-col items-center"><i class="fas fa-pen mb-0.5"></i>Edit</button>
                 </div>
-                <div id="wind-layers-container" class="p-2 flex flex-col gap-1 max-h-60 overflow-y-auto">
+                <div id="wind-layers-container" class="p-2 flex flex-col gap-1 max-h-60 overflow-y-auto scrollbar-hide">
                     <!-- Layers will be injected here -->
                 </div>
             </div>
@@ -668,7 +661,7 @@
                 const simPanel = document.getElementById('sim-panel');
                 const badgeGPS = document.getElementById('sb-gps');
 
-                if (!simPanel || !badgeGPS) return; // Prevent null error if DOM not ready
+                if (!simPanel || !badgeGPS) return;
 
                 if (mode === 'gps') {
                     simPanel.classList.add('hidden'); 
@@ -1171,9 +1164,8 @@
                     const wp = state.targetWaypoint;
                     const distKm = getDistance(simulation.lat, simulation.lng, wp.lat, wp.lng);
                     const bearing = getBearing(simulation.lat, simulation.lng, wp.lat, wp.lng);
-                    document.getElementById('hud-nav').classList.remove('hidden');
-                    // Removed target name as requested
-                    // document.getElementById('nav-target-name').innerText = 'Ziel'; 
+                    document.getElementById('hud-nav-container').classList.remove('hidden'); // Use container for show/hide
+                    
                     document.getElementById('nav-brg').innerText = Math.round(bearing);
                     if (state.settings.unitAlt === 'ft') { 
                         const distNm = distKm * 0.539957;
@@ -1195,7 +1187,7 @@
                         } else { document.getElementById('nav-ete').innerText = "--:--"; }
                     }
                 } else {
-                    document.getElementById('hud-nav').classList.add('hidden');
+                    document.getElementById('hud-nav-container').classList.add('hidden');
                 }
 
                 mapManager.update(data);
@@ -1228,10 +1220,22 @@
                 chevron.classList.toggle('collapsed');
             },
             
+            toggleNavHUD() {
+                const nav = document.getElementById('hud-nav');
+                const btnIcon = document.getElementById('icon-nav-hud-toggle');
+                nav.classList.toggle('minimized'); // Using minimized class now for slide effect
+                
+                if (nav.classList.contains('minimized')) {
+                    btnIcon.className = 'fas fa-chevron-right transition-transform duration-300';
+                } else {
+                    btnIcon.className = 'fas fa-chevron-left transition-transform duration-300';
+                }
+            },
+            
             toggleWaypointLock() { state.waypointLocked = !state.waypointLocked; saveState(); this.updateLockBtn(); this.showToast(state.waypointLocked ? "Wegpunkt gesperrt" : "Wegpunkt entsperrt"); },
             updateLockBtn() { const btn = document.getElementById('btn-waypoint-lock'); const icon = document.getElementById('icon-wp-lock'); if (state.waypointLocked) { btn.classList.add('locked'); icon.className = 'fas fa-lock'; } else { btn.classList.remove('locked'); icon.className = 'fas fa-lock-open'; } },
-            setTarget(latlng) { if (state.waypointLocked) { this.showToast("Wegpunkt ist gesperrt!", "error"); return; } state.targetWaypoint = { lat: latlng.lat, lng: latlng.lng }; saveState(); mapManager.renderTarget(); this.showToast("Ziel gesetzt", "success"); flightManager.updateHUD(simulation.getCurrentState()); },
-            clearTarget() { if (state.waypointLocked) { this.showToast("Wegpunkt ist gesperrt!", "error"); return; } state.targetWaypoint = null; saveState(); mapManager.renderTarget(); document.getElementById('hud-nav').classList.add('hidden'); this.showToast("Navigation beendet"); },
+            setTarget(latlng) { if (state.waypointLocked) { this.showToast("Wegpunkt ist gesperrt!", "error"); return; } state.targetWaypoint = { lat: latlng.lat, lng: latlng.lng }; saveState(); mapManager.renderTarget(); this.showToast("Ziel gesetzt", "success"); flightManager.updateHUD(simulation.getCurrentState()); document.getElementById('btn-nav-toggle-wrapper').classList.remove('hidden'); },
+            clearTarget() { if (state.waypointLocked) { this.showToast("Wegpunkt ist gesperrt!", "error"); return; } state.targetWaypoint = null; saveState(); mapManager.renderTarget(); document.getElementById('hud-nav-container').classList.add('hidden'); document.getElementById('btn-nav-toggle-wrapper').classList.add('hidden'); this.showToast("Navigation beendet"); },
             editWindSettings() { this.openModal(); this.switchTab('environment'); },
             openModal() { document.getElementById('main-modal').style.display = 'flex'; this.switchTab(this.tab); },
             closeModal() { document.getElementById('main-modal').style.display = 'none'; },
@@ -1419,14 +1423,7 @@
             saveCylinder() { const data = { id: this.editingId === 'new' ? Date.now().toString() : this.editingId, label: document.getElementById('f-label').value, type: document.getElementById('f-type').value, sn: document.getElementById('f-sn').value, tare: parseFloat(document.getElementById('f-tare').value), gas: parseFloat(document.getElementById('f-gas').value), tuv: document.getElementById('f-tuv').value }; if (this.editingId === 'new') state.cylinders.push(data); else state.cylinders = state.cylinders.map(x => x.id === this.editingId ? data : x); saveState(); this.switchTab('cylinders'); },
             savePassenger() { const data = { id: this.editingId === 'new' ? Date.now().toString() : this.editingId, name: document.getElementById('f-name').value, weight: parseFloat(document.getElementById('f-p-weight').value), gender: document.getElementById('f-gender').value, phone: document.getElementById('f-phone').value }; if (this.editingId === 'new') state.passengers.push(data); else state.passengers = state.passengers.map(x => x.id === this.editingId ? data : x); saveState(); this.switchTab('passengers'); },
             saveLogManual() { const date = document.getElementById('f-l-date').value; state.logs.push({ id: Date.now(), start: date + "T" + document.getElementById('f-l-start').value, end: date + "T" + document.getElementById('f-l-end').value, balloon: document.getElementById('f-l-balloon').value, notes: document.getElementById('f-l-notes').value, track: [] }); saveState(); this.switchTab('logbook'); },
-            delete(collection, id) { 
-                if (confirm("Löschen?")) { 
-                    // Handle numeric vs string IDs safely
-                    state[collection] = state[collection].filter(x => x.id != id); 
-                    saveState(); 
-                    this.render(); 
-                } 
-            },
+            delete(collection, id) { if (confirm("Löschen?")) { state[collection] = state[collection].filter(x => x.id != id); saveState(); this.render(); } },
 
             saveSettings(silent = false) {
                 state.pilot.name = document.getElementById('set-pilot-name').value;
@@ -2103,32 +2100,15 @@
                     rMap.fitBounds(poly.getBounds(), { padding: [40, 40] });
                 } else { rMap.setView([51.1657, 10.4515], 6); }
                 
-                // Wait for map tiles to be ready
-                tileLayer.on('load', () => {
-                   // Small extra delay to ensure rendering
-                   setTimeout(() => {
-                        html2canvas(document.querySelector("#report-stage > div"), { useCORS: true, allowTaint: true, scale: 2 }).then(canvas => {
-                            const link = document.createElement('a'); link.download = `FlightReport_${dateStr}.png`; link.href = canvas.toDataURL(); link.click();
-                            rMap.remove(); 
-                            reportDiv.innerHTML = ''; 
-                            reportDiv.style.visibility = 'hidden';
-                            document.getElementById('loading-overlay').classList.add('hidden'); 
-                        });
-                   }, 500);
-                });
-
-                // Fallback if load event doesn't fire (e.g. cached)
+                // Allow tiles to load - INCREASED WAIT
                 setTimeout(() => {
-                    if(!document.getElementById('loading-overlay').classList.contains('hidden')) {
-                        html2canvas(document.querySelector("#report-stage > div"), { useCORS: true, allowTaint: true, scale: 2 }).then(canvas => {
-                            const link = document.createElement('a'); link.download = `FlightReport_${dateStr}.png`; link.href = canvas.toDataURL(); link.click();
-                            rMap.remove(); 
-                            reportDiv.innerHTML = '';
-                            reportDiv.style.visibility = 'hidden';
-                            document.getElementById('loading-overlay').classList.add('hidden'); 
-                        });
-                    }
-                }, 5000); // 5s timeout
+                    html2canvas(document.querySelector("#report-stage > div"), { useCORS: true, allowTaint: true, scale: 2 }).then(canvas => {
+                        const link = document.createElement('a'); link.download = `FlightReport_${dateStr}.png`; link.href = canvas.toDataURL(); link.click();
+                        rMap.remove(); 
+                        reportDiv.innerHTML = ''; 
+                        document.getElementById('loading-overlay').classList.add('hidden'); // Hide Loading
+                    });
+                }, 3000); // 3 Seconds wait
             },
 
             render() {
