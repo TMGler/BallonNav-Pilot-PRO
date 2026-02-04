@@ -82,7 +82,7 @@
             width: 90%;
             max-width: 600px;
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr;
+            grid-template-columns: 1fr 1fr 1fr;
             gap: 8px;
             padding: 8px;
             border-color: var(--accent-yellow);
@@ -91,9 +91,9 @@
         }
 
         .hud-value { text-align: center; }
-        .hud-label { font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.05em; }
-        .hud-num { font-size: 1.25rem; font-weight: 700; font-family: 'Courier New', Courier, monospace; }
-        .hud-nav .hud-num { font-size: 1rem; color: var(--accent-yellow); }
+        .hud-label { font-size: 0.7rem; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.05em; font-weight: 600; }
+        .hud-num { font-size: 1.4rem; font-weight: 700; font-family: 'Courier New', Courier, monospace; }
+        .hud-nav .hud-num { font-size: 1.2rem; color: var(--accent-yellow); }
 
         .sidebar-left { 
             position: absolute; 
@@ -107,7 +107,7 @@
         
         .sidebar-right-container { 
             position: absolute; 
-            top: 80px; 
+            top: 190px; 
             right: 10px; 
             z-index: 1000; 
             display: flex; 
@@ -120,7 +120,7 @@
             width: 80px;
             transition: all 0.3s ease;
             overflow: hidden;
-            max-height: calc(100vh - 100px); 
+            max-height: calc(100vh - 280px); 
             opacity: 1;
         }
         
@@ -156,7 +156,14 @@
         .tab-btn { padding: 12px 20px; border-bottom: 2px solid transparent; font-weight: 500; opacity: 0.6; }
         .tab-btn.active { border-color: var(--accent-blue); color: var(--accent-blue); opacity: 1; }
 
-        .wind-layer { display: flex; flex-direction: column; align-items: center; font-size: 0.7rem; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .wind-layer { display: flex; flex-direction: column; align-items: center; font-size: 0.7rem; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.1); transition: background-color 0.3s; }
+        
+        /* Active Altitude Highlight */
+        .wind-layer.active-altitude {
+            background-color: rgba(34, 197, 94, 0.3);
+            border-radius: 6px;
+            border: 1px solid rgba(34, 197, 94, 0.5);
+        }
 
         .leaflet-tile { filter: brightness(0.85); }
         .satellite-layer .leaflet-tile { filter: none; }
@@ -189,54 +196,44 @@
             z-index: 9999;
         }
 
-        /* Collapsible Status Bar (Right Edge) */
-        .status-container {
+        /* Status Bar (Right Edge) */
+        .status-area {
             position: absolute;
-            top: 90px; /* Below HUD */
-            right: 0;
-            z-index: 1000;
+            top: 10px;
+            right: 0px;
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 5px;
             align-items: flex-end;
-            pointer-events: auto;
+            z-index: 2000;
         }
-
-        .status-item {
+        .status-badge {
             background: rgba(15, 23, 42, 0.95);
             border-left: 4px solid #ccc;
             border-top-left-radius: 8px;
             border-bottom-left-radius: 8px;
+            padding: 6px;
             color: white;
             font-size: 0.7rem;
             font-weight: bold;
-            white-space: nowrap;
+            box-shadow: -2px 2px 8px rgba(0,0,0,0.3);
             display: flex;
             align-items: center;
             gap: 8px;
-            box-shadow: -2px 2px 8px rgba(0,0,0,0.3);
-            
-            /* Collapsed State */
-            width: 10px; 
-            overflow: hidden;
-            padding: 6px 0; /* Hide text */
-            transition: width 0.3s ease, padding 0.3s ease;
             cursor: pointer;
+            width: 12px; /* Collapsed */
+            overflow: hidden;
+            transition: width 0.3s ease, padding 0.3s ease;
+            white-space: nowrap;
         }
-
-        .status-item:hover, .status-item.expanded {
+        .status-badge:hover, .status-badge.active {
             width: auto;
             padding: 6px 12px 6px 8px;
         }
-
-        .status-item i { margin-left: 8px; flex-shrink: 0; }
-        .status-item span { margin-right: 4px; opacity: 0; transition: opacity 0.2s; }
-        .status-item:hover span, .status-item.expanded span { opacity: 1; }
-
-        .status-item.red { border-color: #ef4444; }
-        .status-item.green { border-color: #22c55e; }
-        .status-item.blue { border-color: #3b82f6; }
-        .status-item.yellow { border-color: #eab308; }
+        .status-badge.red { border-color: #ef4444; }
+        .status-badge.green { border-color: #22c55e; }
+        .status-badge.blue { border-color: #3b82f6; }
+        .status-badge.yellow { border-color: #eab308; }
 
         /* AI Nav Overlay */
         #ai-nav-overlay {
@@ -255,6 +252,12 @@
             display: none;
             backdrop-filter: blur(8px);
         }
+        
+        #photo-overlay {
+            position: fixed; inset: 0; z-index: 7000; background: rgba(0,0,0,0.9);
+            display: none; justify-content: center; align-items: center; padding: 20px;
+        }
+        #photo-overlay img { max-width: 95%; max-height: 95%; border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
 
         /* Form Controls */
         input, select, textarea { background: rgba(30, 41, 59, 0.5) !important; border: 1px solid rgba(255,255,255,0.1) !important; color: white !important; border-radius: 6px; padding: 8px 12px; width: 100%; }
@@ -309,47 +312,28 @@
         .toast-notification.error {
             background: rgba(239, 68, 68, 0.95);
         }
-        
-        /* Image Modal */
-        #photo-overlay {
-            position: fixed; inset: 0; z-index: 7000; background: rgba(0,0,0,0.9);
-            display: none; justify-content: center; align-items: center; padding: 20px;
-        }
-        #photo-overlay img { max-width: 95%; max-height: 95%; border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
 
         /* --- MOBILE OPTIMIZATIONS --- */
         @media (max-width: 640px) {
             .hud-top { width: 98%; top: 5px; padding: 6px 4px; gap: 2px; }
             .hud-num { font-size: 1.1rem; }
             .hud-label { font-size: 0.55rem; }
-            .hud-nav { top: 60px; width: 98%; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 4px; padding: 6px; }
+            .hud-nav { top: 60px; width: 98%; grid-template-columns: 1fr 1fr 1fr; gap: 4px; padding: 6px; }
             .hud-nav .hud-num { font-size: 0.9rem; }
             .modal-content { width: 100%; height: 100%; min-height: 100vh; border-radius: 0; border: none; margin: 0; padding: 15px; }
             .sidebar-left { left: 5px; bottom: 20px; gap: 8px; }
             .sidebar-right-container { right: 5px; top: 75px; }
             .btn-round { width: 44px; height: 44px; font-size: 1rem; }
+            #status-badges { right: 60px; top: 75px; }
             .toast-notification { top: 70px; }
-            .status-container { top: 80px; }
         }
     </style>
 </head>
 <body>
 
     <div id="map"></div>
-    
-    <!-- Fullscreen Loading Overlay for Report Gen -->
-    <div id="loading-overlay" class="fixed inset-0 z-[6000] bg-slate-900/95 flex flex-col items-center justify-center hidden backdrop-blur-sm">
-        <div class="loader mb-4" style="width: 40px; height: 40px; border-width: 4px;"></div>
-        <div class="text-white font-bold text-lg">Erstelle Bericht...</div>
-        <div class="text-slate-400 text-sm">Bitte warten, Karte wird gerendert</div>
-    </div>
-    
-    <!-- Photo View Overlay -->
-    <div id="photo-overlay" onclick="this.style.display='none'">
-        <img id="photo-overlay-img" src="">
-    </div>
 
-    <!-- Hidden Inputs -->
+    <!-- Hidden Input for Photo Capture -->
     <input type="file" id="cam-input" accept="image/*" capture="environment" class="hidden" onchange="flightManager.handlePhotoInput(this)">
     <input type="file" id="import-input" accept=".json" class="hidden" onchange="system.importData(this)">
 
@@ -373,25 +357,21 @@
         </div>
     </div>
 
-    <!-- COLLAPSIBLE STATUS BAR (Right Edge) -->
-    <div class="status-container">
-        <div id="sb-rec" class="status-item hidden red" onclick="this.classList.toggle('expanded')">
-             <span id="sb-rec-text">REC</span> <i class="fas fa-circle text-[8px]"></i>
+    <!-- STATUS AREA (Right Edge) -->
+    <div class="status-area">
+        <div id="sb-rec" class="status-badge hidden red" onclick="this.classList.toggle('active')">
+             <i class="fas fa-circle text-[8px]"></i> <span>REC</span>
         </div>
-        <div id="sb-gps" class="status-item blue" onclick="this.classList.toggle('expanded')">
-             <span id="sb-gps-text">NO GPS</span> <i class="fas fa-satellite-dish text-[10px]"></i>
+        <div id="sb-gps" class="status-badge blue" onclick="this.classList.toggle('active')">
+             <i class="fas fa-satellite-dish text-[10px]"></i> <span id="sb-gps-text">NO GPS</span>
         </div>
-        <div id="sb-screen" class="status-item hidden yellow" onclick="this.classList.toggle('expanded')">
-             <span>SCREEN ON</span> <i class="fas fa-sun text-[10px]"></i>
+        <div id="sb-screen" class="status-badge yellow hidden" onclick="this.classList.toggle('active')">
+             <i class="fas fa-sun text-[10px]"></i> <span>SCREEN ON</span>
         </div>
     </div>
 
     <!-- HUD NAVIGATION (Hidden by default) -->
     <div id="hud-nav" class="hud-nav glass-panel hidden">
-        <div class="hud-value text-left pl-2">
-            <div class="hud-label">Ziel</div>
-            <div class="hud-num truncate text-sm" id="nav-target-name">--</div>
-        </div>
         <div class="hud-value">
             <div class="hud-label">Distanz</div>
             <div class="hud-num"><span id="nav-dist">0.0</span> <small class="text-[0.6rem] font-normal" id="lbl-nav-dist">km</small></div>
@@ -405,20 +385,7 @@
             <div class="hud-num" id="nav-ete">--:--</div>
         </div>
         
-        <button onclick="aiService.getNavigationAdvice()" id="btn-ai-nav" class="absolute -right-2 top-8 bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-xs shadow border border-white/20" title="KI Ratschlag"><i class="fas fa-magic"></i></button>
         <button onclick="ui.clearTarget()" class="absolute -right-2 -top-2 bg-slate-800 text-slate-400 hover:text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow border border-white/20"><i class="fas fa-times"></i></button>
-    </div>
-
-    <!-- AI NAV ADVICE OVERLAY -->
-    <div id="ai-nav-overlay">
-        <div class="flex justify-between items-start mb-2">
-            <h4 class="text-blue-400 font-bold text-xs uppercase flex items-center gap-2"><i class="fas fa-robot"></i> AeroNav AI</h4>
-            <button onclick="document.getElementById('ai-nav-overlay').style.display='none'" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
-        </div>
-        <div id="ai-nav-content" class="text-sm text-white font-mono leading-relaxed">
-            Berechne Route...
-        </div>
-        <div class="text-[10px] text-slate-500 mt-2 text-right" id="ai-nav-time"></div>
     </div>
 
     <!-- TOAST CONTAINER -->
@@ -516,7 +483,6 @@
          * STATE & CONSTANTS
          */
         const STORAGE_KEY = "AERONAV_PRO_DATA";
-        const apiKey = ""; // Injected by env
         
         let state = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
             pilot: { name: "Max Mustermann", weight: 85, initialFlights: 0, initialHours: 0 }, 
@@ -550,24 +516,7 @@
             }
         };
 
-        // Migration
-        if(!state.settings.unitVario) state.settings.unitVario = 'ms';
-        if(!state.settings.trackColor) state.settings.trackColor = '#3b82f6';
-        if(!state.settings.trackWidth) state.settings.trackWidth = 4;
-        if(!state.settings.mapStyle) state.settings.mapStyle = 'dark';
-        if(!state.settings.mode) state.settings.mode = 'sim';
-        if(!state.measuredWindLayers) state.measuredWindLayers = [];
-        if(state.settings.activeBalloonId === undefined) state.settings.activeBalloonId = null;
-        if(!state.plannings) state.plannings = [];
-        if(!state.archive) state.archive = [];
-        if(state.pilot.initialFlights === undefined) state.pilot.initialFlights = 0;
-        if(state.pilot.initialHours === undefined) state.pilot.initialHours = 0;
-        if(state.activeWaypointId) delete state.activeWaypointId;
-        if(state.targetWaypoint === undefined) state.targetWaypoint = null;
-        if(state.waypointLocked === undefined) state.waypointLocked = false;
-        if(state.waypoints) delete state.waypoints; 
-        if(state.settings.windThreshold === undefined) state.settings.windThreshold = 5;
-        if(state.settings.imageRetention === undefined) state.settings.imageRetention = 30;
+        if(!state.settings.imageRetention) state.settings.imageRetention = 30;
 
         function saveState() {
             try {
@@ -597,77 +546,6 @@
         }
 
         /**
-         * AI SERVICE (GEMINI)
-         */
-        const aiService = {
-            async getNavigationAdvice() {
-                if (!state.settings.apiKey) {
-                    ui.showToast("Kein API Key in Einstellungen!", "error");
-                    return;
-                }
-                if (!state.targetWaypoint) {
-                    ui.showToast("Kein Ziel gesetzt!", "error");
-                    return;
-                }
-
-                const overlay = document.getElementById('ai-nav-overlay');
-                const content = document.getElementById('ai-nav-content');
-                const time = document.getElementById('ai-nav-time');
-                
-                overlay.style.display = 'block';
-                content.innerHTML = '<div class="loader"></div> Berechne Wind-Vektoren...';
-
-                // Construct Prompt Data
-                const currentPos = { lat: simulation.lat, lng: simulation.lng, alt: simulation.alt };
-                const target = state.targetWaypoint;
-                const bearingToTarget = getBearing(currentPos.lat, currentPos.lng, target.lat, target.lng);
-                const distanceToTarget = getDistance(currentPos.lat, currentPos.lng, target.lat, target.lng);
-                
-                // Prioritize Measured Winds
-                const winds = [...state.windLayers];
-                state.measuredWindLayers.forEach(m => {
-                    const idx = winds.findIndex(w => Math.abs(w.alt - m.alt) < 25);
-                    if (idx >= 0) winds[idx] = m; else winds.push(m);
-                });
-                
-                const promptText = `
-                    Du bist Co-Pilot in einem Heißluftballon. Gib eine kurze, präzise Anweisung an den Piloten.
-                    
-                    Aktuelle Lage:
-                    - Position: ${currentPos.lat.toFixed(4)}, ${currentPos.lng.toFixed(4)}
-                    - Höhe: ${Math.round(currentPos.alt)}m
-                    - Ziel-Peilung (Soll-Kurs): ${Math.round(bearingToTarget)}°
-                    - Distanz zum Ziel: ${distanceToTarget.toFixed(1)} km
-                    
-                    Verfügbare Windschichten (Höhe -> Richtung):
-                    ${winds.sort((a,b)=>a.alt-b.alt).map(w => `- ${w.alt}m: ${w.dir}°`).join('\n')}
-                    
-                    Aufgabe:
-                    Welche Höhe ist am besten, um dem Zielkurs (${Math.round(bearingToTarget)}°) am nächsten zu kommen?
-                    Antworte extrem kurz (max 15 Wörter) im Format: "Steige/Sinke auf X m (Wind Y°)." oder "Bleibe auf aktueller Höhe."
-                `;
-
-                try {
-                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${state.settings.apiKey}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
-                    });
-                    
-                    const result = await response.json();
-                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "Keine Antwort.";
-                    
-                    content.innerHTML = text;
-                    time.innerText = "Stand: " + new Date().toLocaleTimeString();
-
-                } catch (e) {
-                    content.innerText = "Fehler bei AI Anfrage.";
-                    console.error(e);
-                }
-            }
-        };
-
-        /**
          * WAKE LOCK MANAGER
          */
         const wakeLockManager = {
@@ -692,6 +570,38 @@
             },
             handleVisibilityChange() {
                 if (this.wakeLock !== null && document.visibilityState === 'visible') { this.request(); }
+            }
+        };
+
+        /**
+         * AI SERVICE (GEMINI)
+         */
+        const aiService = {
+            async getNavigationAdvice() {
+                if (!state.settings.apiKey) { ui.showToast("Kein API Key!", "error"); return; }
+                if (!state.targetWaypoint) { ui.showToast("Kein Ziel!", "error"); return; }
+                const overlay = document.getElementById('ai-nav-overlay');
+                const content = document.getElementById('ai-nav-content');
+                const time = document.getElementById('ai-nav-time');
+                
+                overlay.style.display = 'block';
+                content.innerHTML = '<div class="loader"></div> Berechne...';
+                
+                const winds = [...state.windLayers, ...state.measuredWindLayers].sort((a,b)=>a.alt-b.alt);
+                const currentPos = { lat: simulation.lat, lng: simulation.lng, alt: simulation.alt };
+                const brg = getBearing(currentPos.lat, currentPos.lng, state.targetWaypoint.lat, state.targetWaypoint.lng);
+                
+                const prompt = `Du bist Ballon-CoPilot. Zielkurs: ${Math.round(brg)}°. Windschichten: ${winds.map(w=>w.alt+'m:'+w.dir+'°').join(', ')}. Aktuelle Höhe: ${Math.round(currentPos.alt)}m. Gib extrem kurze Anweisung (max 12 Wörter), auf welche Höhe man steigen/sinken sollte.`;
+
+                try {
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${state.settings.apiKey}`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    });
+                    const data = await res.json();
+                    content.innerText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Keine Antwort.";
+                    time.innerText = "Stand: " + new Date().toLocaleTimeString();
+                } catch (e) { content.innerText = "Fehler."; }
             }
         };
 
@@ -723,19 +633,27 @@
                 const mode = state.settings.mode;
                 const simPanel = document.getElementById('sim-panel');
                 const badgeGPS = document.getElementById('sb-gps');
+                const badgeGPStext = document.getElementById('sb-gps-text');
+
+                if (!simPanel || !badgeGPS || !badgeGPStext) return;
 
                 if (mode === 'gps') {
                     simPanel.classList.add('hidden'); 
                     badgeGPS.classList.remove('hidden');
-                    // Update class logic safely
-                    badgeGPS.className = "status-item red";
-                    document.getElementById('sb-gps-text').innerText = "NO GPS";
+                    
+                    badgeGPS.classList.remove('blue', 'green'); 
+                    badgeGPS.classList.add('red');
+                    
+                    badgeGPStext.innerText = "NO GPS";
                     this.startGPS();
                 } else {
                     simPanel.classList.remove('hidden');
                     badgeGPS.classList.remove('hidden');
-                    document.getElementById('sb-gps-text').innerText = "SIMULATION";
-                    badgeGPS.className = "status-item blue";
+                    badgeGPStext.innerText = "SIMULATION";
+                    
+                    badgeGPS.classList.remove('red', 'green');
+                    badgeGPS.classList.add('blue');
+                    
                     this.stopGPS();
                 }
             },
@@ -746,11 +664,12 @@
                 if (navigator.geolocation) {
                     if (this.gpsWatchId) navigator.geolocation.clearWatch(this.gpsWatchId);
                     this.gpsWatchId = navigator.geolocation.watchPosition(pos => {
+                        const c = pos.coords;
                         document.getElementById('sb-gps-text').innerText = "GPS OK";
-                        badgeGPS.className = "status-item green";
+                        badgeGPS.classList.remove('red', 'blue');
+                        badgeGPS.classList.add('green');
                         this.lat = c.latitude;
                         this.lng = c.longitude;
-                        const c = pos.coords;
                         if(c.altitude !== null) this.alt = c.altitude;
                         this.speed = (c.speed || 0) * 1.94384; 
                         if(c.heading !== null && !isNaN(c.heading)) this.course = c.heading;
@@ -758,11 +677,13 @@
                     }, err => {
                         console.warn("GPS Fehler:", err.message);
                         document.getElementById('sb-gps-text').innerText = "NO GPS";
-                        badgeGPS.className = "status-item red";
+                        badgeGPS.classList.remove('green', 'blue');
+                        badgeGPS.classList.add('red');
                     }, { enableHighAccuracy: true });
                 } else {
                     document.getElementById('sb-gps-text').innerText = "NO SUPP";
-                    badgeGPS.className = "status-item red";
+                    badgeGPS.classList.remove('green', 'blue');
+                    badgeGPS.classList.add('red');
                 }
             },
 
@@ -966,14 +887,16 @@
                     }
                 });
 
-                const start = () => {
+                const start = (e) => {
                     if (!this.recording) return;
+                    if (e.type === 'mousedown' && e.button !== 0) return;
+                    
                     longPressTriggered = false;
                     pressTimer = setTimeout(() => {
                         longPressTriggered = true;
                         this.stopRecording();
                         if (navigator.vibrate) navigator.vibrate(500);
-                    }, 1500); // 1.5 seconds
+                    }, 1500); 
                 };
 
                 const cancel = () => { clearTimeout(pressTimer); };
@@ -1204,12 +1127,22 @@
                     if (currentSpeedKmh > this.maxSpeed) this.maxSpeed = currentSpeedKmh;
                 }
 
+                // Update Active Wind Layer Highlight in DOM
+                const windRows = document.querySelectorAll('.wind-layer');
+                windRows.forEach(row => {
+                    const rowAlt = parseInt(row.dataset.alt);
+                    if (Math.abs(rowAlt - data.alt) < 25) {
+                        row.classList.add('active-altitude');
+                    } else {
+                        row.classList.remove('active-altitude');
+                    }
+                });
+
                 if (state.targetWaypoint) {
                     const wp = state.targetWaypoint;
                     const distKm = getDistance(simulation.lat, simulation.lng, wp.lat, wp.lng);
                     const bearing = getBearing(simulation.lat, simulation.lng, wp.lat, wp.lng);
                     document.getElementById('hud-nav').classList.remove('hidden');
-                    document.getElementById('nav-target-name').innerText = 'Ziel';
                     document.getElementById('nav-brg').innerText = Math.round(bearing);
                     if (state.settings.unitAlt === 'ft') { 
                         const distNm = distKm * 0.539957;
@@ -1317,8 +1250,13 @@
                         const labelClass = layer.isMeasured ? 'text-green-400' : '';
                         const arrowClass = layer.isMeasured ? 'compass-arrow arrow-green' : 'compass-arrow';
 
+                        // HIGHLIGHT CURRENT ALTITUDE
+                        const isCurrentAlt = Math.abs(layer.alt - simulation.alt) < 25;
+                        const activeClass = isCurrentAlt ? 'active-altitude' : '';
+
                         const div = document.createElement('div'); 
-                        div.className = 'wind-layer'; 
+                        div.className = `wind-layer ${activeClass}`; 
+                        div.dataset.alt = layer.alt; // Added dataset
                         div.innerHTML = `<div class="${colorClass}">${layer.alt}m</div><div class="${arrowClass}" style="transform: rotate(${layer.dir}deg)"></div><div class="${labelClass}">${speed.toFixed(1)}${unitLabel}</div>`; 
                         container.appendChild(div);
                         
@@ -1568,9 +1506,11 @@
                         const colorClass = layer.isMeasured ? 'text-green-400 font-bold' : 'text-blue-300';
                         const labelClass = layer.isMeasured ? 'text-green-400' : '';
                         const arrowClass = layer.isMeasured ? 'compass-arrow arrow-green' : 'compass-arrow';
+                        const activeClass = (Math.abs(layer.alt - simulation.alt) < 25) ? 'active-altitude' : '';
 
                         const div = document.createElement('div'); 
-                        div.className = 'wind-layer'; 
+                        div.className = `wind-layer ${activeClass}`; 
+                        div.dataset.alt = layer.alt; // Added dataset
                         div.innerHTML = `<div class="${colorClass}">${layer.alt}m</div><div class="${arrowClass}" style="transform: rotate(${layer.dir}deg)"></div><div class="${labelClass}">${speed.toFixed(1)}${unitLabel}</div>`; 
                         container.appendChild(div);
                         
@@ -2139,9 +2079,32 @@
         };
         // End of ui (Merged)
 
-        /**
-         * INITIALIZATION
-         */
+        const system = {
+            exportData() {
+                const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'aeronav_backup.json'; a.click();
+            },
+            triggerImport() { document.getElementById('import-input').click(); },
+            importData(input) {
+                if (input.files && input.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = e => {
+                        try {
+                            const data = JSON.parse(e.target.result);
+                            if (data.pilot) { state = data; saveState(); alert("Import erfolgreich!"); location.reload(); }
+                        } catch (err) { alert("Format-Fehler!"); }
+                    };
+                    reader.readAsText(input.files[0]);
+                }
+            },
+            resetData() {
+                if (confirm("Sicher? Alle Daten werden gelöscht!")) {
+                    localStorage.removeItem(STORAGE_KEY);
+                    location.reload();
+                }
+            }
+        };
+
         window.onload = () => {
             mapManager.init();
             simulation.init();
