@@ -188,6 +188,55 @@
             top: 0;
             z-index: 9999;
         }
+        
+        /* Collapsible Status Bar */
+        .status-bar {
+            position: absolute;
+            top: 0;
+            right: 0;
+            height: 100%;
+            width: 6px; /* Collapsed width */
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            padding: 2px 0;
+            transition: width 0.3s ease;
+            overflow: hidden;
+            cursor: pointer;
+            z-index: 2000;
+            border-left: 1px solid rgba(255,255,255,0.05);
+            background: rgba(0,0,0,0.2);
+            border-top-right-radius: 12px;
+            border-bottom-right-radius: 12px;
+        }
+        .status-bar:hover, .status-bar.expanded {
+            width: 120px; /* Expanded width */
+            background: rgba(15, 23, 42, 0.95);
+            padding: 4px;
+        }
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            white-space: nowrap;
+            color: white;
+            padding: 2px;
+            border-radius: 4px;
+        }
+        .status-indicator {
+            width: 4px;
+            height: 100%;
+            min-height: 12px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+        .status-bar:hover .status-indicator, .status-bar.expanded .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
 
         /* Form Controls */
         input, select, textarea { background: rgba(30, 41, 59, 0.5) !important; border: 1px solid rgba(255,255,255,0.1) !important; color: white !important; border-radius: 6px; padding: 8px 12px; width: 100%; }
@@ -254,7 +303,6 @@
             .sidebar-left { left: 5px; bottom: 20px; gap: 8px; }
             .sidebar-right-container { right: 5px; top: 75px; }
             .btn-round { width: 44px; height: 44px; font-size: 1rem; }
-            #status-badges { right: 0px !important; top: 5px !important; }
             .toast-notification { top: 70px; }
         }
     </style>
@@ -293,11 +341,22 @@
             <div class="hud-num"><span id="hud-course">360</span>°</div>
         </div>
 
-        <!-- STATUS BADGES - UPDATED POSITION -->
-        <div id="status-badges" class="absolute top-0 right-0 z-[1001] flex flex-col gap-0.5 pointer-events-none items-end p-1">
-            <div id="badge-gps" class="hidden px-1.5 py-0.5 rounded-l font-bold text-[9px] text-white bg-blue-600/90 backdrop-blur-sm shadow-md">SIMULATION</div>
-            <div id="badge-rec" class="hidden px-1.5 py-0.5 rounded-l font-bold text-[9px] text-white bg-red-600/90 backdrop-blur-sm shadow-md animate-pulse">REC</div>
-            <div id="badge-screen" class="hidden px-1.5 py-0.5 rounded-l font-bold text-[9px] text-yellow-100 bg-yellow-600/80 backdrop-blur-sm shadow-md"><i class="fas fa-sun mr-1"></i>SCREEN ON</div>
+        <!-- NEW COLLAPSIBLE STATUS BAR -->
+        <div class="status-bar" onclick="this.classList.toggle('expanded')" title="Status">
+            <div id="sb-gps" class="status-item hidden">
+                <div class="status-indicator bg-blue-500"></div>
+                <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-300">SIMULATION</span>
+            </div>
+            <div id="sb-rec" class="status-item hidden">
+                <div class="status-indicator bg-red-500 animate-pulse"></div>
+                <span>REC</span>
+            </div>
+            <div id="sb-screen" class="status-item hidden">
+                <div class="status-indicator bg-yellow-400"></div>
+                <span>SCREEN ON</span>
+            </div>
+             <!-- Always visible hint icon at bottom when collapsed -->
+            <div class="absolute bottom-1 right-0.5 text-[8px] text-white/30"><i class="fas fa-info-circle"></i></div>
         </div>
     </div>
 
@@ -500,9 +559,9 @@
                 if (!this.isSupported()) return;
                 try {
                     this.wakeLock = await navigator.wakeLock.request('screen');
-                    document.getElementById('badge-screen').classList.remove('hidden'); 
+                    document.getElementById('sb-screen').classList.remove('hidden'); 
                     this.wakeLock.addEventListener('release', () => {
-                        document.getElementById('badge-screen').classList.add('hidden'); 
+                        document.getElementById('sb-screen').classList.add('hidden'); 
                     });
                 } catch (err) { 
                     console.warn(`Screen Wake Lock ignored: ${err.name}, ${err.message}`);
@@ -545,32 +604,33 @@
             applyMode() {
                 const mode = state.settings.mode;
                 const simPanel = document.getElementById('sim-panel');
-                const gpsBadge = document.getElementById('badge-gps');
+                const gpsBadge = document.getElementById('sb-gps');
 
                 if (mode === 'gps') {
                     simPanel.classList.add('hidden'); 
                     gpsBadge.classList.remove('hidden');
-                    gpsBadge.innerText = "NO GPS";
-                    gpsBadge.className = "px-1.5 py-0.5 rounded font-bold text-[9px] text-white bg-red-500/80 backdrop-blur-sm shadow-md border border-white/20";
+                    // Reset to default
+                    gpsBadge.querySelector('span').innerText = "NO GPS";
+                    gpsBadge.querySelector('.status-indicator').className = "status-indicator bg-red-500";
                     this.startGPS();
                 } else {
                     simPanel.classList.remove('hidden');
                     gpsBadge.classList.remove('hidden');
-                    gpsBadge.innerText = "SIMULATION";
-                    gpsBadge.className = "px-1.5 py-0.5 rounded font-bold text-[9px] text-white bg-blue-600/90 backdrop-blur-sm shadow-md border border-white/20";
+                    gpsBadge.querySelector('span').innerText = "SIMULATION";
+                    gpsBadge.querySelector('.status-indicator').className = "status-indicator bg-blue-500";
                     this.stopGPS();
                 }
             },
 
             startGPS() {
                 wakeLockManager.request();
-                const gpsBadge = document.getElementById('badge-gps');
+                const gpsBadge = document.getElementById('sb-gps');
                 if (navigator.geolocation) {
                     if (this.gpsWatchId) navigator.geolocation.clearWatch(this.gpsWatchId);
                     this.gpsWatchId = navigator.geolocation.watchPosition(pos => {
                         const c = pos.coords;
-                        gpsBadge.innerText = "GPS OK";
-                        gpsBadge.className = "px-1.5 py-0.5 rounded font-bold text-[9px] text-white bg-green-600/80 backdrop-blur-sm shadow-md border border-white/20";
+                        gpsBadge.querySelector('span').innerText = "GPS OK";
+                        gpsBadge.querySelector('.status-indicator').className = "status-indicator bg-green-500";
                         this.lat = c.latitude;
                         this.lng = c.longitude;
                         if(c.altitude !== null) this.alt = c.altitude;
@@ -579,12 +639,12 @@
                         flightManager.updateHUD(this.getCurrentState());
                     }, err => {
                         console.warn("GPS Fehler:", err.message);
-                        gpsBadge.innerText = "NO GPS";
-                        gpsBadge.className = "px-1.5 py-0.5 rounded font-bold text-[9px] text-white bg-red-500/80 backdrop-blur-sm shadow-md border border-white/20";
+                        gpsBadge.querySelector('span').innerText = "NO GPS";
+                        gpsBadge.querySelector('.status-indicator').className = "status-indicator bg-red-500";
                     }, { enableHighAccuracy: true });
                 } else {
-                    gpsBadge.innerText = "NO GPS SUPP";
-                    gpsBadge.className = "px-1.5 py-0.5 rounded font-bold text-[9px] text-white bg-red-500/80 backdrop-blur-sm shadow-md border border-white/20";
+                    gpsBadge.querySelector('span').innerText = "NO SUPP";
+                    gpsBadge.querySelector('.status-indicator').className = "status-indicator bg-red-500";
                 }
             },
 
@@ -784,7 +844,7 @@
                     if (!this.recording) {
                         ui.showStartDialog();
                     } else {
-                        ui.showToast("Zum Stoppen 2 Sek. gedrückt halten", "error");
+                        ui.showToast("Zum Stoppen 1.5 Sek. gedrückt halten", "error");
                     }
                 });
 
@@ -795,7 +855,7 @@
                         longPressTriggered = true;
                         this.stopRecording();
                         if (navigator.vibrate) navigator.vibrate(500);
-                    }, 2000);
+                    }, 1500); // 1.5 seconds
                 };
 
                 const cancel = () => { clearTimeout(pressTimer); };
@@ -850,7 +910,7 @@
                 this.start = new Date();
                 
                 document.getElementById('btn-record').classList.add('recording');
-                document.getElementById('badge-rec').classList.remove('hidden');
+                document.getElementById('sb-rec').classList.remove('hidden');
                 document.getElementById('btn-take-photo').classList.remove('hidden');
                 
                 ui.closeModal();
@@ -862,7 +922,6 @@
                 }
 
                 const end = new Date();
-                const recBadge = document.getElementById('badge-rec');
                 
                 const balloonName = this.currentActivePlan ? this.currentActivePlan.balloonName : (state.balloons.find(b => b.id === state.settings.activeBalloonId)?.callsign || "Spontan");
                 
@@ -922,7 +981,7 @@
                 
                 this.recording = false;
                 document.getElementById('btn-record').classList.remove('recording');
-                recBadge.classList.add('hidden');
+                document.getElementById('sb-rec').classList.add('hidden');
                 document.getElementById('btn-take-photo').classList.add('hidden');
                 
                 ui.showSummary(newLog);
@@ -963,7 +1022,6 @@
 
                     // Update Max Stats
                     if (data.alt > this.maxAlt) this.maxAlt = data.alt;
-                    // Internal speed is kt. 
                     let currentSpeedKmh = data.speed * 1.852;
                     if (currentSpeedKmh > this.maxSpeed) this.maxSpeed = currentSpeedKmh;
                 }
@@ -1187,7 +1245,14 @@
             saveCylinder() { const data = { id: this.editingId === 'new' ? Date.now().toString() : this.editingId, label: document.getElementById('f-label').value, type: document.getElementById('f-type').value, sn: document.getElementById('f-sn').value, tare: parseFloat(document.getElementById('f-tare').value), gas: parseFloat(document.getElementById('f-gas').value), tuv: document.getElementById('f-tuv').value }; if (this.editingId === 'new') state.cylinders.push(data); else state.cylinders = state.cylinders.map(x => x.id === this.editingId ? data : x); saveState(); this.switchTab('cylinders'); },
             savePassenger() { const data = { id: this.editingId === 'new' ? Date.now().toString() : this.editingId, name: document.getElementById('f-name').value, weight: parseFloat(document.getElementById('f-p-weight').value), gender: document.getElementById('f-gender').value, phone: document.getElementById('f-phone').value }; if (this.editingId === 'new') state.passengers.push(data); else state.passengers = state.passengers.map(x => x.id === this.editingId ? data : x); saveState(); this.switchTab('passengers'); },
             saveLogManual() { const date = document.getElementById('f-l-date').value; state.logs.push({ id: Date.now(), start: date + "T" + document.getElementById('f-l-start').value, end: date + "T" + document.getElementById('f-l-end').value, balloon: document.getElementById('f-l-balloon').value, notes: document.getElementById('f-l-notes').value, track: [] }); saveState(); this.switchTab('logbook'); },
-            delete(collection, id) { if (confirm("Löschen?")) { state[collection] = state[collection].filter(x => x.id != id); saveState(); this.render(); } },
+            delete(collection, id) { 
+                if (confirm("Löschen?")) { 
+                    // Handle numeric vs string IDs safely
+                    state[collection] = state[collection].filter(x => x.id != id); 
+                    saveState(); 
+                    this.render(); 
+                } 
+            },
 
             saveSettings(silent = false) {
                 state.pilot.name = document.getElementById('set-pilot-name').value;
@@ -1720,9 +1785,11 @@
             archivePlanFromSummary(planId, btn) {
                 if(confirm("Die verwendete Planung jetzt ins Archiv verschieben?")) {
                     this.archivePlan(planId);
+                    // Feedback to user (Update Button immediately)
                     btn.innerHTML = '<i class="fas fa-check"></i>';
                     btn.className = "bg-green-600/20 text-green-400 border border-green-500/30 px-3 rounded cursor-default";
                     btn.onclick = null;
+                    btn.title = "Archiviert";
                 }
             },
 
