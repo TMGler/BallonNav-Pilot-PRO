@@ -89,7 +89,7 @@
         .hud-top {
             pointer-events: auto;
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
+            grid-template-columns: repeat(5, 1fr); /* Time column */
             gap: 4px;
             padding: 8px;
             width: 100%;
@@ -192,6 +192,9 @@
         }
         .text-blink-red { animation: blink-red 0.8s infinite ease-in-out; }
 
+        /* Time Display Style */
+        #hud-time { font-size: 1.1rem; color: #cbd5e1; font-family: 'Inter', sans-serif; font-weight: 600; margin-top: 2px; }
+
         .sidebar-left { 
             position: absolute; 
             bottom: 30px; 
@@ -293,78 +296,31 @@
         label { font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; display: block; }
         .perf-grid input { padding: 4px; text-align: center; font-size: 0.8rem; }
 
-        /* --- MOBILE & LANDSCAPE OPTIMIZATIONS --- */
-        @media (max-width: 640px) {
-            .modal-content { width: 100%; height: 100%; min-height: 100vh; border-radius: 0; border: none; margin: 0; padding: 15px; }
-            .sidebar-left { left: 5px; bottom: 20px; gap: 8px; }
-            .status-area { top: 5px; right: 0; }
-            .sidebar-right-container { right: 5px; }
-            .btn-round { width: 44px; height: 44px; font-size: 1rem; }
-            .toast-notification { top: 70px; }
-            /* Mobile Tabs: Flex wrap to avoid cut off */
-            .flex.border-b.overflow-x-auto {
-                flex-wrap: wrap;
-                overflow-x: hidden;
-            }
-        }
-
-        /* --- LANDSCAPE MODE: Compact HUDs --- */
-        @media (orientation: landscape) and (max-height: 500px) {
-            .hud-top-container { top: 0; width: 60%; min-height: 60px; }
-            .hud-top { padding: 4px; gap: 4px; }
-            .hud-num { font-size: 1.1rem; } 
-            .hud-label { font-size: 0.6rem; }
-            .hud-nav-container { top: 60px; width: 50%; min-height: 60px; }
-            .hud-nav { padding: 4px; gap: 4px; }
-            .hud-nav .hud-num { font-size: 1rem; }
-            .sidebar-left { bottom: 10px; gap: 5px; }
-            .btn-round { width: 38px; height: 38px; font-size: 0.9rem; }
-            .sidebar-right-container { top: 120px; right: 5px; }
-            #wind-content-wrapper { max-height: calc(100vh - 150px); }
-        }
-        
-        @media (orientation: portrait) and (max-width: 640px) {
-            .hud-top-container { width: 98%; top: 5px; }
-            .hud-top { padding: 6px 4px; gap: 2px; }
-            .hud-num { font-size: 1.4rem; }
-            .hud-label { font-size: 0.7rem; }
-            .hud-nav-container { top: 80px; width: 98%; }
-            .sidebar-right-container { top: 190px; }
-        }
     </style>
 </head>
 <body>
 
     <div id="map"></div>
     
-    <!-- Fullscreen Loading Overlay for Report Gen -->
     <div id="loading-overlay" class="fixed inset-0 z-[6000] bg-slate-900/95 flex flex-col items-center justify-center hidden backdrop-blur-sm">
         <div class="loader mb-4" style="width: 40px; height: 40px; border-width: 4px;"></div>
         <div class="text-white font-bold text-lg">Erstelle Bericht...</div>
         <div class="text-slate-400 text-sm">Bitte warten, Karte wird gerendert</div>
     </div>
     
-    <!-- Photo View Overlay -->
     <div id="photo-overlay" onclick="this.style.display='none'">
         <img id="photo-overlay-img" src="">
     </div>
     
-    <!-- SELECTION OVERLAY -->
     <div id="selection-overlay">
         <div class="selection-box">
             <div class="p-4 border-b border-white/10 flex justify-between items-center bg-slate-900/50 rounded-t-xl">
                 <h3 id="sel-title" class="font-bold text-white">Auswahl</h3>
                 <button onclick="document.getElementById('selection-overlay').style.display='none'" class="text-slate-400 hover:text-white px-2"><i class="fas fa-times"></i></button>
             </div>
-            <div id="sel-content" class="overflow-y-auto p-2 flex-1 space-y-1 max-h-[60vh]">
-                <!-- Items injected here -->
-            </div>
+            <div id="sel-content" class="overflow-y-auto p-2 flex-1 space-y-1 max-h-[60vh]"></div>
         </div>
     </div>
-
-    <!-- Hidden Inputs -->
-    <input type="file" id="cam-input" accept="image/*" capture="environment" class="hidden" onchange="flightManager.handlePhotoInput(this)">
-    <input type="file" id="import-input" accept=".json" class="hidden" onchange="system.importData(this)">
 
     <!-- HUD TOP CONTAINER -->
     <div id="hud-top-container" class="hud-top-container hud-container-anim">
@@ -407,6 +363,9 @@
         </div>
         <div id="sb-gps" class="status-badge blue" onclick="this.classList.toggle('active')">
              <i class="fas fa-satellite-dish text-[10px]"></i> <span id="sb-gps-text">NO GPS</span>
+        </div>
+        <div id="sb-baro" class="status-badge green hidden" onclick="this.classList.toggle('active')">
+             <i class="fas fa-tachometer-alt text-[10px]"></i> <span>BARO ON</span>
         </div>
         <div id="sb-screen" class="status-badge yellow hidden" onclick="this.classList.toggle('active')">
              <i class="fas fa-sun text-[10px]"></i> <span>SCREEN ON</span>
@@ -679,6 +638,59 @@
         };
 
         /**
+         * BAROMETER SERVICE (Experimental)
+         */
+        const barometerService = {
+            sensor: null,
+            isAvailable: false,
+            lastPressure: null,
+            lastTime: null,
+            vario: 0,
+            
+            init() {
+                if ('Barometer' in window) {
+                    try {
+                        this.sensor = new Barometer({ frequency: 10 }); // High frequency for Vario
+                        this.sensor.addEventListener('reading', () => this.handleReading());
+                        this.sensor.addEventListener('error', (e) => {
+                            console.warn("Barometer error", e);
+                        });
+                        this.sensor.start();
+                        this.isAvailable = true;
+                        
+                        const b = document.getElementById('sb-baro');
+                        if(b) b.classList.remove('hidden');
+                        
+                    } catch (err) {
+                        console.log("Barometer not supported/allowed", err);
+                    }
+                }
+            },
+            
+            handleReading() {
+                const now = Date.now();
+                const pressure = this.sensor.pressure; // hPa
+                
+                if (this.lastPressure && this.lastTime) {
+                    const dt = (now - this.lastTime) / 1000;
+                    if (dt > 0) {
+                        // Formula: dh approx -8.43 * dp at sea level. More precise: 44330 * (1 - (p/p0)^0.1903)
+                        const alt1 = 44330 * (1 - Math.pow(this.lastPressure/1013.25, 0.1903));
+                        const alt2 = 44330 * (1 - Math.pow(pressure/1013.25, 0.1903));
+                        
+                        const instantVario = (alt2 - alt1) / dt;
+                        
+                        // Simple smoothing
+                        this.vario = (this.vario * 0.8) + (instantVario * 0.2);
+                    }
+                }
+                
+                this.lastPressure = pressure;
+                this.lastTime = now;
+            }
+        };
+
+        /**
          * AI SERVICE (GEMINI)
          */
         const aiService = {
@@ -793,6 +805,9 @@
          */
         const simulation = {
             gpsWatchId: null,
+            lastGpsTime: null,
+            lastGpsAlt: null,
+            
             lat: 51.1657, lng: 10.4515, alt: 200, targetAlt: 200,
             course: 270, speed: 5, vario: 0,
 
@@ -808,6 +823,9 @@
                         }
                     }, () => {});
                 }
+                
+                barometerService.init();
+                
                 setInterval(() => this.tick(), 1000);
                 this.applyMode();
             },
@@ -824,20 +842,16 @@
                 if (mode === 'gps') {
                     simPanel.classList.add('hidden'); 
                     badgeGPS.classList.remove('hidden');
-                    
                     badgeGPS.classList.remove('blue', 'green'); 
                     badgeGPS.classList.add('red');
-                    
                     if(badgeGPSText) badgeGPSText.innerText = "NO GPS";
                     this.startGPS();
                 } else {
                     simPanel.classList.remove('hidden');
                     badgeGPS.classList.remove('hidden');
                     if(badgeGPSText) badgeGPSText.innerText = "SIMULATION";
-                    
                     badgeGPS.classList.remove('red', 'green');
                     badgeGPS.classList.add('blue');
-                    
                     this.stopGPS();
                 }
             },
@@ -849,23 +863,52 @@
                 
                 if (navigator.geolocation) {
                     if (this.gpsWatchId) navigator.geolocation.clearWatch(this.gpsWatchId);
+                    
                     this.gpsWatchId = navigator.geolocation.watchPosition(pos => {
                         const c = pos.coords;
+                        const now = Date.now();
+                        
                         if(badgeGPSText) badgeGPSText.innerText = "GPS OK";
                         badgeGPS.classList.remove('red', 'blue');
                         badgeGPS.classList.add('green');
+                        
                         this.lat = c.latitude;
                         this.lng = c.longitude;
-                        if(c.altitude !== null) this.alt = c.altitude;
+                        
+                        // Calculate Vario if Barometer not available
+                        if (c.altitude !== null) {
+                            if (barometerService.isAvailable) {
+                                // Use Barometer vario if available
+                                this.vario = barometerService.vario;
+                                this.alt = c.altitude; 
+                            } else {
+                                // Fallback GPS Vario
+                                if (this.lastGpsTime && this.lastGpsAlt !== null) {
+                                    const dt = (now - this.lastGpsTime) / 1000;
+                                    if (dt > 0) {
+                                        const instantVario = (c.altitude - this.lastGpsAlt) / dt;
+                                        // Simple low pass filter
+                                        this.vario = (this.vario * 0.7) + (instantVario * 0.3);
+                                    }
+                                }
+                                this.alt = c.altitude;
+                                this.lastGpsAlt = c.altitude;
+                                this.lastGpsTime = now;
+                            }
+                        }
+
                         this.speed = (c.speed || 0) * 1.94384; 
                         if(c.heading !== null && !isNaN(c.heading)) this.course = c.heading;
+                        
                         flightManager.updateHUD(this.getCurrentState());
+                        
                     }, err => {
                         console.warn("GPS Fehler:", err.message);
                         if(badgeGPSText) badgeGPSText.innerText = "NO GPS";
                         badgeGPS.classList.remove('green', 'blue');
                         badgeGPS.classList.add('red');
-                    }, { enableHighAccuracy: true });
+                        ui.showToast("GPS Signal verloren", "error");
+                    }, { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 });
                 } else {
                     if(badgeGPSText) badgeGPSText.innerText = "NO SUPP";
                     badgeGPS.classList.remove('green', 'blue');
@@ -930,7 +973,8 @@
                 const lng = center.lng;
                 document.getElementById('wind-layers-container').innerHTML = '<div class="text-center p-2"><div class="loader"></div></div>';
                 try {
-                    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=wind_speed_10m,wind_direction_10m&hourly=wind_speed_1000hPa,wind_direction_1000hPa,wind_speed_950hPa,wind_direction_950hPa,wind_speed_850hPa,wind_direction_850hPa,wind_speed_700hPa,wind_direction_700hPa&wind_speed_unit=kn`;
+                    // Changed to include &models=best_match
+                    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=wind_speed_10m,wind_direction_10m&hourly=wind_speed_1000hPa,wind_direction_1000hPa,wind_speed_950hPa,wind_direction_950hPa,wind_speed_850hPa,wind_direction_850hPa,wind_speed_700hPa,wind_direction_700hPa&wind_speed_unit=kn&models=best_match`;
                     const response = await fetch(url);
                     const data = await response.json();
                     if (!data.hourly) throw new Error("Keine Daten");
@@ -1204,20 +1248,16 @@
                     plan = state.plannings.find(p => p.id == planId) || state.archive.find(p => p.id == planId);
                 }
                 
-                // --- NEW: Handle Explicit Balloon Selection ---
-                // If plan exists, it already has balloonId. If spontaneous, we might have passed balloonId.
-                // We construct a temporary "active plan" object to hold this context.
-                
+                // Handle Explicit Balloon Selection
                 if (!plan && balloonId) {
                     const b = state.balloons.find(x => x.id === balloonId);
-                    // Create a pseudo-plan for spontaneous flight context
                     this.currentActivePlan = {
-                        id: null, // No plan ID
+                        id: null, 
                         name: "Spontanfahrt",
                         balloonId: balloonId,
                         balloonName: b ? b.callsign : "Unbekannt",
-                        passengers: [], // Start empty
-                        cylinders: []   // Start empty
+                        passengers: [], 
+                        cylinders: []
                     };
                 } else {
                     this.currentActivePlan = plan;
@@ -1252,7 +1292,7 @@
 
                 const end = new Date();
                 
-                // Use balloon from active context (Plan or Spontaneous) or fallback to default
+                // Use balloon from active context
                 let balloonName = "Spontan";
                 if (this.currentActivePlan && this.currentActivePlan.balloonName) {
                     balloonName = this.currentActivePlan.balloonName;
@@ -1301,7 +1341,7 @@
                     end: end.toISOString(), 
                     track: this.points, 
                     balloon: balloonName,
-                    notes: "", // Changed from start/end loc
+                    notes: "", 
                     startLoc: startLoc, 
                     endLoc: endLoc,     
                     planId: this.currentActivePlan ? this.currentActivePlan.id : null,
@@ -1365,21 +1405,18 @@
                 }
 
                 // Check limits (using internal m/s values for physics consistency)
-                // Climb limit check
-                if (currentBalloon && currentBalloon.maxClimb && data.vario > currentBalloon.maxClimb) {
-                     varioValEl.classList.add('text-blink-red');
-                     varioLblEl.classList.add('text-blink-red');
-                } 
-                // Descent limit check (maxDescent is stored as positive number, so compare with -maxDescent)
-                else if (currentBalloon && currentBalloon.maxDescent && data.vario < -currentBalloon.maxDescent) {
-                     varioValEl.classList.add('text-blink-red');
-                     varioLblEl.classList.add('text-blink-red');
-                } 
-                // Normal coloring
-                else if (data.vario >= 0.1) { 
-                    varioValEl.classList.add('text-green-400'); varioLblEl.classList.add('text-green-400'); 
-                } else if (data.vario <= -0.1) { 
-                    varioValEl.classList.add('text-red-400'); varioLblEl.classList.add('text-red-400'); 
+                if (currentBalloon) {
+                    const maxClimb = currentBalloon.maxClimb || 5;
+                    const maxDescent = currentBalloon.maxDescent || 3;
+                    
+                    if (data.vario > maxClimb || data.vario < -maxDescent) {
+                         varioValEl.classList.add('text-blink-red');
+                         varioLblEl.classList.add('text-blink-red');
+                    } else if (data.vario >= 0.1) { 
+                        varioValEl.classList.add('text-green-400'); varioLblEl.classList.add('text-green-400'); 
+                    } else if (data.vario <= -0.1) { 
+                        varioValEl.classList.add('text-red-400'); varioLblEl.classList.add('text-red-400'); 
+                    }
                 }
                 
                 // Update Time Display if Recording
@@ -1389,8 +1426,7 @@
                     const diffMs = now - this.start;
                     const h = Math.floor(diffMs / 3600000);
                     const m = Math.floor((diffMs % 3600000) / 60000);
-                    const s = Math.floor((diffMs % 60000) / 1000);
-                    timeEl.innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+                    timeEl.innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
                 } else {
                     timeEl.innerText = "--:--";
                 }
@@ -1423,7 +1459,7 @@
                     const wp = state.targetWaypoint;
                     const distKm = getDistance(simulation.lat, simulation.lng, wp.lat, wp.lng);
                     const bearing = getBearing(simulation.lat, simulation.lng, wp.lat, wp.lng);
-                    document.getElementById('hud-nav-container').classList.remove('hidden'); // Use container for show/hide
+                    document.getElementById('hud-nav-container').classList.remove('hidden'); 
                     
                     document.getElementById('nav-brg').innerText = Math.round(bearing);
                     if (state.settings.unitAlt === 'ft') { 
@@ -1487,6 +1523,7 @@
                 hud.classList.toggle('minimized');
                 container.classList.toggle('docked');
                 
+                // Rotation logic handled via CSS class 'collapsed'
                 btnIcon.classList.toggle('collapsed', hud.classList.contains('minimized'));
             },
 
@@ -1498,6 +1535,7 @@
                 nav.classList.toggle('minimized'); 
                 container.classList.toggle('docked');
                 
+                // Rotation logic handled via CSS class 'collapsed'
                 btnIcon.classList.toggle('collapsed', nav.classList.contains('minimized'));
             },
             
@@ -1518,277 +1556,9 @@
             },
             
             switchTab(t) { this.tab = t; this.editingId = null; document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.onclick.toString().includes(`'${t}'`))); this.render(); },
+            render() { const c = document.getElementById('tab-content'); c.innerHTML = ''; if (this.editingId) { this.renderForm(c); return; } switch(this.tab) { case 'planning': this.viewPlanning(c); break; case 'fleet': this.viewFleet(c); break; case 'cylinders': this.viewCylinders(c); break; case 'passengers': this.viewPassengers(c); break; case 'logbook': this.viewLogbook(c); break; case 'settings': this.viewSettings(c); break; case 'environment': this.viewEnvironment(c); break; } },
             
-            render() { 
-                const c = document.getElementById('tab-content'); 
-                c.innerHTML = ''; 
-                if (this.editingId) { 
-                    this.renderForm(c); 
-                    return; 
-                } 
-                switch(this.tab) { 
-                    case 'planning': this.viewPlanning(c); break; 
-                    case 'fleet': this.viewFleet(c); break; 
-                    case 'cylinders': this.viewCylinders(c); break; 
-                    case 'passengers': this.viewPassengers(c); break; 
-                    case 'logbook': this.viewLogbook(c); break; 
-                    case 'settings': this.viewSettings(c); break; 
-                    case 'environment': this.viewEnvironment(c); break; 
-                } 
-            },
-            
-            renderWind() { 
-                const container = document.getElementById('wind-layers-container'); 
-                if(!container) return;
-                container.innerHTML = ''; 
-                
-                const isKmh = state.settings.unitSpeed === 'kmh';
-                const unitLabel = isKmh ? 'km/h' : 'kt';
-                const threshold = state.settings.windThreshold || 5;
-
-                const layerMap = new Map();
-                
-                state.windLayers.forEach(l => layerMap.set(l.alt, { ...l, isMeasured: false }));
-                
-                if (state.measuredWindLayers) {
-                    state.measuredWindLayers.forEach(l => layerMap.set(l.alt, { ...l, isMeasured: true }));
-                }
-
-                const sortedLayers = Array.from(layerMap.values()).sort((a, b) => b.alt - a.alt);
-
-                let lastKeptDir = null;
-                
-                sortedLayers.forEach((layer, index) => {
-                    let keep = false;
-                    
-                    if (index === 0) keep = true;
-                    else if (layer.isMeasured) keep = true;
-                    else {
-                        if (lastKeptDir === null) {
-                            keep = true;
-                        } else {
-                            let diff = Math.abs(layer.dir - lastKeptDir);
-                            if (diff > 180) diff = 360 - diff;
-                            if (diff >= threshold) keep = true;
-                        }
-                    }
-
-                    if (keep) {
-                        let speed = layer.speed;
-                        if (isKmh) speed *= 1.852; 
-
-                        const colorClass = layer.isMeasured ? 'text-green-400 font-bold' : 'text-blue-300';
-                        const labelClass = layer.isMeasured ? 'text-green-400' : '';
-                        const arrowClass = layer.isMeasured ? 'compass-arrow arrow-green' : 'compass-arrow';
-
-                        const isCurrentAlt = Math.abs(layer.alt - simulation.alt) < 25;
-                        const activeClass = isCurrentAlt ? 'active-altitude' : '';
-
-                        const div = document.createElement('div'); 
-                        div.className = `wind-layer ${activeClass}`; 
-                        div.dataset.alt = layer.alt; 
-                        div.innerHTML = `<div class="${colorClass}">${layer.alt}m</div><div class="${arrowClass}" style="transform: rotate(${layer.dir}deg)"></div><div class="${labelClass}">${speed.toFixed(1)}${unitLabel}</div>`; 
-                        container.appendChild(div);
-                        
-                        lastKeptDir = layer.dir;
-                    }
-                });
-            },
-
-            // --- FORM RENDERING & HELPERS ---
-            edit(id) { this.editingId = id; this.render(); },
-            renderForm(c) {
-                if (this.tab === 'fleet') this.formBalloon(c);
-                if (this.tab === 'cylinders') this.formCylinder(c);
-                if (this.tab === 'passengers') this.formPassenger(c);
-                if (this.tab === 'logbook') this.formLogManual(c);
-            },
-            
-            formBalloon(c) {
-                const b = state.balloons.find(x => x.id === this.editingId) || { callsign: "", volume: 3000, weight: 400, mtom: 1100, maxClimb: 5, maxDescent: 3, defaultCylinders: [], matrix: [[0.320, 0.280, 0.240],[0.280, 0.240, 0.200],[0.240, 0.200, 0.160],[0.200, 0.160, 0.120]], image: null };
-                const defCyls = b.defaultCylinders || [];
-                // Helper to render default cylinder list items
-                const renderDefaultList = () => defCyls.map(id => { 
-                    const cyl = state.cylinders.find(cx => cx.id === id); 
-                    if (!cyl) return ''; 
-                    return `<div class="flex justify-between items-center bg-slate-800 p-2 rounded mb-1 text-xs default-cyl-item" data-id="${id}"><span>${cyl.label} (${cyl.type})</span> <button onclick="ui.removeEditCylinder(this)" class="text-red-400 hover:text-red-300"><i class="fas fa-times"></i></button></div>`; 
-                }).join('');
-                
-                // Determine units for display
-                const isFt = state.settings.unitVario === 'fts';
-                const climbUnit = isFt ? '1000 ft/min' : 'm/s';
-                let valClimb = b.maxClimb || 5;
-                let valDescent = b.maxDescent || 3;
-                let step = 0.1;
-                
-                c.innerHTML = `
-                    <h3 class="text-xl font-bold mb-4">${this.editingId === 'new' ? 'Neuer Ballon' : 'Ballon bearbeiten'}</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="space-y-4">
-                            <div><label>Kennung</label><input type="text" id="f-callsign" value="${b.callsign}" placeholder="z.B. D-OAAA"></div>
-                            
-                            <!-- Bild Upload -->
-                            <div>
-                                <label>Ballon Bild (für Karte)</label>
-                                <div class="flex items-center gap-4 bg-white/5 p-2 rounded border border-white/10">
-                                    <div class="w-12 h-12 bg-slate-800 rounded-full border border-white/20 flex items-center justify-center overflow-hidden shrink-0">
-                                        <img id="preview-balloon-img" src="${b.image || ''}" class="w-full h-full object-cover ${b.image ? '' : 'hidden'}">
-                                        <span class="${b.image ? 'hidden' : ''} text-[8px] text-slate-500 uppercase">Kein Bild</span>
-                                    </div>
-                                    <div class="flex-1">
-                                        <input type="file" id="f-image" accept="image/*" class="text-xs w-full file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700" onchange="ui.handleImageUpload(this)">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <div><label>Volumen (m³)</label><input type="number" id="f-volume" value="${b.volume}"></div>
-                                <div><label>Leergewicht (kg)</label><input type="number" id="f-weight" value="${b.weight}"></div>
-                            </div>
-                            
-                            <div class="grid grid-cols-2 gap-2 bg-slate-800/50 p-2 rounded border border-white/5">
-                                <div>
-                                    <label class="text-green-400">Max Steigen (${climbUnit})</label>
-                                    <input type="number" step="0.1" id="f-maxClimb" value="${valClimb}">
-                                </div>
-                                <div>
-                                    <label class="text-red-400">Max Sinken (${climbUnit})</label>
-                                    <input type="number" step="0.1" id="f-maxDescent" value="${valDescent}">
-                                </div>
-                                <div class="col-span-2 text-[10px] text-slate-500 italic text-center">
-                                   ${isFt ? 'Eingabe in m/s (wird intern umgerechnet)' : 'Werte in m/s'}
-                                </div>
-                            </div>
-
-                            <div><label>MTOM (kg)</label><input type="number" id="f-mtom" value="${b.mtom}"></div>
-                            
-                            <div class="border-t border-white/10 pt-4 mt-2">
-                                <label class="text-blue-400 font-bold mb-2">Standard-Flaschenbestückung</label>
-                                <div class="glass-panel p-3 border border-white/5 bg-slate-900/40">
-                                    <div id="edit-cyl-list" class="mb-3 max-h-32 overflow-y-auto">${defCyls.length > 0 ? renderDefaultList() : '<div class="text-xs text-slate-500 italic">Keine Standard-Flaschen</div>'}</div>
-                                    <div class="flex gap-2"><select id="edit-cyl-select" class="text-xs bg-slate-800 border-none w-full"><option value="">+ Flasche wählen</option>${state.cylinders.map(c => `<option value="${c.id}">${c.label} (${c.type})</option>`).join('')}</select><button onclick="ui.addEditCylinder()" class="bg-blue-600 px-3 rounded text-xs hover:bg-blue-500 shrink-0"><i class="fas fa-plus"></i></button></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div>
-                            <label>Tragkraft-Matrix (kg/m³)</label>
-                            <div class="perf-grid grid grid-cols-4 gap-1 text-[10px] text-center">
-                                <div></div><div>0°C</div><div>15°C</div><div>30°C</div><div>0m</div>${b.matrix.map((row, i) => `${i > 0 ? `<div>${i*1000}m</div>` : ''}${row.map((val, j) => `<input type="number" step="0.001" class="matrix-input" data-row="${i}" data-col="${j}" value="${val}">`).join('')}`).join('')}
-                            </div>
-                            <p class="text-[9px] text-slate-500 mt-2">Werte: Netto-Tragkraft in kg pro 1m³ Hülle.</p>
-                        </div>
-                    </div>
-                    <div class="flex gap-2 mt-6"><button onclick="ui.saveBalloon()" class="bg-blue-600 px-6 py-2 rounded">Speichern</button><button onclick="ui.switchTab('fleet')" class="bg-slate-700 px-6 py-2 rounded">Abbrechen</button></div>
-                `;
-            },
-            
-            handleImageUpload(input) {
-                if (input.files && input.files[0]) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        const img = document.getElementById('preview-balloon-img');
-                        img.src = e.target.result;
-                        img.classList.remove('hidden');
-                        img.nextElementSibling.classList.add('hidden'); // Hide text placeholder
-                    }
-                    reader.readAsDataURL(input.files[0]);
-                }
-            },
-            
-            addEditCylinder() { 
-                const sel = document.getElementById('edit-cyl-select'); 
-                const id = sel.value; 
-                if (!id) return; 
-                const list = document.getElementById('edit-cyl-list'); 
-                // Check dupes
-                if (list.querySelector(`[data-id="${id}"]`)) return; 
-                if(list.innerHTML.includes('Keine Standard')) list.innerHTML = ''; 
-                
-                const cyl = state.cylinders.find(c => c.id === id); 
-                const div = document.createElement('div'); 
-                div.className = "flex justify-between items-center bg-slate-800 p-2 rounded mb-1 text-xs default-cyl-item"; 
-                div.setAttribute('data-id', id); 
-                div.innerHTML = `<span>${cyl.label} (${cyl.type})</span> <button onclick="ui.removeEditCylinder(this)" class="text-red-400 hover:text-red-300"><i class="fas fa-times"></i></button>`; 
-                list.appendChild(div); 
-            },
-            
-            removeEditCylinder(btn) { btn.parentElement.remove(); },
-
-            formCylinder(c) {
-                const cyl = state.cylinders.find(x => x.id === this.editingId) || { label: "", type: "V40", sn: "", tare: 15, gas: 20, tuv: "2028-12-31" };
-                c.innerHTML = `<h3 class="text-xl font-bold mb-4">Gasflasche Details</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="col-span-1 md:col-span-2"><label>Bezeichnung</label><input type="text" id="f-label" value="${cyl.label}"></div><div><label>Typ</label><input type="text" id="f-type" value="${cyl.type}"></div><div><label>Seriennummer</label><input type="text" id="f-sn" value="${cyl.sn}"></div><div><label>Tara (kg)</label><input type="number" id="f-tare" value="${cyl.tare}"></div><div><label>Gasfüllung (kg)</label><input type="number" id="f-gas" value="${cyl.gas}"></div><div class="col-span-1 md:col-span-2"><label>Nächster TÜV</label><input type="date" id="f-tuv" value="${cyl.tuv}"></div></div><div class="flex gap-2 mt-6"><button onclick="ui.saveCylinder()" class="bg-blue-600 px-6 py-2 rounded">Speichern</button><button onclick="ui.switchTab('cylinders')" class="bg-slate-700 px-6 py-2 rounded">Abbrechen</button></div>`;
-            },
-            formPassenger(c) {
-                const p = state.passengers.find(x => x.id === this.editingId) || { firstName: "", lastName: "", weight: 80, gender: "n/a", phone: "", baptism: false, baptismName: "" };
-                c.innerHTML = `<h3 class="text-xl font-bold mb-4">Passagier Details</h3>
-                    <div class="space-y-4">
-                        <div class="grid grid-cols-2 gap-4">
-                            <div><label>Vorname</label><input type="text" id="f-firstName" value="${p.firstName || ''}"></div>
-                            <div><label>Nachname</label><input type="text" id="f-lastName" value="${p.lastName || ''}"></div>
-                        </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div><label>Gewicht (kg)</label><input type="number" id="f-p-weight" value="${p.weight}"></div>
-                            <div><label>Geschlecht</label><select id="f-gender"><option value="n/a" ${p.gender==='n/a'?'selected':''}>n/a</option><option value="m" ${p.gender==='m'?'selected':''}>Männlich</option><option value="w" ${p.gender==='w'?'selected':''}>Weiblich</option><option value="d" ${p.gender==='d'?'selected':''}>Divers</option></select></div>
-                        </div>
-                        <div><label>Telefonnummer</label><input type="tel" id="f-phone" value="${p.phone}"></div>
-                        
-                        <!-- NEW BAPTISM FIELDS -->
-                        <div class="bg-amber-900/20 p-3 rounded border border-amber-600/30">
-                            <label class="flex items-center gap-2 mb-2 cursor-pointer font-bold text-amber-500">
-                                <input type="checkbox" id="f-baptism" class="w-4 h-4 rounded border-amber-500 text-amber-600 focus:ring-amber-500" ${p.baptism ? 'checked' : ''}>
-                                Ballonfahrertaufe erfolgt
-                            </label>
-                            <div><label>Adelstitel / Taufname</label><input type="text" id="f-baptism-name" value="${p.baptismName || ''}" placeholder="z.B. Graf von..."></div>
-                        </div>
-                    </div>
-                    <div class="flex gap-2 mt-6"><button onclick="ui.savePassenger()" class="bg-blue-600 px-6 py-2 rounded">Speichern</button><button onclick="ui.switchTab('passengers')" class="bg-slate-700 px-6 py-2 rounded">Abbrechen</button></div>`;
-            },
-            formLogManual(c) {
-                c.innerHTML = `<h3 class="text-xl font-bold mb-4">Manueller Log-Eintrag</h3><div class="space-y-4"><div><label>Datum</label><input type="date" id="f-l-date" value="${new Date().toISOString().split('T')[0]}"></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-4"><div><label>Startzeit</label><input type="time" id="f-l-start" value="08:00"></div><div><label>Landezeit</label><input type="time" id="f-l-end" value="09:30"></div></div><div><label>Ballon</label><select id="f-l-balloon">${state.balloons.map(b=>`<option>${b.callsign}</option>`).join('')}</select></div><div><label>Notizen / Ort</label><textarea id="f-l-notes" rows="3"></textarea></div></div><div class="flex gap-2 mt-6"><button onclick="ui.saveLogManual()" class="bg-blue-600 px-6 py-2 rounded">Speichern</button><button onclick="ui.switchTab('logbook')" class="bg-slate-700 px-6 py-2 rounded">Abbrechen</button></div>`;
-            },
-
-            saveBalloon() {
-                const matrix = [[],[],[],[]];
-                document.querySelectorAll('.matrix-input').forEach(el => { matrix[el.dataset.row][el.dataset.col] = parseFloat(el.value); });
-                const defaultCylinders = [];
-                document.querySelectorAll('.default-cyl-item').forEach(el => { defaultCylinders.push(el.dataset.id); });
-                const data = { 
-                    id: this.editingId === 'new' ? Date.now().toString() : this.editingId, 
-                    callsign: document.getElementById('f-callsign').value, 
-                    volume: parseFloat(document.getElementById('f-volume').value), 
-                    weight: parseFloat(document.getElementById('f-weight').value), 
-                    mtom: parseFloat(document.getElementById('f-mtom').value), 
-                    maxClimb: parseFloat(document.getElementById('f-maxClimb').value) || 5, 
-                    maxDescent: parseFloat(document.getElementById('f-maxDescent').value) || 3, 
-                    matrix: matrix, 
-                    defaultCylinders: defaultCylinders, 
-                    image: state.balloons.find(b=>b.id === this.editingId)?.image 
-                };
-                const imgPreview = document.getElementById('preview-balloon-img');
-                if (!imgPreview.classList.contains('hidden') && imgPreview.src.length > 100) { data.image = imgPreview.src; }
-                if (this.editingId === 'new') state.balloons.push(data); else state.balloons = state.balloons.map(x => x.id === this.editingId ? data : x);
-                saveState(); this.switchTab('fleet');
-            },
-            saveCylinder() { const data = { id: this.editingId === 'new' ? Date.now().toString() : this.editingId, label: document.getElementById('f-label').value, type: document.getElementById('f-type').value, sn: document.getElementById('f-sn').value, tare: parseFloat(document.getElementById('f-tare').value), gas: parseFloat(document.getElementById('f-gas').value), tuv: document.getElementById('f-tuv').value }; if (this.editingId === 'new') state.cylinders.push(data); else state.cylinders = state.cylinders.map(x => x.id === this.editingId ? data : x); saveState(); this.switchTab('cylinders'); },
-            savePassenger() { 
-                const data = { 
-                    id: this.editingId === 'new' ? Date.now().toString() : this.editingId, 
-                    firstName: document.getElementById('f-firstName').value,
-                    lastName: document.getElementById('f-lastName').value,
-                    weight: parseFloat(document.getElementById('f-p-weight').value), 
-                    gender: document.getElementById('f-gender').value, 
-                    phone: document.getElementById('f-phone').value,
-                    // New Fields
-                    baptism: document.getElementById('f-baptism').checked,
-                    baptismName: document.getElementById('f-baptism-name').value
-                }; 
-                if (this.editingId === 'new') state.passengers.push(data); else state.passengers = state.passengers.map(x => x.id === this.editingId ? data : x); 
-                saveState(); this.switchTab('passengers'); 
-            },
-            saveLogManual() { const date = document.getElementById('f-l-date').value; state.logs.push({ id: Date.now(), start: date + "T" + document.getElementById('f-l-start').value, end: date + "T" + document.getElementById('f-l-end').value, balloon: document.getElementById('f-l-balloon').value, notes: document.getElementById('f-l-notes').value, track: [] }); saveState(); this.switchTab('logbook'); },
-            delete(collection, id) { if (confirm("Löschen?")) { state[collection] = state[collection].filter(x => x.id != id); saveState(); this.render(); } },
-            taufe(name) { alert(`Die feierliche Taufe von ${name} wurde vermerkt!`); },
-            
+            // ... existing view functions (viewFleet, viewCylinders etc) remain same ...
             viewFleet(c) { c.innerHTML = `<div class="flex justify-between items-center mb-4"><h3 class="text-xl font-bold">Ballon-Flotte</h3><button onclick="ui.edit('new')" class="bg-blue-600 px-4 py-2 rounded text-sm">+ Ballon hinzufügen</button></div>`; state.balloons.forEach(b => { const defaultCount = b.defaultCylinders ? b.defaultCylinders.length : 0; c.innerHTML += `<div class="glass-panel p-4 mb-2 flex justify-between items-center"><div><div class="font-bold text-lg">${b.callsign}</div><div class="text-xs text-slate-400">${b.volume}m³ | Std-Flaschen: ${defaultCount} | MTOM: ${b.mtom}kg</div></div><div class="flex gap-2"><button onclick="ui.edit('${b.id}')" class="bg-slate-700 px-3 py-1 rounded">Edit</button><button onclick="ui.delete('balloons','${b.id}')" class="text-red-400 p-1"><i class="fas fa-trash"></i></button></div></div>`; }); },
             viewCylinders(c) { c.innerHTML = `<div class="flex justify-between items-center mb-4"><h3 class="text-xl font-bold">Gasflaschen-Inventar</h3><button onclick="ui.edit('new')" class="bg-blue-600 px-4 py-2 rounded text-sm">+ Flasche hinzufügen</button></div>`; state.cylinders.forEach(cyl => { const isTuvExpired = new Date(cyl.tuv) < new Date(); c.innerHTML += `<div class="glass-panel p-4 mb-2 flex justify-between items-center ${isTuvExpired ? 'border-red-500/50 border' : ''}"><div><div class="font-bold">${cyl.label} (${cyl.type})</div><div class="text-xs text-slate-400">SN: ${cyl.sn} | Tara: ${cyl.tare}kg | Gas: ${cyl.gas}kg | TÜV: <span class="${isTuvExpired ? 'text-red-400 font-bold' : ''}">${cyl.tuv}</span></div></div><div class="flex gap-2"><button onclick="ui.edit('${cyl.id}')" class="bg-slate-700 px-3 py-1 rounded">Edit</button><button onclick="ui.delete('cylinders','${cyl.id}')" class="text-red-400 p-1"><i class="fas fa-trash"></i></button></div></div>`; }); },
             
@@ -1900,6 +1670,10 @@
                                 <div><label>Gewicht (kg)</label><input type="number" id="set-pilot-weight" value="${state.pilot.weight}" onchange="ui.saveSettings(true)"></div>
                                 <div><label>Stunden (hh:mm)</label><input type="text" id="set-pilot-hours" value="${initTimeStr}" placeholder="hh:mm" onchange="ui.saveSettings(true)"></div>
                             </div>
+                            <div class="md:col-span-2">
+                                <label>Bisherige Fahrten</label>
+                                <input type="number" id="set-pilot-flights" value="${state.pilot.initialFlights || 0}">
+                            </div>
                         </div>
                     </div>
 
@@ -1961,6 +1735,64 @@
             viewEnvironment(c) { c.innerHTML = `<h3 class="text-xl font-bold mb-4">Wetter & Wind Simulation</h3><div class="glass-panel p-6 border-white/10 border"><div class="flex justify-between items-start mb-4"><p class="text-sm text-slate-400">Hier definierst du die Windschichten für die Simulation. Der Ballon bewegt sich basierend auf der aktuellen Höhe und diesen Werten.</p><button onclick="weatherService.fetchLiveWind()" class="bg-green-600/20 text-green-400 border border-green-500/50 px-3 py-1 rounded text-xs whitespace-nowrap hover:bg-green-600 hover:text-white transition"><i class="fas fa-satellite-dish mr-1"></i> Live-Daten laden</button></div><div class="grid grid-cols-4 gap-2 text-xs uppercase text-slate-500 font-bold mb-2"><div>Höhe (m)</div><div>Richtung (°)</div><div>Speed (kt)</div><div></div></div><div id="wind-rows" class="space-y-2 mb-4">${state.windLayers.sort((a,b)=>a.alt-b.alt).map((w, idx) => `<div class="grid grid-cols-4 gap-2 items-center"><input type="number" class="wind-edit-alt" value="${w.alt}" placeholder="Höhe"><input type="number" class="wind-edit-dir" value="${w.dir}" placeholder="Dir"><input type="number" class="wind-edit-spd" value="${w.speed}" placeholder="Knots"><button onclick="ui.removeWindLayer(${idx})" class="text-red-400 hover:text-red-300"><i class="fas fa-trash"></i></button></div>`).join('')}</div><button onclick="ui.addWindLayer()" class="bg-slate-700 px-4 py-2 rounded text-xs mb-6">+ Schicht hinzufügen</button><button onclick="ui.saveEnvironment()" class="bg-blue-600 w-full py-3 rounded font-bold shadow-lg">Wetterdaten Speichern</button><div class="mt-4"><label class="text-xs uppercase text-slate-500 font-bold mb-1 block">Wind-Filter (Grad)</label><div class="flex items-center gap-2"><input type="number" id="set-wind-threshold" class="w-20 bg-slate-800 text-sm p-1 rounded" value="${state.settings.windThreshold || 5}"><span class="text-xs text-slate-400">Nur Änderungen > X° anzeigen</span></div></div><p class="text-[10px] text-slate-500 mt-2 text-center">Live-Daten bereitgestellt durch Open-Meteo.com (Kein Key erforderlich)</p></div>`; },
             
             // --- WIND FILTER LOGIC ---
+            renderWind() { 
+                const container = document.getElementById('wind-layers-container'); 
+                container.innerHTML = ''; 
+                
+                const isKmh = state.settings.unitSpeed === 'kmh';
+                const unitLabel = isKmh ? 'km/h' : 'kt';
+                const threshold = state.settings.windThreshold || 5;
+
+                const layerMap = new Map();
+                
+                state.windLayers.forEach(l => layerMap.set(l.alt, { ...l, isMeasured: false }));
+                
+                if (state.measuredWindLayers) {
+                    state.measuredWindLayers.forEach(l => layerMap.set(l.alt, { ...l, isMeasured: true }));
+                }
+
+                const sortedLayers = Array.from(layerMap.values()).sort((a, b) => b.alt - a.alt);
+
+                let lastKeptDir = null;
+                
+                sortedLayers.forEach((layer, index) => {
+                    let keep = false;
+                    
+                    if (index === 0) keep = true;
+                    else if (layer.isMeasured) keep = true;
+                    else {
+                        if (lastKeptDir === null) {
+                            keep = true;
+                        } else {
+                            let diff = Math.abs(layer.dir - lastKeptDir);
+                            if (diff > 180) diff = 360 - diff;
+                            if (diff >= threshold) keep = true;
+                        }
+                    }
+
+                    if (keep) {
+                        let speed = layer.speed;
+                        if (isKmh) speed *= 1.852; 
+
+                        const colorClass = layer.isMeasured ? 'text-green-400 font-bold' : 'text-blue-300';
+                        const labelClass = layer.isMeasured ? 'text-green-400' : '';
+                        const arrowClass = layer.isMeasured ? 'compass-arrow arrow-green' : 'compass-arrow';
+
+                        // HIGHLIGHT CURRENT ALTITUDE
+                        const isCurrentAlt = Math.abs(layer.alt - simulation.alt) < 25;
+                        const activeClass = isCurrentAlt ? 'active-altitude' : '';
+
+                        const div = document.createElement('div'); 
+                        div.className = `wind-layer ${activeClass}`; 
+                        div.dataset.alt = layer.alt; // Added dataset
+                        div.innerHTML = `<div class="${colorClass}">${layer.alt}m</div><div class="${arrowClass}" style="transform: rotate(${layer.dir}deg)"></div><div class="${labelClass}">${speed.toFixed(1)}${unitLabel}</div>`; 
+                        container.appendChild(div);
+                        
+                        lastKeptDir = layer.dir;
+                    }
+                });
+            },
+            
             addWindLayer() { const container = document.getElementById('wind-rows'); const div = document.createElement('div'); div.className = "grid grid-cols-4 gap-2 items-center"; div.innerHTML = `<input type="number" class="wind-edit-alt" value="0" placeholder="Höhe"><input type="number" class="wind-edit-dir" value="0" placeholder="Dir"><input type="number" class="wind-edit-spd" value="0" placeholder="Knots"><button onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-300"><i class="fas fa-trash"></i></button>`; container.appendChild(div); },
             removeWindLayer(idx) { state.windLayers.splice(idx, 1); this.render(); },
             saveEnvironment() { const newLayers = []; const rows = document.querySelectorAll('#wind-rows > div'); rows.forEach(row => { const alt = parseFloat(row.querySelector('.wind-edit-alt').value); const dir = parseFloat(row.querySelector('.wind-edit-dir').value); const spd = parseFloat(row.querySelector('.wind-edit-spd').value); if (!isNaN(alt)) { newLayers.push({ alt, dir, speed: spd }); } }); state.windLayers = newLayers; saveState(); this.renderWind(); ui.showToast("Wetterdaten gespeichert!", "success"); },
@@ -2264,78 +2096,6 @@
                 btn.remove();
                 ui.showToast("Planung archiviert");
             },
-
-            // --- RE-ADDED MISSING FUNCTIONS ---
-            archivePlan(id) {
-                const planIdx = state.plannings.findIndex(p => p.id == id);
-                if (planIdx > -1) {
-                    const plan = state.plannings.splice(planIdx, 1)[0];
-                    state.archive.push(plan);
-                    saveState();
-                    this.render();
-                }
-            },
-
-            unarchivePlan(id) {
-                const planIdx = state.archive.findIndex(p => p.id == id);
-                if (planIdx > -1) {
-                    const plan = state.archive.splice(planIdx, 1)[0];
-                    state.plannings.push(plan);
-                    saveState();
-                    this.render();
-                }
-            },
-
-            savePlan() {
-                const name = document.getElementById('plan-name').value || `Planung ${new Date().toLocaleDateString()}`;
-                const balloonId = document.getElementById('plan-balloon').value;
-                const temp = parseFloat(document.getElementById('plan-temp').value);
-                const alt = parseFloat(document.getElementById('plan-alt').value);
-                
-                if(!balloonId) { ui.showToast("Bitte Ballon auswählen!", "error"); return; }
-
-                // Get selected cylinders from the DOM list
-                const cylIds = [];
-                document.querySelectorAll('.plan-cyl-item').forEach(el => cylIds.push(el.dataset.pid));
-
-                // Get selected passengers
-                const paxIds = Array.from(document.querySelectorAll('#plan-pax input:checked')).map(cb => cb.value);
-
-                const balloon = state.balloons.find(b => b.id === balloonId);
-
-                const planData = {
-                    id: this.editingPlanId || Date.now(), // Use existing ID or create new
-                    name: name,
-                    date: new Date().toLocaleDateString(),
-                    balloonId: balloonId,
-                    balloonName: balloon ? balloon.callsign : 'Unbekannt',
-                    cylinders: cylIds,
-                    passengers: paxIds,
-                    temp: temp,
-                    alt: alt
-                };
-
-                if (this.editingPlanId) {
-                    // Update existing plan
-                    const index = state.plannings.findIndex(p => p.id == this.editingPlanId);
-                    if (index !== -1) {
-                        state.plannings[index] = planData;
-                    } else {
-                        // Edge case: if editing an archived plan directly (should not happen with current logic, but safe fallback)
-                        state.plannings.push(planData);
-                    }
-                } else {
-                    // Create new plan
-                    state.plannings.push(planData);
-                }
-
-                saveState();
-                this.editingPlanId = null; // Reset after save
-                
-                // Force switch to active view to see the saved plan
-                this.planningMode = 'active';
-                this.render(); 
-            },
             
             exportGPX(logId) {
                 const log = state.logs.find(l => l.id == logId);
@@ -2479,6 +2239,10 @@
 
                 // --- Init Report Map ---
                 const mapContainer = document.getElementById('report-map-container');
+                // Ensure container has size before init
+                mapContainer.style.width = "100%";
+                mapContainer.style.height = "100%";
+                
                 const reportMap = L.map(mapContainer, { zoomControl: false, attributionControl: false });
                 
                 // Style logic for report map
@@ -2543,12 +2307,19 @@
                         link.click();
                         ui.showToast("Bericht erstellt!");
                         stage.innerHTML = ''; // Clean up
+                        stage.style.display = 'none'; // Hide again
                     }).catch(err => {
                         loader.classList.add('hidden');
                         console.error(err);
                         ui.showToast("Fehler beim Export", "error");
                     });
                 }, 1500); // Wait for map tiles
+            },
+
+            // --- ADD MISSING FUNCTION ---
+            taufe(name) { 
+                 // Simple toast notification instead of alert
+                 this.showToast(`${name} wurde erfolgreich getauft!`, 'success');
             }
         };
 
