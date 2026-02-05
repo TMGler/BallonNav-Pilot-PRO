@@ -59,21 +59,31 @@
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
+        /* --- HUD COMMON ANIMATIONS --- */
+        .hud-container-anim {
+            transition: left 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
         /* --- HUD TOP CONTAINER --- */
         .hud-top-container {
             position: absolute;
             top: 10px;
-            /* Changed centering method to avoid 'fixed position' trap */
-            left: 0;
-            right: 0;
-            margin: 0 auto;
+            left: 50%;
+            transform: translateX(-50%);
             z-index: 1000;
             width: 95%;
             max-width: 800px;
+            min-height: 75px; 
             display: flex;
-            justify-content: center;
-            transition: all 0.3s ease;
+            align-items: center; 
+            padding-left: 40px; 
             pointer-events: none;
+        }
+
+        .hud-top-container.docked {
+            left: 10px;
+            transform: translateX(0);
+            width: auto;
         }
 
         .hud-top {
@@ -83,52 +93,48 @@
             gap: 4px;
             padding: 8px;
             width: 100%;
-            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
-            position: relative;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            opacity: 1;
+            transform: translateX(0);
         }
 
         .hud-top.minimized {
-            transform: translateY(-200%);
             opacity: 0;
             pointer-events: none;
+            transform: translateX(-20px);
+            position: absolute; 
         }
 
-        /* Toggle Button for Top HUD */
+        /* Toggle Button Wrapper - Always absolute inside container */
         #btn-top-toggle-wrapper {
             position: absolute;
-            left: -40px; 
+            left: 0;
             top: 50%;
             transform: translateY(-50%);
             z-index: 1001;
             pointer-events: auto;
-            transition: all 0.4s ease;
-        }
-        
-        /* DOCKED STATE: Top Toggle moves to top center screen */
-        .hud-top-container.docked #btn-top-toggle-wrapper {
-            position: fixed !important;
-            left: 50% !important;
-            top: 10px !important;
-            transform: translateX(-50%) !important;
-            background: rgba(15, 23, 42, 0.9);
-            border: 1px solid rgba(255,255,255,0.2);
         }
 
         /* --- NAVIGATION HUD --- */
         .hud-nav-container {
             position: absolute;
             top: 100px;
-            /* Changed centering method */
-            left: 0;
-            right: 0;
-            margin: 0 auto;
+            left: 50%;
+            transform: translateX(-50%);
             z-index: 990;
             width: 90%;
             max-width: 600px;
-            transition: all 0.3s ease;
-            pointer-events: none;
+            min-height: 75px; 
             display: flex;
-            justify-content: center;
+            align-items: center;
+            padding-left: 40px;
+            pointer-events: none;
+        }
+
+        .hud-nav-container.docked {
+            left: 10px;
+            transform: translateX(0);
+            width: auto;
         }
 
         .hud-nav {
@@ -140,36 +146,40 @@
             border-color: var(--accent-yellow);
             border-width: 1px;
             width: 100%;
-            position: relative;
-            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            opacity: 1;
+            transform: translateX(0);
         }
         
         .hud-nav.minimized {
-            /* Changed from translateX to translateY for vertical collapse effect */
-            transform: translateY(-50%) scale(0.9);
             opacity: 0;
             pointer-events: none;
+            transform: translateX(-20px);
+            position: absolute;
         }
 
-        /* Nav Toggle: Moved to TOP Center */
         #btn-nav-toggle-wrapper {
             position: absolute;
-            left: 50%;
-            top: -28px; /* Positioned above the HUD */
-            transform: translateX(-50%);
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
             z-index: 991;
             pointer-events: auto;
-            transition: all 0.4s ease;
+        }
+
+        /* --- TOGGLE ICONS ROTATION --- */
+        /* Applies to all toggle icons: Top, Nav, Wind */
+        #icon-top-hud-toggle, 
+        #icon-nav-hud-toggle, 
+        #icon-wind-toggle {
+            transition: transform 0.3s ease;
         }
         
-        /* DOCKED STATE: Nav Toggle stays at its position but fixed */
-        .hud-nav-container.docked #btn-nav-toggle-wrapper {
-             position: fixed !important;
-             left: 50% !important; 
-             top: 100px !important; /* Fixed vertical pos */
-             transform: translateX(-50%) !important;
-             background: rgba(15, 23, 42, 0.9);
-             border: 1px solid rgba(255,255,255,0.2);
+        /* Rotated state for all icons */
+        #icon-top-hud-toggle.collapsed, 
+        #icon-nav-hud-toggle.collapsed, 
+        #icon-wind-toggle.collapsed {
+            transform: rotate(180deg);
         }
 
         .hud-value { text-align: center; }
@@ -220,13 +230,6 @@
             opacity: 0;
             border: none;
             padding: 0;
-        }
-        
-        #wind-chevron {
-            transition: transform 0.3s ease;
-        }
-        #wind-chevron.collapsed {
-            transform: rotate(180deg);
         }
 
         .btn-round { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: all 0.2s; cursor: pointer; }
@@ -298,11 +301,11 @@
 
         /* --- LANDSCAPE MODE: Compact HUDs --- */
         @media (orientation: landscape) and (max-height: 500px) {
-            .hud-top-container { top: 0; width: 60%; }
+            .hud-top-container { top: 0; width: 60%; min-height: 60px; }
             .hud-top { padding: 4px; gap: 4px; }
             .hud-num { font-size: 1.1rem; } 
             .hud-label { font-size: 0.6rem; }
-            .hud-nav-container { top: 60px; width: 50%; }
+            .hud-nav-container { top: 60px; width: 50%; min-height: 60px; }
             .hud-nav { padding: 4px; gap: 4px; }
             .hud-nav .hud-num { font-size: 1rem; }
             .sidebar-left { bottom: 10px; gap: 5px; }
@@ -342,11 +345,11 @@
     <input type="file" id="import-input" accept=".json" class="hidden" onchange="system.importData(this)">
 
     <!-- HUD TOP CONTAINER -->
-    <div id="hud-top-container" class="hud-top-container">
-         <!-- Collapse Button -->
+    <div id="hud-top-container" class="hud-top-container hud-container-anim">
+         <!-- Collapse Button: Links -->
         <div id="btn-top-toggle-wrapper">
             <button onclick="ui.toggleTopHUD()" class="bg-slate-800 text-slate-400 hover:text-white rounded-full w-8 h-8 flex items-center justify-center text-xs shadow border border-white/20" title="Ein/Ausblenden">
-                <i class="fas fa-chevron-up transition-transform duration-300" id="icon-top-hud-toggle"></i>
+                <i class="fas fa-chevron-left transition-transform duration-300" id="icon-top-hud-toggle"></i>
             </button>
         </div>
 
@@ -384,11 +387,11 @@
     </div>
 
     <!-- HUD NAVIGATION CONTAINER -->
-    <div id="hud-nav-container" class="hud-nav-container hidden">
-        <!-- Collapse Button MOVED TO TOP -->
+    <div id="hud-nav-container" class="hud-nav-container hidden hud-container-anim">
+        <!-- Collapse Button: Links -->
         <div id="btn-nav-toggle-wrapper">
             <button onclick="ui.toggleNavHUD()" class="bg-slate-800 text-slate-400 hover:text-white rounded-full w-8 h-8 flex items-center justify-center text-xs shadow border border-white/20" title="Ein/Ausblenden">
-                <i class="fas fa-chevron-up transition-transform duration-300" id="icon-nav-hud-toggle"></i>
+                <i class="fas fa-chevron-left transition-transform duration-300" id="icon-nav-hud-toggle"></i>
             </button>
         </div>
 
@@ -464,15 +467,16 @@
         </div>
 
         <div id="wind-panel" class="glass-panel">
-            <!-- Header removed, only content used now -->
-            <div class="p-2 border-b border-white/10 flex justify-center">
+            <!-- Header with merged Live Button -->
+            <div class="p-2 border-b border-white/10 flex justify-between items-center px-3">
                  <i class="fas fa-wind text-blue-400"></i>
+                 <button onclick="event.stopPropagation(); weatherService.fetchLiveWind()" class="text-[0.65rem] text-green-400 hover:text-white flex flex-col items-center leading-none" title="Live Update">
+                    <i class="fas fa-sync-alt mb-0.5"></i>Live
+                 </button>
             </div>
             
             <div id="wind-content-wrapper" class="overflow-hidden transition-all duration-300">
-                <div class="p-1 border-b border-white/5 flex justify-around bg-slate-800/30">
-                     <button onclick="event.stopPropagation(); weatherService.fetchLiveWind()" class="text-[0.65rem] text-green-400 hover:text-white flex flex-col items-center"><i class="fas fa-sync-alt mb-0.5"></i>Live</button>
-                </div>
+                <!-- Removed sub-bar since live button moved up -->
                 <div id="wind-layers-container" class="p-2 flex flex-col gap-1 max-h-60 overflow-y-auto scrollbar-hide">
                     <!-- Layers will be injected here -->
                 </div>
@@ -910,8 +914,16 @@
             updateIcon() {
                 let iconHtml = '<div class="text-3xl">🎈</div>';
                 let className = '';
-                if (state.settings.activeBalloonId) {
-                    const balloon = state.balloons.find(b => b.id === state.settings.activeBalloonId);
+                
+                let balloonIdToUse = state.settings.activeBalloonId;
+                
+                // --- NEW LOGIC: Use Plan Balloon if active ---
+                if (flightManager.recording && flightManager.currentActivePlan) {
+                    balloonIdToUse = flightManager.currentActivePlan.balloonId;
+                }
+
+                if (balloonIdToUse) {
+                    const balloon = state.balloons.find(b => b.id === balloonIdToUse);
                     if (balloon && balloon.image) {
                         iconHtml = `<img src="${balloon.image}" class="balloon-marker-img">`;
                         className = ''; 
@@ -1115,6 +1127,9 @@
                 document.getElementById('btn-take-photo').classList.remove('hidden');
                 
                 ui.closeModal();
+                
+                // Force Icon Update (Added to update balloon icon based on plan)
+                mapManager.updateIcon();
             },
 
             async stopRecording() {
@@ -1181,9 +1196,16 @@
                 saveState();
                 
                 this.recording = false;
+                
+                // Clear active plan
+                this.currentActivePlan = null;
+                
                 document.getElementById('btn-record').classList.remove('recording');
                 document.getElementById('sb-rec').classList.add('hidden');
                 document.getElementById('btn-take-photo').classList.add('hidden');
+                
+                // Reset Icon
+                mapManager.updateIcon();
                 
                 ui.showSummary(newLog);
             },
@@ -1293,12 +1315,10 @@
             
             toggleWindPanel() {
                 const wrapper = document.getElementById('wind-content-wrapper');
-                const chevron = document.getElementById('wind-chevron');
-                const container = document.getElementById('sidebar-right-container');
-                wrapper.classList.toggle('collapsed');
-                chevron.classList.toggle('collapsed');
-                
-                // Just toggle wrapper visibility, button is inside now
+                const chevron = document.getElementById('icon-wind-toggle'); // Corrected ID
+                // const container = document.getElementById('sidebar-right-container'); // Not used currently
+                if (wrapper) wrapper.classList.toggle('collapsed');
+                if (chevron) chevron.classList.toggle('collapsed');
             },
             
             toggleTopHUD() {
@@ -1307,14 +1327,10 @@
                 const container = document.getElementById('hud-top-container');
                 
                 hud.classList.toggle('minimized');
+                container.classList.toggle('docked');
                 
-                if (hud.classList.contains('minimized')) {
-                    btnIcon.className = 'fas fa-chevron-down transition-transform duration-300';
-                    container.classList.add('docked');
-                } else {
-                    btnIcon.className = 'fas fa-chevron-up transition-transform duration-300';
-                    container.classList.remove('docked');
-                }
+                // Rotation logic handled via CSS class 'collapsed'
+                btnIcon.classList.toggle('collapsed', hud.classList.contains('minimized'));
             },
 
             toggleNavHUD() {
@@ -1323,16 +1339,10 @@
                 const container = document.getElementById('hud-nav-container');
 
                 nav.classList.toggle('minimized'); 
+                container.classList.toggle('docked');
                 
-                if (nav.classList.contains('minimized')) {
-                    // Changed Icon to Down
-                    btnIcon.className = 'fas fa-chevron-down transition-transform duration-300';
-                    container.classList.add('docked');
-                } else {
-                    // Changed Icon to Up
-                    btnIcon.className = 'fas fa-chevron-up transition-transform duration-300';
-                    container.classList.remove('docked');
-                }
+                // Rotation logic handled via CSS class 'collapsed'
+                btnIcon.classList.toggle('collapsed', nav.classList.contains('minimized'));
             },
             
             toggleWaypointLock() { state.waypointLocked = !state.waypointLocked; saveState(); this.updateLockBtn(); this.showToast(state.waypointLocked ? "Wegpunkt gesperrt" : "Wegpunkt entsperrt"); },
@@ -1354,6 +1364,7 @@
             switchTab(t) { this.tab = t; this.editingId = null; document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.onclick.toString().includes(`'${t}'`))); this.render(); },
             render() { const c = document.getElementById('tab-content'); c.innerHTML = ''; if (this.editingId) { this.renderForm(c); return; } switch(this.tab) { case 'planning': this.viewPlanning(c); break; case 'fleet': this.viewFleet(c); break; case 'cylinders': this.viewCylinders(c); break; case 'passengers': this.viewPassengers(c); break; case 'logbook': this.viewLogbook(c); break; case 'settings': this.viewSettings(c); break; case 'environment': this.viewEnvironment(c); break; } },
             
+            // ... existing view functions (viewFleet, viewCylinders etc) remain same ...
             viewFleet(c) { c.innerHTML = `<div class="flex justify-between items-center mb-4"><h3 class="text-xl font-bold">Ballon-Flotte</h3><button onclick="ui.edit('new')" class="bg-blue-600 px-4 py-2 rounded text-sm">+ Ballon hinzufügen</button></div>`; state.balloons.forEach(b => { const defaultCount = b.defaultCylinders ? b.defaultCylinders.length : 0; c.innerHTML += `<div class="glass-panel p-4 mb-2 flex justify-between items-center"><div><div class="font-bold text-lg">${b.callsign}</div><div class="text-xs text-slate-400">${b.volume}m³ | Std-Flaschen: ${defaultCount} | MTOM: ${b.mtom}kg</div></div><div class="flex gap-2"><button onclick="ui.edit('${b.id}')" class="bg-slate-700 px-3 py-1 rounded">Edit</button><button onclick="ui.delete('balloons','${b.id}')" class="text-red-400 p-1"><i class="fas fa-trash"></i></button></div></div>`; }); },
             viewCylinders(c) { c.innerHTML = `<div class="flex justify-between items-center mb-4"><h3 class="text-xl font-bold">Gasflaschen-Inventar</h3><button onclick="ui.edit('new')" class="bg-blue-600 px-4 py-2 rounded text-sm">+ Flasche hinzufügen</button></div>`; state.cylinders.forEach(cyl => { const isTuvExpired = new Date(cyl.tuv) < new Date(); c.innerHTML += `<div class="glass-panel p-4 mb-2 flex justify-between items-center ${isTuvExpired ? 'border-red-500/50 border' : ''}"><div><div class="font-bold">${cyl.label} (${cyl.type})</div><div class="text-xs text-slate-400">SN: ${cyl.sn} | Tara: ${cyl.tare}kg | Gas: ${cyl.gas}kg | TÜV: <span class="${isTuvExpired ? 'text-red-400 font-bold' : ''}">${cyl.tuv}</span></div></div><div class="flex gap-2"><button onclick="ui.edit('${cyl.id}')" class="bg-slate-700 px-3 py-1 rounded">Edit</button><button onclick="ui.delete('cylinders','${cyl.id}')" class="text-red-400 p-1"><i class="fas fa-trash"></i></button></div></div>`; }); },
             viewPassengers(c) { c.innerHTML = `<div class="flex justify-between items-center mb-4"><h3 class="text-xl font-bold">Passagier-Datenbank</h3><button onclick="ui.edit('new')" class="bg-blue-600 px-4 py-2 rounded text-sm">+ Passagier hinzufügen</button></div>`; const activePax = state.passengers.filter(p => !p.flights || p.flights === 0); const archivedPax = state.passengers.filter(p => p.flights > 0); if (activePax.length > 0) { c.innerHTML += `<h4 class="text-xs uppercase text-slate-400 font-bold mb-2">Warteliste</h4>`; activePax.forEach(p => { c.innerHTML += `<div class="glass-panel p-4 mb-2 flex justify-between items-center"><div><div class="font-bold">${p.name}</div><div class="text-xs text-slate-400">${p.weight}kg | ${p.gender} | ${p.phone}</div></div><div class="flex gap-2"><button onclick="ui.taufe('${p.name}')" class="bg-amber-600/20 text-amber-500 px-2 py-1 rounded text-xs">Taufe</button><button onclick="ui.edit('${p.id}')" class="bg-slate-700 px-3 py-1 rounded text-xs">Edit</button><button onclick="ui.delete('passengers','${p.id}')" class="text-red-400 p-1"><i class="fas fa-trash"></i></button></div></div>`; }); } if (archivedPax.length > 0) { c.innerHTML += `<h4 class="text-xs uppercase text-slate-400 font-bold mb-2 mt-6">Gäste-Archiv (Bereits gefahren)</h4>`; archivedPax.forEach(p => { c.innerHTML += `<div class="glass-panel p-4 mb-2 flex justify-between items-center border-l-4 border-green-500/50 bg-slate-900/40"><div><div class="font-bold text-slate-300">${p.name}</div><div class="text-xs text-slate-500">${p.flights} Fahrten | Letzte: ${new Date(p.lastFlight).toLocaleDateString()}</div></div><div class="flex gap-2"><button onclick="ui.edit('${p.id}')" class="bg-slate-700 px-3 py-1 rounded text-xs text-slate-400">Edit</button><button onclick="ui.delete('passengers','${p.id}')" class="text-red-400 p-1"><i class="fas fa-trash"></i></button></div></div>`; }); } if (state.passengers.length === 0) { c.innerHTML += `<div class="text-center text-slate-500 italic py-8">Noch keine Passagiere angelegt</div>`; } },
