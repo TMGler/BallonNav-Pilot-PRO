@@ -59,7 +59,7 @@
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        /* --- HUD TOP --- */
+        /* --- HUD TOP CONTAINER --- */
         .hud-top-container {
             position: absolute;
             top: 10px;
@@ -86,18 +86,30 @@
         }
 
         .hud-top.minimized {
-            transform: translateY(-150%);
+            transform: translateY(-200%);
             opacity: 0;
             pointer-events: none;
         }
 
+        /* Toggle Button for Top HUD */
         #btn-top-toggle-wrapper {
             position: absolute;
-            left: 0;
+            left: -40px; 
             top: 50%;
             transform: translateY(-50%);
             z-index: 1001;
             pointer-events: auto;
+            transition: all 0.4s ease;
+        }
+        
+        /* DOCKED STATE: Top Toggle moves to top center screen */
+        .hud-top-container.docked #btn-top-toggle-wrapper {
+            position: fixed !important;
+            left: 50% !important;
+            top: 10px !important;
+            transform: translateX(-50%) !important;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(255,255,255,0.2);
         }
 
         /* --- NAVIGATION HUD --- */
@@ -129,18 +141,29 @@
         }
         
         .hud-nav.minimized {
-            transform: translateX(-120%);
+            transform: translateX(-150%);
             opacity: 0;
             pointer-events: none;
         }
 
         #btn-nav-toggle-wrapper {
             position: absolute;
-            left: -15px;
+            left: -40px;
             top: 50%;
             transform: translateY(-50%);
             z-index: 991;
             pointer-events: auto;
+            transition: all 0.4s ease;
+        }
+        
+        /* DOCKED STATE: Nav Toggle moves to left screen edge */
+        .hud-nav-container.docked #btn-nav-toggle-wrapper {
+             position: fixed !important;
+             left: 10px !important; 
+             top: 130px !important; /* Fixed vertical pos */
+             transform: none !important;
+             background: rgba(15, 23, 42, 0.9);
+             border: 1px solid rgba(255,255,255,0.2);
         }
 
         .hud-value { text-align: center; }
@@ -158,7 +181,6 @@
             gap: 10px; 
         }
         
-        /* --- WIND PANEL (RIGHT) --- */
         .sidebar-right-container { 
             position: absolute; 
             top: 190px; 
@@ -168,26 +190,16 @@
             flex-direction: column; 
             align-items: end;
             gap: 5px;
-            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transition: top 0.3s ease;
         }
 
-        .sidebar-right-container.minimized {
-            transform: translateX(120%); /* Slide out to right */
-        }
-        
-        /* Toggle button for Wind attached to left side of panel */
-        #btn-wind-toggle-wrapper {
-            position: absolute;
-            left: -35px;
-            top: 0;
-            z-index: 1001;
-        }
-
+        /* --- WIND PANEL --- */
         #wind-panel {
             width: 90px;
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            transition: height 0.3s ease;
         }
         
         #wind-content-wrapper {
@@ -195,6 +207,20 @@
             overflow: hidden;
             max-height: 400px;
             opacity: 1;
+        }
+        
+        #wind-content-wrapper.collapsed {
+            max-height: 0;
+            opacity: 0;
+            border: none;
+            padding: 0;
+        }
+        
+        #wind-chevron {
+            transition: transform 0.3s ease;
+        }
+        #wind-chevron.collapsed {
+            transform: rotate(180deg);
         }
 
         .btn-round { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: all 0.2s; cursor: pointer; }
@@ -212,7 +238,7 @@
         .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); z-index: 2000; display: none; padding: 20px; overflow-y: auto; }
         .modal-content { max-width: 1000px; margin: auto; min-height: 85vh; display: flex; flex-direction: column; }
 
-        .tab-btn { padding: 12px 20px; border-bottom: 2px solid transparent; font-weight: 500; opacity: 0.6; }
+        .tab-btn { padding: 12px 15px; border-bottom: 2px solid transparent; font-weight: 500; opacity: 0.6; white-space: nowrap; font-size: 0.9rem; }
         .tab-btn.active { border-color: var(--accent-blue); color: var(--accent-blue); opacity: 1; }
 
         .wind-layer { display: flex; flex-direction: column; align-items: center; font-size: 0.7rem; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.1); transition: background-color 0.3s; }
@@ -257,6 +283,11 @@
             .sidebar-right-container { right: 5px; }
             .btn-round { width: 44px; height: 44px; font-size: 1rem; }
             .toast-notification { top: 70px; }
+            /* Mobile Tabs: Flex wrap to avoid cut off */
+            .flex.border-b.overflow-x-auto {
+                flex-wrap: wrap;
+                overflow-x: hidden;
+            }
         }
 
         /* --- LANDSCAPE MODE: Compact HUDs --- */
@@ -288,12 +319,14 @@
 
     <div id="map"></div>
     
+    <!-- Fullscreen Loading Overlay for Report Gen -->
     <div id="loading-overlay" class="fixed inset-0 z-[6000] bg-slate-900/95 flex flex-col items-center justify-center hidden backdrop-blur-sm">
         <div class="loader mb-4" style="width: 40px; height: 40px; border-width: 4px;"></div>
         <div class="text-white font-bold text-lg">Erstelle Bericht...</div>
         <div class="text-slate-400 text-sm">Bitte warten, Karte wird gerendert</div>
     </div>
     
+    <!-- Photo View Overlay -->
     <div id="photo-overlay" onclick="this.style.display='none'">
         <img id="photo-overlay-img" src="">
     </div>
@@ -404,7 +437,6 @@
         <button id="btn-waypoint-lock" class="btn-round glass-panel text-slate-400" title="Wegpunkt sperren" onclick="ui.toggleWaypointLock()">
             <i class="fas fa-lock-open" id="icon-wp-lock"></i>
         </button>
-
         <button id="btn-layers" class="btn-round glass-panel" title="Ebenen">
             <i class="fas fa-layer-group"></i>
         </button>
@@ -442,23 +474,37 @@
         </div>
     </div>
 
+    <!-- SIMULATION PANEL -->
+    <div id="sim-panel" class="absolute bottom-8 left-1/2 -translate-x-1/2 z-[2000] hidden glass-panel px-6 py-3 flex items-center gap-4 border border-white/10 shadow-2xl">
+        <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider border-r border-white/10 pr-3">Sim Control</div>
+        <div class="flex gap-3">
+            <button onclick="simulation.adjustAltitude(-50)" class="bg-red-600/90 hover:bg-red-500 text-white px-4 py-2 rounded-lg font-bold shadow-lg transition transform active:scale-95 text-sm flex items-center gap-2">
+                <i class="fas fa-arrow-down"></i> 50m
+            </button>
+            <button onclick="simulation.adjustAltitude(50)" class="bg-blue-600/90 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold shadow-lg transition transform active:scale-95 text-sm flex items-center gap-2">
+                <i class="fas fa-arrow-up"></i> 50m
+            </button>
+        </div>
+    </div>
+
     <!-- MAIN MODAL -->
     <div id="main-modal" class="overlay">
-        <div class="modal-content glass-panel p-6">
-            <div class="flex justify-between items-center mb-6">
+        <div class="modal-content glass-panel p-0 md:p-6"> <!-- Full width on mobile -->
+            <div class="flex justify-between items-center mb-4 p-4 md:p-0">
                 <h2 class="text-2xl font-bold flex items-center gap-2">AeroNav Control</h2>
                 <button onclick="ui.closeModal()" class="text-3xl opacity-50 hover:opacity-100">&times;</button>
             </div>
-            <div class="flex border-b border-white/10 mb-6 overflow-x-auto whitespace-nowrap scrollbar-hide">
-                <button class="tab-btn active" onclick="ui.switchTab('planning')">Planung</button>
-                <button class="tab-btn" onclick="ui.switchTab('fleet')">Flotte</button>
-                <button class="tab-btn" onclick="ui.switchTab('cylinders')">Gasflaschen</button>
-                <button class="tab-btn" onclick="ui.switchTab('passengers')">Passagiere</button>
-                <button class="tab-btn" onclick="ui.switchTab('logbook')">Logbuch</button>
-                <button class="tab-btn" onclick="ui.switchTab('environment')">Wetter/Wind</button>
-                <button class="tab-btn" onclick="ui.switchTab('settings')">Einstellungen</button>
+            <!-- Improved Scrollable Tabs -->
+            <div class="flex border-b border-white/10 mb-4 overflow-x-auto flex-wrap scrollbar-hide">
+                <button class="tab-btn active shrink-0" onclick="ui.switchTab('planning')">Planung</button>
+                <button class="tab-btn shrink-0" onclick="ui.switchTab('fleet')">Flotte</button>
+                <button class="tab-btn shrink-0" onclick="ui.switchTab('cylinders')">Gasflaschen</button>
+                <button class="tab-btn shrink-0" onclick="ui.switchTab('passengers')">Passagiere</button>
+                <button class="tab-btn shrink-0" onclick="ui.switchTab('logbook')">Logbuch</button>
+                <button class="tab-btn shrink-0" onclick="ui.switchTab('environment')">Wetter/Wind</button>
+                <button class="tab-btn shrink-0" onclick="ui.switchTab('settings')">Einstellungen</button>
             </div>
-            <div id="tab-content" class="flex-grow overflow-y-auto pr-2"></div>
+            <div id="tab-content" class="flex-grow overflow-y-auto pr-2 p-4 md:p-0"></div>
         </div>
     </div>
 
@@ -469,7 +515,7 @@
         /**
          * STATE & CONSTANTS
          */
-        const STORAGE_KEY = "AERONAV_PRO_DATA";
+        const STORAGE_KEY = "AERONAV_PRO_DATA_V5";
         
         let state = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
             pilot: { name: "Max Mustermann", weight: 85, initialFlights: 0, initialHours: 0 }, 
@@ -672,22 +718,28 @@
                 const mode = state.settings.mode;
                 const simPanel = document.getElementById('sim-panel');
                 const badgeGPS = document.getElementById('sb-gps');
+                const badgeGPSText = document.getElementById('sb-gps-text');
 
+                // Safety check
                 if (!simPanel || !badgeGPS) return;
 
                 if (mode === 'gps') {
                     simPanel.classList.add('hidden'); 
                     badgeGPS.classList.remove('hidden');
+                    
                     badgeGPS.classList.remove('blue', 'green'); 
                     badgeGPS.classList.add('red');
-                    document.getElementById('sb-gps-text').innerText = "NO GPS";
+                    
+                    if(badgeGPSText) badgeGPSText.innerText = "NO GPS";
                     this.startGPS();
                 } else {
                     simPanel.classList.remove('hidden');
                     badgeGPS.classList.remove('hidden');
-                    document.getElementById('sb-gps-text').innerText = "SIMULATION";
+                    if(badgeGPSText) badgeGPSText.innerText = "SIMULATION";
+                    
                     badgeGPS.classList.remove('red', 'green');
                     badgeGPS.classList.add('blue');
+                    
                     this.stopGPS();
                 }
             },
@@ -695,11 +747,13 @@
             startGPS() {
                 wakeLockManager.request();
                 const badgeGPS = document.getElementById('sb-gps');
+                const badgeGPSText = document.getElementById('sb-gps-text');
+                
                 if (navigator.geolocation) {
                     if (this.gpsWatchId) navigator.geolocation.clearWatch(this.gpsWatchId);
                     this.gpsWatchId = navigator.geolocation.watchPosition(pos => {
                         const c = pos.coords;
-                        document.getElementById('sb-gps-text').innerText = "GPS OK";
+                        if(badgeGPSText) badgeGPSText.innerText = "GPS OK";
                         badgeGPS.classList.remove('red', 'blue');
                         badgeGPS.classList.add('green');
                         this.lat = c.latitude;
@@ -710,12 +764,12 @@
                         flightManager.updateHUD(this.getCurrentState());
                     }, err => {
                         console.warn("GPS Fehler:", err.message);
-                        document.getElementById('sb-gps-text').innerText = "NO GPS";
+                        if(badgeGPSText) badgeGPSText.innerText = "NO GPS";
                         badgeGPS.classList.remove('green', 'blue');
                         badgeGPS.classList.add('red');
                     }, { enableHighAccuracy: true });
                 } else {
-                    document.getElementById('sb-gps-text').innerText = "NO SUPP";
+                    if(badgeGPSText) badgeGPSText.innerText = "NO SUPP";
                     badgeGPS.classList.remove('green', 'blue');
                     badgeGPS.classList.add('red');
                 }
@@ -1023,6 +1077,11 @@
                     ui.showToast(`${cleanedCount} alte Fotos bereinigt`, 'success');
                 }
             },
+            
+            cleanOldPhotosNow() {
+                this.cleanOldPhotos();
+                ui.showToast("Bereinigung durchgeführt.", "success");
+            },
 
             startRecording(planId) {
                 wakeLockManager.request();
@@ -1227,32 +1286,44 @@
             },
             
             toggleWindPanel() {
-                const wrapper = document.getElementById('sidebar-right-container');
-                const chevron = document.getElementById('icon-wind-toggle');
-                wrapper.classList.toggle('minimized');
-                if (wrapper.classList.contains('minimized')) {
-                    chevron.className = 'fas fa-chevron-left transition-transform duration-300';
-                } else {
-                    chevron.className = 'fas fa-chevron-right transition-transform duration-300';
-                }
+                const wrapper = document.getElementById('wind-content-wrapper');
+                const chevron = document.getElementById('wind-chevron');
+                const container = document.getElementById('sidebar-right-container');
+                wrapper.classList.toggle('collapsed');
+                chevron.classList.toggle('collapsed');
+                
+                // Just toggle wrapper visibility, button is inside now
             },
             
             toggleTopHUD() {
                 const hud = document.getElementById('hud-top');
                 const btnIcon = document.getElementById('icon-top-hud-toggle');
+                const container = document.getElementById('hud-top-container');
+                
                 hud.classList.toggle('minimized');
-                btnIcon.className = hud.classList.contains('minimized') ? 'fas fa-chevron-down transition-transform duration-300' : 'fas fa-chevron-up transition-transform duration-300';
+                
+                if (hud.classList.contains('minimized')) {
+                    btnIcon.className = 'fas fa-chevron-down transition-transform duration-300';
+                    container.classList.add('docked');
+                } else {
+                    btnIcon.className = 'fas fa-chevron-up transition-transform duration-300';
+                    container.classList.remove('docked');
+                }
             },
 
             toggleNavHUD() {
                 const nav = document.getElementById('hud-nav');
                 const btnIcon = document.getElementById('icon-nav-hud-toggle');
-                nav.classList.toggle('minimized'); // Using minimized class now for slide effect
+                const container = document.getElementById('hud-nav-container');
+
+                nav.classList.toggle('minimized'); 
                 
                 if (nav.classList.contains('minimized')) {
                     btnIcon.className = 'fas fa-chevron-right transition-transform duration-300';
+                    container.classList.add('docked');
                 } else {
                     btnIcon.className = 'fas fa-chevron-left transition-transform duration-300';
+                    container.classList.remove('docked');
                 }
             },
             
@@ -1284,7 +1355,64 @@
                 c.innerHTML += `<div class="glass-panel p-4 mb-2 flex justify-between items-center"><div><div class="font-bold">${new Date(l.start).toLocaleDateString()} - ${l.balloon}</div><div class="text-xs text-slate-400">${startStr} bis ${endStr} | ${l.notes.substring(0,30)}...</div></div><div class="flex gap-2"><button onclick="ui.showSummary(${l.id})" class="text-blue-400 p-1"><i class="fas fa-eye"></i></button><button onclick="ui.delete('logs',${l.id})" class="text-red-400 p-1"><i class="fas fa-trash"></i></button></div></div>`; 
             }); },
             viewPlanning(c) { if (!state.plannings) { state.plannings = []; saveState(); } if (!state.archive) { state.archive = []; saveState(); } const isArchive = this.planningMode === 'archive'; const listData = isArchive ? state.archive : state.plannings; const listTitle = isArchive ? 'Archiv / Vorlagen' : 'Aktive Planungen'; c.innerHTML = `<h3 class="text-xl font-bold mb-4">Weight & Balance Planung</h3><div class="mb-6 p-4 glass-panel border border-white/10"><div class="flex gap-4 border-b border-white/10 pb-2 mb-2 text-sm"><button onclick="ui.setPlanView('active')" class="${!isArchive ? 'text-blue-400 font-bold border-b-2 border-blue-400' : 'text-slate-500 hover:text-slate-300'} pb-1 transition">Aktive Planungen</button><button onclick="ui.setPlanView('archive')" class="${isArchive ? 'text-blue-400 font-bold border-b-2 border-blue-400' : 'text-slate-500 hover:text-slate-300'} pb-1 transition">Archiv</button></div><div class="flex justify-between items-center mb-2"><h4 class="text-xs uppercase text-slate-400 font-bold">${listTitle}</h4>${!isArchive ? '<button onclick="ui.clearPlanForm()" class="text-xs bg-slate-700 px-3 py-1 rounded hover:bg-slate-600 transition">+ Neue Planung</button>' : ''}</div><div class="max-h-32 overflow-y-auto space-y-1" id="saved-plans-list">${listData.length === 0 ? `<div class="text-xs text-slate-500 italic p-2">${isArchive ? 'Archiv ist leer' : 'Keine aktiven Planungen'}</div>` : listData.sort((a,b) => b.id - a.id).map(p => `<div class="flex justify-between items-center bg-slate-800 p-2 rounded text-xs group hover:bg-slate-700/50 transition"><div class="cursor-pointer flex-1" onclick="${isArchive ? `ui.loadTemplate('${p.id}')` : `ui.loadPlan('${p.id}')`}" title="${isArchive ? 'Als Vorlage laden' : 'Bearbeiten'}"><div class="font-bold text-white flex items-center gap-2">${isArchive ? '<i class="fas fa-history text-slate-500"></i>' : ''} ${p.name}</div><div class="text-slate-400 text-[10px]">${p.date} | ${p.balloonName}</div></div><div class="flex gap-1">${!isArchive ? `<button onclick="ui.archivePlan(${p.id})" class="text-blue-400 hover:text-blue-300 p-1 px-2 bg-slate-900/50 rounded" title="Ins Archiv verschieben"><i class="fas fa-box-archive"></i></button>` : `<button onclick="ui.unarchivePlan(${p.id})" class="text-green-400 hover:text-green-300 p-1 px-2 bg-slate-900/50 rounded" title="Wiederherstellen"><i class="fas fa-box-open"></i></button>`}<button onclick="ui.delete('${isArchive ? 'archive' : 'plannings'}', ${p.id})" class="text-red-400 hover:text-red-300 p-1 px-2 bg-slate-900/50 rounded"><i class="fas fa-trash"></i></button></div></div>`).join('')}</div></div><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="space-y-4"><div><label>Bezeichnung der Planung</label><input type="text" id="plan-name" placeholder="z.B. Morgenfahrt Alpen" class="bg-slate-800 border-slate-600 focus:border-blue-500"></div><div><label>Ballon wählen</label><select id="plan-balloon" onchange="ui.selectBalloon()"><option value="">-- Wählen --</option>${state.balloons.map(b => `<option value="${b.id}">${b.callsign}</option>`).join('')}</select></div><div><label>Gasflaschen für diese Fahrt</label><div class="glass-panel p-3 border border-white/5 bg-slate-900/40"><div id="plan-cyl-list" class="space-y-2 mb-3"><div class="text-xs text-slate-500 italic">Keine Flaschen ausgewählt</div></div><div class="flex gap-2 pt-2 border-t border-white/10"><select id="plan-cyl-add-select" class="text-xs bg-slate-800 border-none w-full"><option value="">+ Flasche wählen</option>${state.cylinders.map(c => `<option value="${c.id}">${c.label} (${c.type}) - ${c.gas+c.tare}kg</option>`).join('')}</select><button onclick="ui.addPlanCylinder()" class="bg-blue-600 px-3 rounded text-xs hover:bg-blue-500 shrink-0"><i class="fas fa-plus"></i></button></div></div></div><div><label>Passagiere wählen</label><div class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 border border-white/5 rounded" id="plan-pax">${state.passengers.sort((a,b) => (a.flights||0) - (b.flights||0)).map(p => { const isFlown = p.flights > 0; const badge = isFlown ? `<span class="text-green-400 text-[9px] ml-1">✓ ${p.flights}</span>` : ''; return `<label class="flex items-center gap-2 bg-slate-800 p-2 rounded text-[10px] hover:bg-slate-700 cursor-pointer ${isFlown ? 'opacity-75' : ''}"><input type="checkbox" value="${p.id}" onchange="ui.recalcWB()" class="w-4 h-4 shrink-0"> <span class="flex-1 truncate">${p.name}${badge}</span> <span class="text-slate-400">${p.weight}kg</span></label>`; }).join('')}</div></div></div><div class="space-y-4"><div class="grid grid-cols-1 sm:grid-cols-2 gap-2"><div><label>Startort Temp (°C)</label><input type="number" id="plan-temp" value="15" onchange="ui.recalcWB()"></div><div><label>Zielhöhe (m)</label><input type="number" id="plan-alt" value="1000" onchange="ui.recalcWB()"></div></div><div id="wb-result" class="glass-panel p-6 border-blue-500/30 border min-h-[200px] flex flex-col justify-center text-center"><div class="text-slate-500 italic">Bitte Ballon und Zuladung wählen...</div></div><button onclick="ui.savePlan()" id="btn-save-plan" class="bg-green-600 hover:bg-green-500 w-full py-3 rounded font-bold shadow-lg shadow-green-900/20 mt-4 transition transform active:scale-95 flex items-center justify-center gap-2"><i class="fas fa-save"></i> Planung Speichern</button></div></div>`; },
-            viewSettings(c) { const initHrs = Math.floor(state.pilot.initialHours || 0); const initMins = Math.round(((state.pilot.initialHours || 0) - initHrs) * 60); const initTimeStr = `${initHrs}:${initMins.toString().padStart(2, '0')}`; c.innerHTML = `<h3 class="text-xl font-bold mb-4">Einstellungen</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-8"><section class="space-y-4"><h4 class="font-bold text-blue-400">Pilot & System</h4><div><label>Name des Piloten</label><input type="text" id="set-pilot-name" value="${state.pilot.name}" onchange="ui.saveSettings(true)"></div><div class="grid grid-cols-2 gap-2"><div><label>Gewicht (kg)</label><input type="number" id="set-pilot-weight" value="${state.pilot.weight}" onchange="ui.saveSettings(true)"></div><div><!-- Spacer --></div><div><label>Bisherige Fahrten</label><input type="number" id="set-pilot-flights" value="${state.pilot.initialFlights || 0}" placeholder="Anzahl" onchange="ui.saveSettings(true)"></div><div><label>Bisherige Stunden (hh:mm)</label><input type="text" id="set-pilot-hours" value="${initTimeStr}" placeholder="hh:mm" onchange="ui.saveSettings(true)"></div></div><div><label>Aktueller Ballon (für Karte)</label><select id="set-active-balloon" class="bg-slate-800 text-sm" onchange="ui.saveSettings(true)"><option value="">-- Standard (Emoji) --</option>${state.balloons.map(b => `<option value="${b.id}" ${state.settings.activeBalloonId === b.id ? 'selected' : ''}>${b.callsign}</option>`).join('')}</select></div><div class="pt-2"><label>Gemini API Key</label><input type="password" id="set-api-key" value="${state.settings.apiKey || ''}" placeholder="AI API Key..." onchange="ui.saveSettings(true)"></div><h4 class="font-bold text-blue-400 mt-2">Einheiten</h4><div class="grid grid-cols-1 sm:grid-cols-3 gap-2"><div><label>Höhe</label><select id="set-unit-alt" onchange="ui.saveSettings(true)"><option value="m" ${state.settings.unitAlt==='m'?'selected':''}>Meter (m)</option><option value="ft" ${state.settings.unitAlt==='ft'?'selected':''}>Fuß (ft)</option></select></div><div><label>Speed</label><select id="set-unit-speed" onchange="ui.saveSettings(true)"><option value="kmh" ${state.settings.unitSpeed==='kmh'?'selected':''}>km/h</option><option value="kt" ${state.settings.unitSpeed==='kt'?'selected':''}>Knoten (kt)</option></select></div><div><label>Vario</label><select id="set-unit-vario" onchange="ui.saveSettings(true)"><option value="ms" ${state.settings.unitVario==='ms'?'selected':''}>m/s</option><option value="fts" ${state.settings.unitVario==='fts'?'selected':''}>ft/s</option></select></div></div></section><section class="space-y-4"><h4 class="font-bold text-blue-400">Karte & Anzeige</h4><div><label class="mb-2 block">Betriebsmodus</label><div class="flex items-center justify-between bg-white/5 p-3 rounded border border-white/10"><div class="flex flex-col"><span class="text-sm font-bold text-white">GPS / Live-Tracking</span><span class="text-[10px] text-slate-400">Verwendet echte Standortdaten</span></div><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="set-mode-toggle" class="sr-only peer" ${state.settings.mode === 'gps' ? 'checked' : ''} onchange="ui.saveSettings(true)"><div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div></label></div><div class="text-[10px] text-slate-500 mt-1 text-right">${state.settings.mode === 'gps' ? 'Modus: GPS Aktiv' : 'Modus: Simulation (Training)'}</div></div><div><label>Kartenstil</label><select id="set-map-style" onchange="ui.saveSettings(true)"><option value="dark" ${state.settings.mapStyle==='dark'?'selected':''}>Dark Matter (Dunkel)</option><option value="light" ${state.settings.mapStyle==='light'?'selected':''}>OpenStreetMap (Hell)</option><option value="sat" ${state.settings.mapStyle==='sat'?'selected':''}>Satellit</option></select></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-2"><div><label>Track Farbe</label><input type="color" id="set-track-color" value="${state.settings.trackColor}" onchange="ui.saveSettings(true)"></div><div><label>Track Stärke (px)</label><input type="number" id="set-track-width" value="${state.settings.trackWidth}" min="1" max="10" onchange="ui.saveSettings(true)"></div></div><h4 class="font-bold text-red-400 mt-4">Datenverwaltung</h4><div class="flex flex-col gap-2"><button onclick="system.exportData()" class="bg-slate-700 py-2 rounded text-sm">Backup Export (JSON)</button><button onclick="system.triggerImport()" class="bg-slate-600 py-2 rounded text-sm text-blue-200">Backup Importieren (Restore)</button><button onclick="system.resetData()" class="bg-red-900/40 text-red-300 py-2 rounded text-sm">Daten zurücksetzen</button></div><div class="mt-4"><label class="text-xs uppercase text-slate-500 font-bold mb-1">Fotos löschen nach (Tagen)</label><input type="number" id="set-image-retention" value="${state.settings.imageRetention || 30}" onchange="ui.saveSettings(true)" class="bg-slate-800 border border-slate-600 rounded p-2 text-sm w-full"></div></section></div>`; },
+            viewSettings(c) { const initHrs = Math.floor(state.pilot.initialHours || 0); const initMins = Math.round(((state.pilot.initialHours || 0) - initHrs) * 60); const initTimeStr = `${initHrs}:${initMins.toString().padStart(2, '0')}`; c.innerHTML = `
+                <div class="space-y-6">
+                    <!-- SECTION 1: PILOT -->
+                    <div class="bg-white/5 p-4 rounded-lg">
+                        <h4 class="text-blue-400 font-bold mb-3 border-b border-white/10 pb-1">Pilot & Basisdaten</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><label>Name des Piloten</label><input type="text" id="set-pilot-name" value="${state.pilot.name}" onchange="ui.saveSettings(true)"></div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div><label>Gewicht (kg)</label><input type="number" id="set-pilot-weight" value="${state.pilot.weight}" onchange="ui.saveSettings(true)"></div>
+                                <div><label>Stunden (hh:mm)</label><input type="text" id="set-pilot-hours" value="${initTimeStr}" placeholder="hh:mm" onchange="ui.saveSettings(true)"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECTION 2: DISPLAY & UNITS -->
+                    <div class="bg-white/5 p-4 rounded-lg">
+                        <h4 class="text-blue-400 font-bold mb-3 border-b border-white/10 pb-1">Anzeige & Einheiten</h4>
+                        <div class="space-y-3">
+                             <div class="flex items-center justify-between bg-black/20 p-2 rounded">
+                                 <span class="text-sm">Betriebsmodus: <b>${state.settings.mode === 'gps' ? 'GPS LIVE' : 'SIMULATION'}</b></span>
+                                 <label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="set-mode-toggle" class="sr-only peer" ${state.settings.mode === 'gps' ? 'checked' : ''} onchange="ui.saveSettings(true)"><div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div></label>
+                             </div>
+                             <div class="flex items-center justify-between bg-black/20 p-2 rounded">
+                                 <span class="text-sm">Zeiten in UTC anzeigen</span>
+                                 <label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="set-use-utc" class="sr-only peer" ${state.settings.useUTC ? 'checked' : ''} onchange="ui.saveSettings(true)"><div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div></label>
+                             </div>
+                             <div class="grid grid-cols-2 gap-2">
+                                <div><label>Kartenstil</label><select id="set-map-style" onchange="ui.saveSettings(true)"><option value="dark" ${state.settings.mapStyle==='dark'?'selected':''}>Dark Matter (Dunkel)</option><option value="light" ${state.settings.mapStyle==='light'?'selected':''}>OpenStreetMap (Hell)</option><option value="sat" ${state.settings.mapStyle==='sat'?'selected':''}>Satellit</option></select></div>
+                                <div><label>Track Farbe</label><input type="color" id="set-track-color" value="${state.settings.trackColor}" onchange="ui.saveSettings(true)"></div>
+                             </div>
+                             <div class="pt-2"><label>Gemini API Key</label><input type="password" id="set-api-key" value="${state.settings.apiKey || ''}" placeholder="..." onchange="ui.saveSettings(true)"></div>
+                        </div>
+                    </div>
+
+                    <!-- SECTION 3: STORAGE -->
+                    <div class="bg-white/5 p-4 rounded-lg">
+                        <h4 class="text-amber-400 font-bold mb-3 border-b border-white/10 pb-1">Speicher & Bereinigung</h4>
+                        <div class="flex items-end gap-2">
+                            <div class="flex-1">
+                                <label class="text-[10px]">Fotos aufbewahren (Tage)</label>
+                                <input type="number" id="set-image-retention" value="${state.settings.imageRetention || 30}" onchange="ui.saveSettings(true)" class="bg-slate-800 border border-slate-600 rounded p-2 text-sm w-full">
+                            </div>
+                            <button onclick="flightManager.cleanOldPhotosNow()" class="bg-amber-700/50 hover:bg-amber-600 text-amber-100 p-2 rounded text-sm mb-[1px]">Jetzt bereinigen</button>
+                        </div>
+                    </div>
+
+                    <!-- SECTION 4: DANGER ZONE -->
+                    <div class="bg-red-900/10 border border-red-900/30 p-4 rounded-lg mt-8">
+                        <h4 class="text-red-400 font-bold mb-3 text-sm uppercase">System & Daten (Gefahrenzone)</h4>
+                        <div class="flex flex-col gap-2">
+                            <button onclick="system.exportData()" class="bg-slate-800 hover:bg-slate-700 py-2 rounded text-sm border border-white/10">Backup erstellen (Export)</button>
+                            <button onclick="system.triggerImport()" class="bg-slate-800 hover:bg-slate-700 py-2 rounded text-sm border border-white/10 text-blue-200">Backup wiederherstellen (Import)</button>
+                            <button onclick="system.resetData()" class="bg-red-900/40 hover:bg-red-900/60 text-red-200 py-2 rounded text-sm mt-2 border border-red-500/30">Werkseinstellungen (Reset)</button>
+                        </div>
+                    </div>
+                </div>`; 
+            },
+            
             viewEnvironment(c) { c.innerHTML = `<h3 class="text-xl font-bold mb-4">Wetter & Wind Simulation</h3><div class="glass-panel p-6 border-white/10 border"><div class="flex justify-between items-start mb-4"><p class="text-sm text-slate-400">Hier definierst du die Windschichten für die Simulation. Der Ballon bewegt sich basierend auf der aktuellen Höhe und diesen Werten.</p><button onclick="weatherService.fetchLiveWind()" class="bg-green-600/20 text-green-400 border border-green-500/50 px-3 py-1 rounded text-xs whitespace-nowrap hover:bg-green-600 hover:text-white transition"><i class="fas fa-satellite-dish mr-1"></i> Live-Daten laden</button></div><div class="grid grid-cols-4 gap-2 text-xs uppercase text-slate-500 font-bold mb-2"><div>Höhe (m)</div><div>Richtung (°)</div><div>Speed (kt)</div><div></div></div><div id="wind-rows" class="space-y-2 mb-4">${state.windLayers.sort((a,b)=>a.alt-b.alt).map((w, idx) => `<div class="grid grid-cols-4 gap-2 items-center"><input type="number" class="wind-edit-alt" value="${w.alt}" placeholder="Höhe"><input type="number" class="wind-edit-dir" value="${w.dir}" placeholder="Dir"><input type="number" class="wind-edit-spd" value="${w.speed}" placeholder="Knots"><button onclick="ui.removeWindLayer(${idx})" class="text-red-400 hover:text-red-300"><i class="fas fa-trash"></i></button></div>`).join('')}</div><button onclick="ui.addWindLayer()" class="bg-slate-700 px-4 py-2 rounded text-xs mb-6">+ Schicht hinzufügen</button><button onclick="ui.saveEnvironment()" class="bg-blue-600 w-full py-3 rounded font-bold shadow-lg">Wetterdaten Speichern</button><div class="mt-4"><label class="text-xs uppercase text-slate-500 font-bold mb-1 block">Wind-Filter (Grad)</label><div class="flex items-center gap-2"><input type="number" id="set-wind-threshold" class="w-20 bg-slate-800 text-sm p-1 rounded" value="${state.settings.windThreshold || 5}"><span class="text-xs text-slate-400">Nur Änderungen > X° anzeigen</span></div></div><p class="text-[10px] text-slate-500 mt-2 text-center">Live-Daten bereitgestellt durch Open-Meteo.com (Kein Key erforderlich)</p></div>`; },
             
             // --- WIND FILTER LOGIC ---
@@ -1424,8 +1552,26 @@
                 c.innerHTML = `<h3 class="text-xl font-bold mb-4">Gasflasche Details</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="col-span-1 md:col-span-2"><label>Bezeichnung</label><input type="text" id="f-label" value="${cyl.label}"></div><div><label>Typ</label><input type="text" id="f-type" value="${cyl.type}"></div><div><label>Seriennummer</label><input type="text" id="f-sn" value="${cyl.sn}"></div><div><label>Tara (kg)</label><input type="number" id="f-tare" value="${cyl.tare}"></div><div><label>Gasfüllung (kg)</label><input type="number" id="f-gas" value="${cyl.gas}"></div><div class="col-span-1 md:col-span-2"><label>Nächster TÜV</label><input type="date" id="f-tuv" value="${cyl.tuv}"></div></div><div class="flex gap-2 mt-6"><button onclick="ui.saveCylinder()" class="bg-blue-600 px-6 py-2 rounded">Speichern</button><button onclick="ui.switchTab('cylinders')" class="bg-slate-700 px-6 py-2 rounded">Abbrechen</button></div>`;
             },
             formPassenger(c) {
-                const p = state.passengers.find(x => x.id === this.editingId) || { name: "", weight: 80, gender: "n/a", phone: "" };
-                c.innerHTML = `<h3 class="text-xl font-bold mb-4">Passagier Details</h3><div class="space-y-4"><div><label>Vollständiger Name</label><input type="text" id="f-name" value="${p.name}"></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-4"><div><label>Gewicht (kg)</label><input type="number" id="f-p-weight" value="${p.weight}"></div><div><label>Geschlecht</label><select id="f-gender"><option value="n/a" ${p.gender==='n/a'?'selected':''}>n/a</option><option value="m" ${p.gender==='m'?'selected':''}>Männlich</option><option value="w" ${p.gender==='w'?'selected':''}>Weiblich</option><option value="d" ${p.gender==='d'?'selected':''}>Divers</option></select></div></div><div><label>Telefonnummer</label><input type="tel" id="f-phone" value="${p.phone}"></div></div><div class="flex gap-2 mt-6"><button onclick="ui.savePassenger()" class="bg-blue-600 px-6 py-2 rounded">Speichern</button><button onclick="ui.switchTab('passengers')" class="bg-slate-700 px-6 py-2 rounded">Abbrechen</button></div>`;
+                const p = state.passengers.find(x => x.id === this.editingId) || { name: "", weight: 80, gender: "n/a", phone: "", baptism: false, baptismName: "" };
+                c.innerHTML = `<h3 class="text-xl font-bold mb-4">Passagier Details</h3>
+                    <div class="space-y-4">
+                        <div><label>Vollständiger Name</label><input type="text" id="f-name" value="${p.name}"></div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div><label>Gewicht (kg)</label><input type="number" id="f-p-weight" value="${p.weight}"></div>
+                            <div><label>Geschlecht</label><select id="f-gender"><option value="n/a" ${p.gender==='n/a'?'selected':''}>n/a</option><option value="m" ${p.gender==='m'?'selected':''}>Männlich</option><option value="w" ${p.gender==='w'?'selected':''}>Weiblich</option><option value="d" ${p.gender==='d'?'selected':''}>Divers</option></select></div>
+                        </div>
+                        <div><label>Telefonnummer</label><input type="tel" id="f-phone" value="${p.phone}"></div>
+                        
+                        <!-- NEW BAPTISM FIELDS -->
+                        <div class="bg-amber-900/20 p-3 rounded border border-amber-600/30">
+                            <label class="flex items-center gap-2 mb-2 cursor-pointer font-bold text-amber-500">
+                                <input type="checkbox" id="f-baptism" class="w-4 h-4 rounded border-amber-500 text-amber-600 focus:ring-amber-500" ${p.baptism ? 'checked' : ''}>
+                                Ballonfahrertaufe erfolgt
+                            </label>
+                            <div><label>Adelstitel / Taufname</label><input type="text" id="f-baptism-name" value="${p.baptismName || ''}" placeholder="z.B. Graf von..."></div>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 mt-6"><button onclick="ui.savePassenger()" class="bg-blue-600 px-6 py-2 rounded">Speichern</button><button onclick="ui.switchTab('passengers')" class="bg-slate-700 px-6 py-2 rounded">Abbrechen</button></div>`;
             },
             formLogManual(c) {
                 c.innerHTML = `<h3 class="text-xl font-bold mb-4">Manueller Log-Eintrag</h3><div class="space-y-4"><div><label>Datum</label><input type="date" id="f-l-date" value="${new Date().toISOString().split('T')[0]}"></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-4"><div><label>Startzeit</label><input type="time" id="f-l-start" value="08:00"></div><div><label>Landezeit</label><input type="time" id="f-l-end" value="09:30"></div></div><div><label>Ballon</label><select id="f-l-balloon">${state.balloons.map(b=>`<option>${b.callsign}</option>`).join('')}</select></div><div><label>Notizen / Ort</label><textarea id="f-l-notes" rows="3"></textarea></div></div><div class="flex gap-2 mt-6"><button onclick="ui.saveLogManual()" class="bg-blue-600 px-6 py-2 rounded">Speichern</button><button onclick="ui.switchTab('logbook')" class="bg-slate-700 px-6 py-2 rounded">Abbrechen</button></div>`;
@@ -1449,14 +1595,26 @@
                 saveState(); this.switchTab('fleet');
             },
             saveCylinder() { const data = { id: this.editingId === 'new' ? Date.now().toString() : this.editingId, label: document.getElementById('f-label').value, type: document.getElementById('f-type').value, sn: document.getElementById('f-sn').value, tare: parseFloat(document.getElementById('f-tare').value), gas: parseFloat(document.getElementById('f-gas').value), tuv: document.getElementById('f-tuv').value }; if (this.editingId === 'new') state.cylinders.push(data); else state.cylinders = state.cylinders.map(x => x.id === this.editingId ? data : x); saveState(); this.switchTab('cylinders'); },
-            savePassenger() { const data = { id: this.editingId === 'new' ? Date.now().toString() : this.editingId, name: document.getElementById('f-name').value, weight: parseFloat(document.getElementById('f-p-weight').value), gender: document.getElementById('f-gender').value, phone: document.getElementById('f-phone').value }; if (this.editingId === 'new') state.passengers.push(data); else state.passengers = state.passengers.map(x => x.id === this.editingId ? data : x); saveState(); this.switchTab('passengers'); },
+            savePassenger() { 
+                const data = { 
+                    id: this.editingId === 'new' ? Date.now().toString() : this.editingId, 
+                    name: document.getElementById('f-name').value, 
+                    weight: parseFloat(document.getElementById('f-p-weight').value), 
+                    gender: document.getElementById('f-gender').value, 
+                    phone: document.getElementById('f-phone').value,
+                    // New Fields
+                    baptism: document.getElementById('f-baptism').checked,
+                    baptismName: document.getElementById('f-baptism-name').value
+                }; 
+                if (this.editingId === 'new') state.passengers.push(data); else state.passengers = state.passengers.map(x => x.id === this.editingId ? data : x); 
+                saveState(); this.switchTab('passengers'); 
+            },
             saveLogManual() { const date = document.getElementById('f-l-date').value; state.logs.push({ id: Date.now(), start: date + "T" + document.getElementById('f-l-start').value, end: date + "T" + document.getElementById('f-l-end').value, balloon: document.getElementById('f-l-balloon').value, notes: document.getElementById('f-l-notes').value, track: [] }); saveState(); this.switchTab('logbook'); },
             delete(collection, id) { if (confirm("Löschen?")) { state[collection] = state[collection].filter(x => x.id != id); saveState(); this.render(); } },
 
             saveSettings(silent = false) {
                 state.pilot.name = document.getElementById('set-pilot-name').value;
                 state.pilot.weight = parseFloat(document.getElementById('set-pilot-weight').value);
-                state.pilot.initialFlights = parseInt(document.getElementById('set-pilot-flights').value) || 0;
                 
                 const timeStr = document.getElementById('set-pilot-hours').value;
                 const parts = timeStr.split(':');
@@ -1464,13 +1622,11 @@
                 else { state.pilot.initialHours = parseFloat(timeStr) || 0; }
                 
                 state.settings.apiKey = document.getElementById('set-api-key').value;
-                state.settings.unitAlt = document.getElementById('set-unit-alt').value;
-                state.settings.unitSpeed = document.getElementById('set-unit-speed').value;
-                state.settings.unitVario = document.getElementById('set-unit-vario').value;
+                state.settings.unitAlt = 'm'; // Hidden fallback
+                state.settings.unitSpeed = 'kmh'; // Hidden fallback
+                state.settings.unitVario = 'ms'; // Hidden fallback
                 state.settings.trackColor = document.getElementById('set-track-color').value;
-                state.settings.trackWidth = parseInt(document.getElementById('set-track-width').value);
                 state.settings.mapStyle = document.getElementById('set-map-style').value;
-                state.settings.activeBalloonId = document.getElementById('set-active-balloon').value || null;
                 const modeToggle = document.getElementById('set-mode-toggle');
                 state.settings.mode = modeToggle.checked ? 'gps' : 'sim';
                 state.settings.windThreshold = parseFloat(document.getElementById('set-wind-threshold')?.value) || 5;
@@ -1546,64 +1702,6 @@
             },
             taufe(name) { const titles = ["Baron von Thermika", "Graf von Wolkenstein", "Ritter der Windstille", "Herzog der sanften Landung", "Fürst von Cumulus"]; alert(`Die feierliche Taufe von ${name}:\n\nSie werden hiermit erhoben in den Adelsstand als:\n\n"${titles[Math.floor(Math.random()*titles.length)]}"`); },
             
-            renderWind() { 
-                const container = document.getElementById('wind-layers-container'); 
-                container.innerHTML = ''; 
-                
-                const isKmh = state.settings.unitSpeed === 'kmh';
-                const unitLabel = isKmh ? 'km/h' : 'kt';
-                const threshold = state.settings.windThreshold || 5;
-
-                const layerMap = new Map();
-                
-                state.windLayers.forEach(l => layerMap.set(l.alt, { ...l, isMeasured: false }));
-                
-                if (state.measuredWindLayers) {
-                    state.measuredWindLayers.forEach(l => layerMap.set(l.alt, { ...l, isMeasured: true }));
-                }
-
-                const sortedLayers = Array.from(layerMap.values()).sort((a, b) => b.alt - a.alt);
-
-                let lastKeptDir = null;
-                
-                sortedLayers.forEach((layer, index) => {
-                    let keep = false;
-                    
-                    if (index === 0) keep = true;
-                    else if (layer.isMeasured) keep = true;
-                    else {
-                        if (lastKeptDir === null) {
-                            keep = true;
-                        } else {
-                            let diff = Math.abs(layer.dir - lastKeptDir);
-                            if (diff > 180) diff = 360 - diff;
-                            if (diff >= threshold) keep = true;
-                        }
-                    }
-
-                    if (keep) {
-                        let speed = layer.speed;
-                        if (isKmh) speed *= 1.852; 
-
-                        const colorClass = layer.isMeasured ? 'text-green-400 font-bold' : 'text-blue-300';
-                        const labelClass = layer.isMeasured ? 'text-green-400' : '';
-                        const arrowClass = layer.isMeasured ? 'compass-arrow arrow-green' : 'compass-arrow';
-
-                        // HIGHLIGHT CURRENT ALTITUDE
-                        const isCurrentAlt = Math.abs(layer.alt - simulation.alt) < 25;
-                        const activeClass = isCurrentAlt ? 'active-altitude' : '';
-
-                        const div = document.createElement('div'); 
-                        div.className = `wind-layer ${activeClass}`; 
-                        div.dataset.alt = layer.alt; // Added dataset
-                        div.innerHTML = `<div class="${colorClass}">${layer.alt}m</div><div class="${arrowClass}" style="transform: rotate(${layer.dir}deg)"></div><div class="${labelClass}">${speed.toFixed(1)}${unitLabel}</div>`; 
-                        container.appendChild(div);
-                        
-                        lastKeptDir = layer.dir;
-                    }
-                });
-            },
-
             capture() { html2canvas(document.body).then(canvas => { const link = document.createElement('a'); link.download = `AeroNav-Screenshot-${Date.now()}.png`; link.href = canvas.toDataURL(); link.click(); }); },
 
             // --- PLANNING LOGIC ---
@@ -1922,131 +2020,89 @@
                                 
                                 ${isPlanActive ? `<button onclick="ui.archivePlanFromSummary(${log.planId}, this)" class="bg-amber-600/20 text-amber-400 border border-amber-500/30 px-3 rounded hover:bg-amber-600/40" title="Planung archivieren"><i class="fas fa-box-archive"></i></button>` : ''}
                                 <button onclick="ui.exportGPX(${log.id})" class="bg-slate-800 border border-white/10 px-3 rounded text-orange-400 hover:text-white transition" title="GPX"><i class="fas fa-route"></i></button>
-                                <button onclick="ui.shareSummaryImage(${log.id})" class="bg-slate-800 border border-white/10 px-3 rounded text-purple-400 hover:text-white transition" title="Bild Export"><i class="fas fa-share-alt"></i></button>
+                                <button onclick="ui.generateReportImage(${log.id})" class="bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 px-3 rounded hover:bg-indigo-600/40" title="Teilen / Report"><i class="fas fa-share-alt"></i></button>
                             </div>
                         </div>
-                    </div>
-                `;
-                
-                setTimeout(() => {
-                    const el = document.getElementById('summary-map-container');
-                    if(el) {
-                        el.innerHTML = '<div id="summary-map-inner" style="width:100%;height:100%;"></div>'; 
-                        const style = state.settings.mapStyle || 'dark';
-                        let tileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-                        if (style === 'light') tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-                        if (style === 'sat') tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+                    </div>`;
 
-                        const smap = L.map('summary-map-inner', { zoomControl: false, attributionControl: false });
-                        L.tileLayer(tileUrl).addTo(smap);
-                        
-                        if (log.track && log.track.length > 0) {
-                            const poly = L.polyline(log.track, { color: '#ef4444', weight: 4 }).addTo(smap);
-                            smap.invalidateSize();
-                            smap.fitBounds(poly.getBounds(), { padding: [20, 20] });
-                        } else {
-                            smap.setView([51.1657, 10.4515], 6);
-                        }
-                    }
+                // Render Map Preview inside Modal
+                setTimeout(() => {
+                    const mapContainer = document.getElementById('summary-map-container');
+                    mapContainer.innerHTML = ''; // Remove loader
+                    const miniMap = L.map(mapContainer, { zoomControl: false, attributionControl: false }).setView([51.1657, 10.4515], 13);
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(miniMap);
                     
-                    // Render Chart
-                    const chartCtx = document.getElementById('altitudeChart');
-                    if(chartCtx && log.track && log.track.length > 0) {
-                        // Extract altitude if available (index 2)
-                        const labels = log.track.map((_, i) => i); // Just index for x-axis
-                        // Check if altitude exists in track points [lat, lng, alt]
-                        const altData = log.track.map(pt => pt[2] || 0);
-                        
-                        new Chart(chartCtx, {
-                            type: 'line',
-                            data: {
-                                labels: labels,
-                                datasets: [{
-                                    label: 'Höhe (m)',
-                                    data: altData,
-                                    borderColor: '#3b82f6',
-                                    borderWidth: 2,
-                                    pointRadius: 0,
-                                    fill: true,
-                                    backgroundColor: 'rgba(59, 130, 246, 0.2)'
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                plugins: { legend: { display: false } },
-                                scales: {
-                                    x: { display: false },
-                                    y: { 
-                                        grid: { color: 'rgba(255,255,255,0.1)' },
-                                        ticks: { color: '#94a3b8', font: { size: 10 } }
-                                    }
-                                }
-                            }
-                        });
+                    if (log.track && log.track.length > 0) {
+                        const line = L.polyline(log.track, { color: '#3b82f6', weight: 3 }).addTo(miniMap);
+                        miniMap.fitBounds(line.getBounds(), { padding: [20, 20] });
                     }
-                }, 200);
+
+                    // Render Chart
+                    const ctx = document.getElementById('altitudeChart').getContext('2d');
+                    const trackData = log.track || [];
+                    const labels = trackData.map((_, i) => i);
+                    const altData = trackData.map(p => p[2]);
+                    
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Höhe (m)',
+                                data: altData,
+                                borderColor: '#3b82f6',
+                                borderWidth: 1.5,
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                fill: true,
+                                pointRadius: 0
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                x: { display: false },
+                                y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b' } }
+                            }
+                        }
+                    });
+
+                }, 100);
             },
 
-            // --- Logbook Editing Helpers ---
-            updateLogBalloon(logId, callsign) {
+            updateLogBalloon(logId, newCallsign) {
                 const log = state.logs.find(l => l.id == logId);
                 if (log) {
-                    log.balloon = callsign;
+                    log.balloon = newCallsign;
                     saveState();
-                    this.showSummary(logId, true); // Keep edit mode
+                    // Don't re-render entire form to keep input focus, handled by state update on save
                 }
             },
-            
+
             removeLogCylinder(logId, cylId) {
                 const log = state.logs.find(l => l.id == logId);
                 if (log) {
-                    log.cylinders = log.cylinders.filter(c => c != cylId);
+                    log.cylinders = log.cylinders.filter(id => id !== cylId);
                     saveState();
-                    this.showSummary(logId, true); // Keep edit mode
+                    this.showSummary(logId, true); // Refresh
                 }
             },
 
             addLogCylinder(logId) {
-                const available = state.cylinders.filter(c => !state.logs.find(l => l.id == logId).cylinders.includes(c.id));
-                if (available.length === 0) { ui.showToast("Alle verfügbaren Flaschen sind bereits hinzugefügt.", "error"); return; }
-                
-                const selector = document.createElement('div');
-                selector.className = "fixed inset-0 z-[3000] bg-black/80 flex items-center justify-center p-4";
-                selector.innerHTML = `
-                    <div class="bg-slate-800 p-4 rounded w-full max-w-sm">
-                        <h4 class="font-bold mb-4">Flasche hinzufügen</h4>
-                        <div class="space-y-2 max-h-60 overflow-y-auto">
-                            ${available.map(c => `
-                                <button class="w-full text-left bg-slate-700 p-3 rounded hover:bg-blue-600" onclick="ui.confirmAddLogCylinder(${logId}, '${c.id}')">
-                                    ${c.label} (${c.type})
-                                </button>
-                            `).join('')}
-                        </div>
-                        <button class="mt-4 w-full py-2 bg-slate-600 rounded" onclick="this.parentElement.parentElement.remove()">Abbrechen</button>
-                    </div>
-                `;
-                document.body.appendChild(selector);
-            },
-
-            confirmAddLogCylinder(logId, cylId) {
-                const log = state.logs.find(l => l.id == logId);
-                if (log) {
-                    log.cylinders.push(cylId);
-                    saveState();
-                    document.querySelector('.z-\\[3000\\]')?.remove();
-                    this.showSummary(logId, true); // Keep edit mode
-                }
-            },
-
-            archivePlanFromSummary(planId, btn) {
-                if(confirm("Die verwendete Planung jetzt ins Archiv verschieben?")) {
-                    this.archivePlan(planId);
-                    // Feedback to user (Update Button immediately)
-                    btn.innerHTML = '<i class="fas fa-check"></i>';
-                    btn.className = "bg-green-600/20 text-green-400 border border-green-500/30 px-3 rounded cursor-default";
-                    btn.onclick = null;
-                    btn.title = "Archiviert";
+                // Simple prompt for now - could be a modal selector
+                const available = state.cylinders.map((c, i) => `${i+1}: ${c.label}`).join('\n');
+                const selection = prompt("Nummer der Flasche eingeben:\n" + available);
+                if (selection) {
+                    const idx = parseInt(selection) - 1;
+                    if (state.cylinders[idx]) {
+                        const log = state.logs.find(l => l.id == logId);
+                        if(log) {
+                            log.cylinders.push(state.cylinders[idx].id);
+                            saveState();
+                            this.showSummary(logId, true);
+                        }
+                    }
                 }
             },
 
@@ -2055,223 +2111,134 @@
                 if (log) {
                     log.startLoc = document.getElementById('sum-start').value;
                     log.endLoc = document.getElementById('sum-end').value;
-                    log.notes = `Start: ${log.startLoc}\nLandung: ${log.endLoc}`;
+                    // Balloon change is already live via onchange, cylinders live via add/remove
                     saveState();
+                    this.showSummary(logId, false); // Switch to read mode
+                    ui.showToast("Änderungen gespeichert");
                 }
-                this.closeModal();
-                this.switchTab('logbook'); 
             },
-
+            
+            archivePlanFromSummary(planId, btn) {
+                this.archivePlan(planId);
+                btn.remove();
+                ui.showToast("Planung archiviert");
+            },
+            
             exportGPX(logId) {
                 const log = state.logs.find(l => l.id == logId);
-                if (!log || !log.track || log.track.length === 0) { ui.showToast("Keine Trackdaten vorhanden.", "error"); return; }
-                let gpx = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="AeroNav">\n  <trk>\n    <name>${log.balloon} - ${new Date(log.start).toLocaleDateString()}</name>\n    <trkseg>\n`;
-                log.track.forEach(pt => { gpx += `      <trkpt lat="${pt[0]}" lon="${pt[1]}"></trkpt>\n`; });
-                gpx += `    </trkseg>\n  </trk>\n</gpx>`;
-                const blob = new Blob([gpx], { type: 'application/gpx+xml' });
+                if (!log || !log.track || log.track.length === 0) { ui.showToast("Kein Track vorhanden!", "error"); return; }
+                
+                let gpx = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="AeroNav">
+  <trk>
+    <name>Flight ${new Date(log.start).toLocaleDateString()}</name>
+    <trkseg>`;
+    
+                log.track.forEach(pt => {
+                    gpx += `\n      <trkpt lat="${pt[0]}" lon="${pt[1]}"><ele>${pt[2]}</ele></trkpt>`;
+                });
+                
+                gpx += `\n    </trkseg>\n  </trk>\n</gpx>`;
+                
+                const blob = new Blob([gpx], {type: 'application/gpx+xml'});
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = `flight_${logId}.gpx`; a.click();
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `flight-${logId}.gpx`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
             },
 
-            shareSummaryImage(logId) {
-                const log = state.logs.find(l => l.id == logId);
-                if(!log) return;
+            generateReportImage(logId) {
+                const loader = document.getElementById('loading-overlay');
+                loader.classList.remove('hidden');
                 
-                // Show Loading
-                document.getElementById('loading-overlay').classList.remove('hidden');
-
-                const balloonObj = state.balloons.find(b => b.callsign === log.balloon);
-                const balloonImg = balloonObj ? balloonObj.image : null;
-
-                const durMs = new Date(log.end) - new Date(log.start);
-                const hrs = Math.floor(durMs / 3600000);
-                const mins = Math.floor((durMs % 3600000) / 60000);
-                const dateStr = new Date(log.start).toLocaleDateString('de-DE');
-                const startStr = ui.formatTime(log.start);
-                const endStr = ui.formatTime(log.end);
-                
-                const reportDiv = document.getElementById('report-stage');
-                reportDiv.style.visibility = 'visible'; // Make visible for render
-                reportDiv.innerHTML = `
-                    <div class="bg-white text-slate-900 p-0 rounded-lg shadow-xl overflow-hidden" style="width: 800px;">
-                         <!-- Reduced Header Height for Report -->
-                         <div class="relative h-40 bg-slate-800">
-                             ${balloonImg ? 
-                                `<div class="absolute inset-0 opacity-60 bg-center bg-cover" style="background-image: url('${balloonImg}')"></div>` 
-                                : '<div class="absolute inset-0 opacity-20 bg-gradient-to-r from-blue-600 to-purple-600"></div>'
-                             }
-                             <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent"></div>
-                             <div class="absolute bottom-6 left-8 flex items-center gap-4">
-                                  ${balloonImg ? `<img src="${balloonImg}" class="w-24 h-24 rounded-full border-4 border-white shadow-lg object-cover bg-slate-800">` : ''}
-                                  <div>
-                                     <h1 class="text-4xl font-bold text-white mb-0">Flight Report</h1>
-                                     <p class="text-slate-300 text-base">${dateStr} | ${log.balloon}</p>
-                                  </div>
-                             </div>
-                             <div class="absolute top-6 right-8 text-right text-white">
-                                 <div class="text-sm uppercase tracking-wider opacity-80">AeroNav Pilot</div>
-                                 <div class="font-bold text-base">${state.pilot.name}</div>
-                             </div>
-                        </div>
-
-                        <div class="p-8">
-                            <div class="flex gap-8 mb-8">
-                                <div class="w-1/3 space-y-6">
-                                    <div>
-                                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Start</div>
-                                        <div class="text-lg font-bold text-slate-800">${startStr}</div>
-                                        <div class="text-sm text-slate-600 leading-tight">${log.startLoc || '-'}</div>
-                                    </div>
-                                    <div>
-                                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Landung</div>
-                                        <div class="text-lg font-bold text-slate-800">${endStr}</div>
-                                        <div class="text-sm text-slate-600 leading-tight">${log.endLoc || '-'}</div>
-                                    </div>
-                                    <div>
-                                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Flugdauer</div>
-                                        <div class="text-3xl font-bold text-blue-600">${hrs}h ${mins}m</div>
-                                    </div>
-                                    <div class="grid grid-cols-2 gap-2 pt-4 border-t border-slate-100">
-                                        <div>
-                                            <div class="text-[10px] font-bold text-slate-400 uppercase">Max Höhe</div>
-                                            <div class="text-lg font-bold text-slate-700">${Math.round(log.maxAlt||0)}m</div>
-                                        </div>
-                                        <div>
-                                            <div class="text-[10px] font-bold text-slate-400 uppercase">Max Speed</div>
-                                            <div class="text-lg font-bold text-slate-700">${(log.maxSpeed||0).toFixed(1)} km/h</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="w-2/3 flex flex-col gap-4">
-                                    <div id="report-map" class="w-full h-64 bg-slate-200 rounded border shadow-inner"></div>
-                                    <div class="w-full h-32 bg-slate-50 rounded border p-2">
-                                        <canvas id="reportAltitudeChart"></canvas>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            ${log.photos && log.photos.length > 0 ? `
-                                <div>
-                                    <h3 class="font-bold text-slate-400 text-xs uppercase mb-3 border-b border-slate-200 pb-2">Impressionen</h3>
-                                    <div class="grid grid-cols-4 gap-3">
-                                        ${log.photos.map(p => `<div class="aspect-square bg-slate-200 overflow-hidden rounded-lg shadow-sm"><img src="${p.src}" class="w-full h-full object-cover"></div>`).join('')}
-                                    </div>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-                
-                const mapTarget = document.getElementById('report-map');
-                // Use Light Map for Print/Export
-                const rMap = L.map(mapTarget, { zoomControl: false, attributionControl: false, fadeAnimation: false });
-                
-                // Add event listener for tile load
-                const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { crossOrigin: 'anonymous' }).addTo(rMap);
-                
-                if (log.track && log.track.length > 0) {
-                    const poly = L.polyline(log.track, { color: '#ef4444', weight: 6 }).addTo(rMap);
-                    rMap.fitBounds(poly.getBounds(), { padding: [40, 40] });
-                } else { rMap.setView([51.1657, 10.4515], 6); }
-                
-                // Chart for Report
-                const reportChartCtx = document.getElementById('reportAltitudeChart');
-                if(reportChartCtx && log.track && log.track.length > 0) {
-                     const altData = log.track.map(pt => pt[2] || 0);
-                     new Chart(reportChartCtx, {
-                            type: 'line',
-                            data: {
-                                labels: log.track.map((_, i) => i),
-                                datasets: [{
-                                    label: 'Altitude',
-                                    data: altData,
-                                    borderColor: '#3b82f6',
-                                    borderWidth: 2,
-                                    pointRadius: 0,
-                                    fill: true,
-                                    backgroundColor: 'rgba(59, 130, 246, 0.1)'
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                plugins: { legend: { display: false } },
-                                scales: { x: { display: false }, y: { ticks: { font: { size: 9 } } } }
-                            }
-                        });
-                }
-
-                
-                // Allow tiles to load - INCREASED WAIT
+                // Wait for UI to render
                 setTimeout(() => {
-                    html2canvas(document.querySelector("#report-stage > div"), { useCORS: true, allowTaint: true, scale: 2 }).then(canvas => {
-                        const link = document.createElement('a'); link.download = `FlightReport_${dateStr}.png`; link.href = canvas.toDataURL(); link.click();
-                        rMap.remove(); 
-                        reportDiv.innerHTML = ''; 
-                        document.getElementById('loading-overlay').classList.add('hidden'); // Hide Loading
+                    const element = document.getElementById('flight-summary-view');
+                    if (!element) return;
+                    
+                    html2canvas(element, {
+                        useCORS: true,
+                        backgroundColor: '#0f172a',
+                        scale: 2
+                    }).then(canvas => {
+                        loader.classList.add('hidden');
+                        const link = document.createElement('a');
+                        link.download = `Flight-Report-${logId}.png`;
+                        link.href = canvas.toDataURL('image/png');
+                        link.click();
+                        ui.showToast("Bericht heruntergeladen!");
+                    }).catch(err => {
+                        loader.classList.add('hidden');
+                        console.error(err);
+                        ui.showToast("Fehler beim Erstellen des Bildes", "error");
                     });
-                }, 2000); // 2 Seconds wait
-            },
-
-            render() {
-                const c = document.getElementById('tab-content');
-                c.innerHTML = '';
-                if (this.editingId) { this.renderForm(c); return; }
-                switch(this.tab) {
-                    case 'planning': this.viewPlanning(c); break;
-                    case 'fleet': this.viewFleet(c); break;
-                    case 'cylinders': this.viewCylinders(c); break;
-                    case 'passengers': this.viewPassengers(c); break;
-                    case 'logbook': this.viewLogbook(c); break;
-                    case 'settings': this.viewSettings(c); break;
-                    case 'environment': this.viewEnvironment(c); break;
-                }
-            },
-            // ... (rest of view functions included above) ...
+                }, 500);
+            }
         };
-        // End of ui (Merged)
 
+        /**
+         * SYSTEM FUNCTIONS (Import/Export)
+         */
         const system = {
             exportData() {
-                const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `aeronav_backup_${new Date().toISOString().slice(0,10)}.json`; 
-                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                const dataStr = JSON.stringify(state);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                const exportFileDefaultName = 'aeronav-backup-' + new Date().toISOString().slice(0,10) + '.json';
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                linkElement.click();
             },
-            triggerImport() { const el = document.getElementById('import-input'); el.value = null; el.click(); },
+            
+            triggerImport() {
+                document.getElementById('import-input').click();
+            },
+            
             importData(input) {
                 if (input.files && input.files[0]) {
                     const reader = new FileReader();
-                    reader.onload = e => {
+                    reader.onload = function(e) {
                         try {
-                            const data = JSON.parse(e.target.result);
-                            if (data.pilot) { 
-                                localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); 
-                                alert("Daten erfolgreich importiert! App wird neu geladen."); 
-                                location.reload(); 
-                            } else { alert("Ungültiges Backup-Format."); }
-                        } catch (err) { alert("Fehler beim Lesen der Datei: " + err.message); }
+                            const importedState = JSON.parse(e.target.result);
+                            // Basic validation
+                            if (importedState.pilot && importedState.balloons) {
+                                state = importedState;
+                                saveState();
+                                ui.showToast("Daten erfolgreich importiert!", "success");
+                                setTimeout(() => location.reload(), 1000);
+                            } else {
+                                throw new Error("Ungültiges Format");
+                            }
+                        } catch (err) {
+                            ui.showToast("Import fehlgeschlagen: " + err.message, "error");
+                        }
                     };
                     reader.readAsText(input.files[0]);
                 }
             },
+            
             resetData() {
-                if (confirm("Sicher? Alle Daten werden gelöscht!")) {
+                if (confirm("ACHTUNG: Alle Daten werden unwiderruflich gelöscht! Fortfahren?")) {
                     localStorage.removeItem(STORAGE_KEY);
                     location.reload();
                 }
             }
         };
 
-        window.onload = () => {
+        // --- INIT ---
+        window.onload = function() {
             mapManager.init();
             simulation.init();
             flightManager.init();
             ui.init();
-            if (state.balloons.length === 0) {
-                state.balloons.push({ id: 'def', callsign: 'D-OAAA', volume: 3000, weight: 420, mtom: 1100, defaultCylinders: [], matrix: [[0.320, 0.280, 0.240],[0.280, 0.240, 0.200],[0.240, 0.200, 0.160],[0.200, 0.160, 0.120]], image: null });
-                saveState();
-            }
+            
+            // Initial Render logic based on default tab
+            ui.render();
         };
+
     </script>
 </body>
 </html>
