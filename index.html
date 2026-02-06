@@ -261,6 +261,7 @@
         
         /* RESPONSIVE MODAL CONTENT */
         .modal-content { 
+            width: 100%; /* Ensure width is consistent */
             max-width: 1000px; 
             margin: auto; 
             min-height: 85vh; 
@@ -287,7 +288,7 @@
         
         /* SELECTION OVERLAY */
         #selection-overlay { position: fixed; inset: 0; z-index: 10001; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; padding: 20px; backdrop-filter: blur(4px); }
-        .selection-box { background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 100%; max-width: 400px; max-height: 80vh; display: flex; flex-direction: column; shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        .selection-box { background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 100%; max-width: 400px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
 
         /* Form Controls */
         input, select, textarea { background: rgba(30, 41, 59, 0.5) !important; border: 1px solid rgba(255,255,255,0.1) !important; color: white !important; border-radius: 6px; padding: 8px 12px; width: 100%; }
@@ -2728,45 +2729,70 @@
 
                 // Basic Summary View
                 if (!isEdit) {
+                    // Display Photos Grid
+                    let photosHtml = '';
+                    if (log.photos && log.photos.length > 0) {
+                        photosHtml = `
+                            <h4 class="font-bold mb-2 text-sm text-slate-400 uppercase mt-4">Fotos</h4>
+                            <div class="grid grid-cols-4 gap-2 mb-4">
+                                ${log.photos.map(p => `
+                                    <div class="aspect-square bg-cover bg-center rounded-lg border border-white/10 cursor-pointer hover:opacity-80 transition" onclick="ui.showPhoto('${p.src}')" style="background-image: url('${p.src}')"></div>
+                                `).join('')}
+                            </div>
+                        `;
+                    } else {
+                        photosHtml = '<div class="text-xs text-slate-500 italic mt-4 mb-4">Keine Fotos vorhanden.</div>';
+                    }
+
                     c.innerHTML = `
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="text-xl font-bold">Zusammenfassung</h3>
                             <button onclick="ui.switchTab('logbook')" class="text-slate-400">Schließen</button>
                         </div>
                         
-                        <!-- Header with Balloon Image -->
-                        <div class="flex items-center gap-4 mb-4">
-                            ${balloonImg ? `<img src="${balloonImg}" class="w-16 h-16 rounded-full border-2 border-white object-cover">` : '<div class="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center text-2xl border-2 border-white">🎈</div>'}
-                            <div>
-                                <div class="font-bold text-lg">${log.balloon}</div>
-                                <div class="text-slate-400 text-xs">${new Date(log.start).toLocaleDateString()}</div>
+                        <!-- Map Container (Moved Top) -->
+                        <div class="relative w-full h-64 bg-slate-900 rounded-xl mb-4 border border-white/10 overflow-hidden">
+                            <div id="summary-map" class="absolute inset-0 z-0"></div>
+                            
+                            <!-- Balloon Overlay (Left on Map) -->
+                            <div class="absolute top-4 left-4 z-[400] flex items-center gap-3 pointer-events-none">
+                                ${balloonImg ? 
+                                    `<img src="${balloonImg}" class="w-16 h-16 rounded-full border-2 border-white object-cover shadow-lg bg-slate-800">` : 
+                                    `<div class="w-16 h-16 rounded-full bg-blue-600/90 backdrop-blur flex items-center justify-center text-3xl border-2 border-white shadow-lg text-white">🎈</div>`
+                                }
+                                <div class="bg-slate-900/80 backdrop-blur-md px-3 py-2 rounded-lg border border-white/10 shadow-lg">
+                                    <div class="font-bold text-white leading-tight">${log.balloon}</div>
+                                    <div class="text-slate-400 text-xs">${new Date(log.start).toLocaleDateString()}</div>
+                                </div>
                             </div>
                         </div>
 
                         <div class="glass-panel p-4 mb-4">
-                            <div class="flex justify-between mb-2">
+                            <!-- Locations & Duration -->
+                             <div class="flex justify-between mb-2">
                                 <span class="text-slate-400 text-sm">Startort:</span>
-                                <span class="font-bold">${log.startLoc}</span>
+                                <span class="font-bold text-right">${log.startLoc}</span>
                             </div>
                             <div class="flex justify-between mb-2">
                                 <span class="text-slate-400 text-sm">Landeort:</span>
-                                <span class="font-bold">${log.endLoc}</span>
+                                <span class="font-bold text-right">${log.endLoc}</span>
                             </div>
                             <div class="flex justify-between mb-2">
                                 <span class="text-slate-400 text-sm">Dauer:</span>
                                 <span class="font-bold text-blue-400">${Math.floor((new Date(log.end)-new Date(log.start))/60000)} min</span>
                             </div>
-                            
-                            <!-- Bemerkungsfeld Read-Only -->
+                             <div class="flex justify-between mb-2">
+                                <span class="text-slate-400 text-sm">Max Höhe:</span>
+                                <span class="font-bold text-blue-400">${Math.round(log.maxAlt || 0)} m</span>
+                            </div>
+
+                            <!-- Notes -->
                             <div class="mt-4 pt-2 border-t border-white/10">
                                 <span class="text-xs text-slate-500 uppercase font-bold mb-1 block">Bemerkungen</span>
                                 <div class="text-sm italic text-slate-300 bg-slate-900/50 p-2 rounded min-h-[40px] whitespace-pre-wrap">${log.notes || "Keine Notizen vorhanden."}</div>
                             </div>
                         </div>
                         
-                        <!-- Interactive Map Container -->
-                        <div id="summary-map" class="w-full h-48 bg-slate-900 rounded-lg mb-4 border border-white/10 relative z-0"></div>
-
                         <h4 class="font-bold mb-2 text-sm text-slate-400 uppercase">Passagiere</h4>
                         <div class="space-y-2 mb-4">
                             ${log.pax.map(pid => {
@@ -2774,6 +2800,8 @@
                                 return p ? `<div class="bg-slate-800 p-2 rounded flex justify-between items-center text-sm"><span>${p.firstName} ${p.lastName}</span> ${p.baptism ? '<span class="text-[10px] bg-amber-900/50 text-amber-500 px-1 rounded">Getauft</span>' : ''}</div>` : '';
                             }).join('')}
                         </div>
+                        
+                        ${photosHtml}
                         
                         <div class="flex gap-2 mt-6">
                             <button onclick="ui.generateReportImage(${log.id})" class="bg-blue-600 hover:bg-blue-500 w-12 h-12 rounded-lg flex items-center justify-center shadow-lg" title="Bildbericht"><i class="fas fa-image text-xl"></i></button>
@@ -2848,7 +2876,14 @@
                 let html = '';
                 
                 if (this.tab === 'fleet') {
-                    const b = isNew ? { id: Date.now().toString(), callsign: '', volume: 3000, mtom: 1000, weight: 200, image: '', defaultCylinders: [], matrix: Array(4).fill(Array(3).fill(0.3)) } : state.balloons.find(x => x.id === id);
+                    const b = isNew ? { 
+                        id: Date.now().toString(), 
+                        callsign: '', volume: 3000, mtom: 1000, weight: 200, image: '', defaultCylinders: [], 
+                        matrix: [ [0.3,0.28,0.26], [0.28,0.26,0.24], [0.26,0.24,0.22], [0.24,0.22,0.20] ] // Default matrix
+                    } : state.balloons.find(x => x.id === id);
+                    
+                    if(!b.matrix) b.matrix = [ [0.3,0.28,0.26], [0.28,0.26,0.24], [0.26,0.24,0.22], [0.24,0.22,0.20] ];
+
                     html = `
                         <div class="flex justify-between items-center mb-4"><h3 class="text-xl font-bold">${isNew ? 'Neuer Ballon' : 'Ballon bearbeiten'}</h3><button onclick="ui.switchTab('fleet')" class="text-slate-400">Abbrechen</button></div>
                         <div class="space-y-4">
@@ -2858,7 +2893,7 @@
                                 <input type="file" id="edit-balloon-img" class="hidden" accept="image/*" onchange="ui.handleImageUpload(this)">
                             </div>
                             <div><label>Kennzeichen</label><input type="text" id="edit-callsign" value="${b.callsign}"></div>
-                            <div class="grid grid-cols-3 gap-2">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
                                 <div><label>Volumen (m³)</label><input type="number" id="edit-vol" value="${b.volume}"></div>
                                 <div><label>MTOM (kg)</label><input type="number" id="edit-mtom" value="${b.mtom}"></div>
                                 <div><label>Leergewicht (kg)</label><input type="number" id="edit-weight" value="${b.weight}"></div>
@@ -2873,8 +2908,43 @@
                                     }).join('') : '<div class="text-slate-500 italic text-xs p-1">Keine Standard-Flaschen</div>'}
                                 </div>
                                 <div class="flex gap-2">
-                                    <select id="edit-cyl-select" class="text-xs"><option value="">+ Flasche wählen</option>${state.cylinders.map(cyl => `<option value="${cyl.id}">${cyl.label} (${cyl.type})</option>`).join('')}</select>
-                                    <button onclick="ui.addEditCylinder()" class="bg-slate-700 px-3 rounded hover:bg-slate-600"><i class="fas fa-plus"></i></button>
+                                    <select id="edit-cyl-select" onchange="ui.addEditCylinder()" class="text-xs"><option value="">+ Flasche wählen (Auto-Add)</option>${state.cylinders.map(cyl => `<option value="${cyl.id}">${cyl.label} (${cyl.type})</option>`).join('')}</select>
+                                </div>
+                            </div>
+                            
+                            <!-- Lift Matrix Editor -->
+                            <div class="border-t border-white/10 pt-4">
+                                <label class="mb-2 block">Tragkraft-Faktoren (kg/m³)</label>
+                                <div class="grid grid-cols-4 gap-2 text-xs items-center mb-2">
+                                     <div class="text-right text-slate-500 font-bold">Alt / T</div>
+                                     <div class="text-center text-blue-300 font-bold">0°C</div>
+                                     <div class="text-center text-blue-300 font-bold">15°C</div>
+                                     <div class="text-center text-blue-300 font-bold">30°C</div>
+                                </div>
+                                <div class="grid grid-cols-4 gap-2 text-xs items-center">
+                                     <!-- 0m -->
+                                     <div class="text-right text-slate-500 font-bold">0m</div>
+                                     <input type="number" step="0.001" id="mx-0-0" value="${b.matrix[0][0]}" class="p-1 text-center bg-slate-800 rounded border border-white/10">
+                                     <input type="number" step="0.001" id="mx-0-1" value="${b.matrix[0][1]}" class="p-1 text-center bg-slate-800 rounded border border-white/10">
+                                     <input type="number" step="0.001" id="mx-0-2" value="${b.matrix[0][2]}" class="p-1 text-center bg-slate-800 rounded border border-white/10">
+
+                                     <!-- 1000m -->
+                                     <div class="text-right text-slate-500 font-bold">1000m</div>
+                                     <input type="number" step="0.001" id="mx-1-0" value="${b.matrix[1][0]}" class="p-1 text-center bg-slate-800 rounded border border-white/10">
+                                     <input type="number" step="0.001" id="mx-1-1" value="${b.matrix[1][1]}" class="p-1 text-center bg-slate-800 rounded border border-white/10">
+                                     <input type="number" step="0.001" id="mx-1-2" value="${b.matrix[1][2]}" class="p-1 text-center bg-slate-800 rounded border border-white/10">
+
+                                     <!-- 2000m -->
+                                     <div class="text-right text-slate-500 font-bold">2000m</div>
+                                     <input type="number" step="0.001" id="mx-2-0" value="${b.matrix[2][0]}" class="p-1 text-center bg-slate-800 rounded border border-white/10">
+                                     <input type="number" step="0.001" id="mx-2-1" value="${b.matrix[2][1]}" class="p-1 text-center bg-slate-800 rounded border border-white/10">
+                                     <input type="number" step="0.001" id="mx-2-2" value="${b.matrix[2][2]}" class="p-1 text-center bg-slate-800 rounded border border-white/10">
+
+                                     <!-- 3000m -->
+                                     <div class="text-right text-slate-500 font-bold">3000m</div>
+                                     <input type="number" step="0.001" id="mx-3-0" value="${b.matrix[3][0]}" class="p-1 text-center bg-slate-800 rounded border border-white/10">
+                                     <input type="number" step="0.001" id="mx-3-1" value="${b.matrix[3][1]}" class="p-1 text-center bg-slate-800 rounded border border-white/10">
+                                     <input type="number" step="0.001" id="mx-3-2" value="${b.matrix[3][2]}" class="p-1 text-center bg-slate-800 rounded border border-white/10">
                                 </div>
                             </div>
 
@@ -2885,6 +2955,17 @@
                     window.saveBalloon = (bid) => {
                         const callsign = document.getElementById('edit-callsign').value;
                         if(!callsign) return;
+                        
+                        // Collect Matrix
+                        const matrix = [];
+                        for(let i=0; i<4; i++) {
+                            const row = [];
+                            for(let j=0; j<3; j++) {
+                                row.push(parseFloat(document.getElementById(`mx-${i}-${j}`).value) || 0);
+                            }
+                            matrix.push(row);
+                        }
+
                         const newB = {
                             id: bid,
                             callsign: callsign,
@@ -2893,7 +2974,7 @@
                             weight: parseFloat(document.getElementById('edit-weight').value),
                             image: document.getElementById('preview-balloon-img').src,
                             defaultCylinders: [],
-                            matrix: b.matrix // Keep matrix
+                            matrix: matrix 
                         };
                         
                         // Robustly collect cylinder IDs from DOM
@@ -2913,11 +2994,11 @@
                         <div class="flex justify-between items-center mb-4"><h3 class="text-xl font-bold">${isNew ? 'Neue Flasche' : 'Flasche bearbeiten'}</h3><button onclick="ui.switchTab('cylinders')" class="text-slate-400">Abbrechen</button></div>
                         <div class="space-y-4">
                             <div><label>Bezeichnung / Label</label><input type="text" id="edit-cyl-label" value="${cy.label}" placeholder="z.B. Blau 1"></div>
-                            <div class="grid grid-cols-2 gap-2">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                                 <div><label>Typ</label><select id="edit-cyl-type"><option value="VA50" ${cy.type==='VA50'?'selected':''}>VA50</option><option value="VA70" ${cy.type==='VA70'?'selected':''}>VA70</option><option value="Master" ${cy.type==='Master'?'selected':''}>Master</option><option value="Standard" ${cy.type==='Standard'?'selected':''}>Standard</option></select></div>
                                 <div><label>Seriennummer</label><input type="text" id="edit-cyl-sn" value="${cy.sn}"></div>
                             </div>
-                            <div class="grid grid-cols-2 gap-2">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                                 <div><label>Tara (kg)</label><input type="number" id="edit-cyl-tare" value="${cy.tare}"></div>
                                 <div><label>Füllung (kg)</label><input type="number" id="edit-cyl-gas" value="${cy.gas}"></div>
                             </div>
@@ -2946,11 +3027,11 @@
                     html = `
                         <div class="flex justify-between items-center mb-4"><h3 class="text-xl font-bold">${isNew ? 'Neuer Passagier' : 'Passagier bearbeiten'}</h3><button onclick="ui.switchTab('passengers')" class="text-slate-400">Abbrechen</button></div>
                         <div class="space-y-4">
-                            <div class="grid grid-cols-2 gap-2">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                                 <div><label>Vorname</label><input type="text" id="edit-pax-first" value="${p.firstName}"></div>
                                 <div><label>Nachname</label><input type="text" id="edit-pax-last" value="${p.lastName}"></div>
                             </div>
-                            <div class="grid grid-cols-2 gap-2">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                                 <div><label>Gewicht (kg)</label><input type="number" id="edit-pax-weight" value="${p.weight}"></div>
                                 <div><label>Geschlecht</label><select id="edit-pax-gender"><option value="m" ${p.gender==='m'?'selected':''}>Männlich</option><option value="w" ${p.gender==='w'?'selected':''}>Weiblich</option><option value="d" ${p.gender==='d'?'selected':''}>Divers</option></select></div>
                             </div>
@@ -2983,12 +3064,12 @@
                     html = `
                         <div class="flex justify-between items-center mb-4"><h3 class="text-xl font-bold">Manueller Logbuch-Eintrag</h3><button onclick="ui.switchTab('logbook')" class="text-slate-400">Abbrechen</button></div>
                         <div class="space-y-4">
-                            <div class="grid grid-cols-2 gap-2">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                                 <div><label>Startzeit</label><input type="datetime-local" id="edit-log-start" value="${l.start}"></div>
                                 <div><label>Landung</label><input type="datetime-local" id="edit-log-end" value="${l.end}"></div>
                             </div>
                             <div><label>Ballon</label><input type="text" id="edit-log-balloon" placeholder="Kennzeichen"></div>
-                            <div class="grid grid-cols-2 gap-2">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                                 <div><label>Startort</label><input type="text" id="edit-log-sloc"></div>
                                 <div><label>Landeort</label><input type="text" id="edit-log-eloc"></div>
                             </div>
