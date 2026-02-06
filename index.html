@@ -89,7 +89,7 @@
         .hud-top {
             pointer-events: auto;
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr 1fr 0.7fr; /* Time column smaller */
+            grid-template-columns: 1fr 1fr 1fr 1fr 0.5fr; /* Time column smaller */
             gap: 4px;
             padding: 8px;
             width: 100%;
@@ -240,16 +240,6 @@
             padding: 0;
         }
 
-        .wind-layer { display: flex; flex-direction: column; align-items: center; font-size: 0.7rem; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.1); transition: background-color 0.3s; }
-        .wind-layer.active-altitude {
-            background-color: rgba(34, 197, 94, 0.3);
-            border-radius: 6px;
-            border: 1px solid rgba(34, 197, 94, 0.5);
-        }
-
-        .compass-arrow { width: 0; height: 0; border-left: 5px solid solid transparent; border-right: 5px solid transparent; border-bottom: 10px solid var(--accent-blue); transition: transform 0.3s; }
-        .arrow-green { border-bottom-color: #4ade80 !important; }
-
         .btn-round { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: all 0.2s; cursor: pointer; }
         .btn-round:active { transform: scale(0.9); }
         .btn-round.active { background: var(--accent-blue); color: white; }
@@ -262,21 +252,38 @@
             100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
 
-        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); z-index: 2000; display: none; padding: 20px; overflow-y: auto; }
-        .modal-content { max-width: 1000px; margin: auto; min-height: 85vh; display: flex; flex-direction: column; }
-
         .tab-btn { padding: 12px 15px; border-bottom: 2px solid transparent; font-weight: 500; opacity: 0.6; white-space: nowrap; font-size: 0.9rem; }
         .tab-btn.active { border-color: var(--accent-blue); color: var(--accent-blue); opacity: 1; }
 
+        .wind-layer { display: flex; flex-direction: column; align-items: center; font-size: 0.7rem; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.1); transition: background-color 0.3s; }
+        .wind-layer.active-altitude {
+            background-color: rgba(34, 197, 94, 0.3);
+            border-radius: 6px;
+            border: 1px solid rgba(34, 197, 94, 0.5);
+        }
+
         .leaflet-tile { filter: brightness(0.85); }
         .satellite-layer .leaflet-tile { filter: none; }
+
+        .compass-arrow { width: 0; height: 0; border-left: 5px solid solid transparent; border-right: 5px solid transparent; border-bottom: 10px solid var(--accent-blue); transition: transform 0.3s; }
+        .arrow-green { border-bottom-color: #4ade80 !important; }
 
         .balloon-marker-img { width: 44px; height: 44px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5); object-fit: cover; background: #fff; }
 
         #report-stage { background: #0f172a; color: #f8fafc; width: 800px; padding: 30px; position: fixed; left: -9999px; top: 0; z-index: 9999; }
 
-        /* SELECTION OVERLAY */
-        #selection-overlay { position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; padding: 20px; backdrop-filter: blur(4px); }
+        /* Status Bar (Right Edge) */
+        .status-area { position: absolute; top: 10px; right: 0px; display: flex; flex-direction: column; gap: 5px; align-items: flex-end; z-index: 2000; }
+        .status-badge { background: rgba(15, 23, 42, 0.95); border-left: 4px solid #ccc; border-top-left-radius: 8px; border-bottom-left-radius: 8px; padding: 6px; color: white; font-size: 0.7rem; font-weight: bold; box-shadow: -2px 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 8px; cursor: pointer; width: 12px; overflow: hidden; transition: width 0.3s ease, padding 0.3s ease; white-space: nowrap; }
+        .status-badge:hover, .status-badge.active { width: auto; padding: 6px 12px 6px 8px; }
+        .status-badge.red { border-color: #ef4444; } .status-badge.green { border-color: #22c55e; } .status-badge.blue { border-color: #3b82f6; } .status-badge.yellow { border-color: #eab308; }
+
+        #ai-nav-overlay { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 600px; background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent-blue); box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); border-radius: 12px; padding: 12px; z-index: 1000; display: none; backdrop-filter: blur(8px); }
+        #photo-overlay { position: fixed; inset: 0; z-index: 7000; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; padding: 20px; }
+        #photo-overlay img { max-width: 95%; max-height: 95%; border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        
+        /* SELECTION OVERLAY - Z-INDEX 10001 (Above main modal) */
+        #selection-overlay { position: fixed; inset: 0; z-index: 10001; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; padding: 20px; backdrop-filter: blur(4px); }
         .selection-box { background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 100%; max-width: 400px; max-height: 80vh; display: flex; flex-direction: column; shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
 
         /* Form Controls */
@@ -285,6 +292,10 @@
         input:focus { border-color: var(--accent-blue) !important; outline: none; }
         label { font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; display: block; }
         .perf-grid input { padding: 4px; text-align: center; font-size: 0.8rem; }
+        
+        /* MAIN MODAL - Z-INDEX 9999 (Highest Priority) */
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); z-index: 9999; display: none; padding: 20px; overflow-y: auto; }
+        .modal-content { max-width: 1000px; margin: auto; min-height: 85vh; display: flex; flex-direction: column; }
 
     </style>
 </head>
@@ -292,34 +303,25 @@
 
     <div id="map"></div>
     
-    <!-- Fullscreen Loading Overlay for Report Gen -->
     <div id="loading-overlay" class="fixed inset-0 z-[6000] bg-slate-900/95 flex flex-col items-center justify-center hidden backdrop-blur-sm">
         <div class="loader mb-4" style="width: 40px; height: 40px; border-width: 4px;"></div>
         <div class="text-white font-bold text-lg">Erstelle Bericht...</div>
         <div class="text-slate-400 text-sm">Bitte warten, Karte wird gerendert</div>
     </div>
     
-    <!-- Photo View Overlay -->
     <div id="photo-overlay" onclick="this.style.display='none'">
         <img id="photo-overlay-img" src="">
     </div>
     
-    <!-- SELECTION OVERLAY -->
     <div id="selection-overlay">
         <div class="selection-box">
             <div class="p-4 border-b border-white/10 flex justify-between items-center bg-slate-900/50 rounded-t-xl">
                 <h3 id="sel-title" class="font-bold text-white">Auswahl</h3>
                 <button onclick="document.getElementById('selection-overlay').style.display='none'" class="text-slate-400 hover:text-white px-2"><i class="fas fa-times"></i></button>
             </div>
-            <div id="sel-content" class="overflow-y-auto p-2 flex-1 space-y-1 max-h-[60vh]">
-                <!-- Items injected here -->
-            </div>
+            <div id="sel-content" class="overflow-y-auto p-2 flex-1 space-y-1 max-h-[60vh]"></div>
         </div>
     </div>
-
-    <!-- Hidden Inputs -->
-    <input type="file" id="cam-input" accept="image/*" capture="environment" class="hidden" onchange="flightManager.handlePhotoInput(this)">
-    <input type="file" id="import-input" accept=".json" class="hidden" onchange="system.importData(this)">
 
     <!-- HUD TOP CONTAINER -->
     <div id="hud-top-container" class="hud-top-container hud-container-anim">
@@ -394,7 +396,7 @@
                 <div class="hud-num" id="nav-ete">--:--</div>
             </div>
             
-            <button onclick="aiService.getNavigationAdvice()" id="btn-ai-nav" class="absolute -right-2 top-8 bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-xs shadow border border-white/20" title="KI Ratschlag"><i class="fas fa-magic"></i></button>
+            <button onclick="aiService.getNavigationAdvice()" id="btn-ai-nav" class="absolute -right-2 top-8 bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-xs shadow border border-white/20 hidden" title="KI Ratschlag"><i class="fas fa-magic"></i></button>
             <button onclick="ui.clearTarget()" class="absolute -right-2 -top-2 bg-slate-800 text-slate-400 hover:text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow border border-white/20"><i class="fas fa-times"></i></button>
         </div>
     </div>
@@ -490,7 +492,7 @@
                 <button onclick="ui.closeModal()" class="text-3xl opacity-50 hover:opacity-100">&times;</button>
             </div>
             <!-- Improved Scrollable Tabs -->
-            <div class="flex border-b border-white/10 mb-4 overflow-x-auto flex-wrap scrollbar-hide">
+            <div class="flex border-b border-white/10 mb-4 overflow-x-auto gap-4 scrollbar-hide">
                 <button class="tab-btn active shrink-0" onclick="ui.switchTab('planning')">Planung</button>
                 <button class="tab-btn shrink-0" onclick="ui.switchTab('fleet')">Flotte</button>
                 <button class="tab-btn shrink-0" onclick="ui.switchTab('cylinders')">Gasflaschen</button>
@@ -716,22 +718,39 @@
                     const idx = winds.findIndex(w => Math.abs(w.alt - m.alt) < 25);
                     if (idx >= 0) winds[idx] = m; else winds.push(m);
                 });
+
+                // Calculate Deltas for prompt
+                let windAnalysis = winds.sort((a,b)=>a.alt-b.alt).map(w => {
+                    let diff = Math.abs(w.dir - bearingToTarget);
+                    if (diff > 180) diff = 360 - diff;
+                    let suitability = "Schlecht";
+                    if (diff < 10) suitability = "PERFEKT";
+                    else if (diff < 25) suitability = "Gut";
+                    else if (diff < 45) suitability = "Mittel";
+                    return `- ${w.alt}m: ${w.dir}° (${w.speed}kt) -> Abweichung: ${Math.round(diff)}° (${suitability})`;
+                }).join('\n');
                 
                 const promptText = `
-                    Du bist Co-Pilot in einem Heißluftballon. Gib eine kurze, präzise Anweisung an den Piloten.
+                    Du bist ein intelligenter Ballon-Navigations-Computer (SatNav).
                     
                     Aktuelle Lage:
                     - Position: ${currentPos.lat.toFixed(4)}, ${currentPos.lng.toFixed(4)}
-                    - Höhe: ${Math.round(currentPos.alt)}m
-                    - Ziel-Peilung (Soll-Kurs): ${Math.round(bearingToTarget)}°
-                    - Distanz zum Ziel: ${distanceToTarget.toFixed(1)} km
+                    - Aktuelle Höhe: ${Math.round(currentPos.alt)}m
+                    - Ziel-Kurs (Bearing): ${Math.round(bearingToTarget)}°
+                    - Distanz: ${distanceToTarget.toFixed(1)} km
                     
-                    Verfügbare Windschichten (Höhe -> Richtung):
-                    ${winds.sort((a,b)=>a.alt-b.alt).map(w => `- ${w.alt}m: ${w.dir}°`).join('\n')}
+                    Wind-Analyse (Vorhersage & Messung):
+                    ${windAnalysis}
                     
                     Aufgabe:
-                    Welche Höhe ist am besten, um dem Zielkurs (${Math.round(bearingToTarget)}°) am nächsten zu kommen?
-                    Antworte extrem kurz (max 15 Wörter) im Format: "Steige/Sinke auf X m (Wind Y°)." oder "Bleibe auf aktueller Höhe."
+                    Berechne die optimale Strategie.
+                    1. Ist das Ziel direkt erreichbar? (Abweichung < 20 Grad).
+                    2. Wenn ja, nenne die beste Höhe (schnellste Geschwindigkeit bei geringster Abweichung).
+                    3. Wenn nein, nenne die Höhe, die dem Ziel am nächsten kommt ("Hundekurve" vermeiden, besten Vektor suchen).
+                    
+                    Antworte extrem kurz, wie ein Navi:
+                    "Steige auf X m (Kurs Y°). ETA Z min." oder "Ziel nicht direkt erreichbar. Beste Option: X m (Abweichung D°)."
+                    Maximal 20 Wörter.
                 `;
 
                 try {
@@ -1282,6 +1301,8 @@
                 
                 // Force Icon Update (Added to update balloon icon based on plan)
                 mapManager.updateIcon();
+                // Show AI button if key exists
+                ui.updateAiButtonVisibility();
             },
 
             async stopRecording() {
@@ -1490,7 +1511,12 @@
 
         const ui = {
             tab: 'planning', editingId: null, editingPlanId: null, planningMode: 'active', passengerMode: 'active', toastTimeout: null,
-            init() { document.getElementById('btn-settings').onclick = () => this.openModal(); this.renderWind(); this.updateLockBtn(); },
+            init() { 
+                document.getElementById('btn-settings').onclick = () => this.openModal(); 
+                this.renderWind(); 
+                this.updateLockBtn(); 
+                this.updateAiButtonVisibility(); // Check initially
+            },
             
             formatTime(isoString) {
                 const date = new Date(isoString);
@@ -1552,6 +1578,18 @@
                 const img = document.getElementById('photo-overlay-img');
                 img.src = src;
                 overlay.style.display = 'flex';
+            },
+            
+            // AI Button Visibility Helper
+            updateAiButtonVisibility() {
+                const btn = document.getElementById('btn-ai-nav');
+                if (btn) {
+                    if (state.settings.apiKey && state.settings.apiKey.trim() !== "") {
+                        btn.classList.remove('hidden');
+                    } else {
+                        btn.classList.add('hidden');
+                    }
+                }
             },
             
             switchTab(t) { this.tab = t; this.editingId = null; document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.onclick.toString().includes(`'${t}'`))); this.render(); },
