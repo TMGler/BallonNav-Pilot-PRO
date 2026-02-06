@@ -222,7 +222,7 @@
 
         /* --- WIND PANEL --- */
         #wind-panel {
-            width: 90px; /* Reduced width again as requested */
+            width: 90px; 
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -413,6 +413,10 @@
         </div>
         <div id="sb-screen" class="status-badge yellow hidden" onclick="this.classList.toggle('active')">
              <i class="fas fa-sun text-[10px]"></i> <span>SCREEN ON</span>
+        </div>
+        <!-- NEW: Network Status Badge -->
+        <div id="sb-net" class="status-badge green" onclick="this.classList.toggle('active')">
+             <i class="fas fa-wifi text-[10px]"></i> <span id="sb-net-text">ONLINE</span>
         </div>
     </div>
 
@@ -1742,6 +1746,31 @@
                         menu.style.display = 'none';
                     }
                 });
+
+                // --- NEW: Network Status Listeners ---
+                window.addEventListener('online', () => this.updateNetworkStatus());
+                window.addEventListener('offline', () => this.updateNetworkStatus());
+                this.updateNetworkStatus(); // Initial check
+            },
+            
+            // --- NEW: Network Status Logic ---
+            updateNetworkStatus() {
+                const badge = document.getElementById('sb-net');
+                const text = document.getElementById('sb-net-text');
+                const isOnline = navigator.onLine;
+                
+                if (badge && text) {
+                    if (isOnline) {
+                        badge.classList.remove('red');
+                        badge.classList.add('green');
+                        text.innerText = "ONLINE";
+                    } else {
+                        badge.classList.remove('green');
+                        badge.classList.add('red');
+                        text.innerText = "OFFLINE";
+                        this.showToast("Du bist Offline. Karte lädt nicht mehr.", "error");
+                    }
+                }
             },
             
             formatTime(isoString) {
@@ -2071,145 +2100,6 @@
             }); },
 
             viewPlanning(c) { if (!state.plannings) { state.plannings = []; saveState(); } if (!state.archive) { state.archive = []; saveState(); } const isArchive = this.planningMode === 'archive'; const listData = isArchive ? state.archive : state.plannings; const listTitle = isArchive ? 'Archiv / Vorlagen' : 'Aktive Planungen'; c.innerHTML = `<h3 class="text-xl font-bold mb-4">Weight & Balance Planung</h3><div class="mb-6 p-4 glass-panel border border-white/10"><div class="flex gap-4 border-b border-white/10 pb-2 mb-2 text-sm"><button onclick="ui.setPlanView('active')" class="${!isArchive ? 'text-blue-400 font-bold border-b-2 border-blue-400' : 'text-slate-500 hover:text-slate-300'} pb-1 transition">Aktive Planungen</button><button onclick="ui.setPlanView('archive')" class="${isArchive ? 'text-blue-400 font-bold border-b-2 border-blue-400' : 'text-slate-500 hover:text-slate-300'} pb-1 transition">Archiv</button></div><div class="flex justify-between items-center mb-2"><h4 class="text-xs uppercase text-slate-400 font-bold">${listTitle}</h4>${!isArchive ? '<button onclick="ui.clearPlanForm()" class="text-xs bg-slate-700 px-3 py-1 rounded hover:bg-slate-600 transition">+ Neue Planung</button>' : ''}</div><div class="max-h-32 overflow-y-auto space-y-1" id="saved-plans-list">${listData.length === 0 ? `<div class="text-xs text-slate-500 italic p-2">${isArchive ? 'Archiv ist leer' : 'Keine aktiven Planungen'}</div>` : listData.sort((a,b) => b.id - a.id).map(p => `<div class="flex justify-between items-center bg-slate-800 p-2 rounded text-xs group hover:bg-slate-700/50 transition"><div class="cursor-pointer flex-1" onclick="${isArchive ? `ui.loadTemplate('${p.id}')` : `ui.loadPlan('${p.id}')`}" title="${isArchive ? 'Als Vorlage laden' : 'Bearbeiten'}"><div class="font-bold text-white flex items-center gap-2">${isArchive ? '<i class="fas fa-history text-slate-500"></i>' : ''} ${p.name}</div><div class="text-slate-400 text-[10px]">${p.date} | ${p.balloonName}</div></div><div class="flex gap-1">${!isArchive ? `<button onclick="ui.archivePlan(${p.id})" class="text-blue-400 hover:text-blue-300 p-1 px-2 bg-slate-900/50 rounded" title="Ins Archiv verschieben"><i class="fas fa-box-archive"></i></button>` : `<button onclick="ui.unarchivePlan(${p.id})" class="text-green-400 hover:text-green-300 p-1 px-2 bg-slate-900/50 rounded" title="Wiederherstellen"><i class="fas fa-box-open"></i></button>`}<button onclick="ui.delete('${isArchive ? 'archive' : 'plannings'}', ${p.id})" class="text-red-400 hover:text-red-300 p-1 px-2 bg-slate-900/50 rounded"><i class="fas fa-trash"></i></button></div></div>`).join('')}</div></div><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="space-y-4"><div><label>Bezeichnung der Planung</label><input type="text" id="plan-name" placeholder="z.B. Morgenfahrt Alpen" class="bg-slate-800 border-slate-600 focus:border-blue-500"></div><div><label>Ballon wählen</label><select id="plan-balloon" onchange="ui.selectBalloon()"><option value="">-- Wählen --</option>${state.balloons.map(b => `<option value="${b.id}">${b.callsign}</option>`).join('')}</select></div><div><label>Gasflaschen für diese Fahrt</label><div class="glass-panel p-3 border border-white/5 bg-slate-900/40"><div id="plan-cyl-list" class="space-y-2 mb-3"><div class="text-xs text-slate-500 italic">Keine Flaschen ausgewählt</div></div><div class="flex gap-2 pt-2 border-t border-white/10"><select id="plan-cyl-add-select" class="text-xs bg-slate-800 border-none w-full"><option value="">+ Flasche wählen</option>${state.cylinders.map(c => `<option value="${c.id}">${c.label} (${c.type}) - ${c.gas+c.tare}kg</option>`).join('')}</select><button onclick="ui.addPlanCylinder()" class="bg-blue-600 px-3 rounded text-xs hover:bg-blue-500 shrink-0"><i class="fas fa-plus"></i></button></div></div></div><div><label>Passagiere wählen</label><div class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 border border-white/5 rounded" id="plan-pax">${state.passengers.sort((a,b) => (a.flights||0) - (b.flights||0)).map(p => { const isFlown = p.flights > 0; const badge = isFlown ? `<span class="text-green-400 text-[9px] ml-1">✓ ${p.flights}</span>` : ''; return `<label class="flex items-center gap-2 bg-slate-800 p-2 rounded text-[10px] hover:bg-slate-700 cursor-pointer ${isFlown ? 'opacity-75' : ''}"><input type="checkbox" value="${p.id}" onchange="ui.recalcWB()" class="w-4 h-4 shrink-0"> <span class="flex-1 truncate">${p.firstName} ${p.lastName}${badge}</span> <span class="text-slate-400">${p.weight}kg</span></label>`; }).join('')}</div></div></div><div class="space-y-4"><div class="grid grid-cols-1 sm:grid-cols-2 gap-2"><div><label>Startort Temp (°C)</label><input type="number" id="plan-temp" value="15" onchange="ui.recalcWB()"></div><div><label>Zielhöhe (m)</label><input type="number" id="plan-alt" value="1000" onchange="ui.recalcWB()"></div></div><div id="wb-result" class="glass-panel p-6 border-blue-500/30 border min-h-[200px] flex flex-col justify-center text-center"><div class="text-slate-500 italic">Bitte Ballon und Zuladung wählen...</div></div><button onclick="ui.savePlan()" id="btn-save-plan" class="bg-green-600 hover:bg-green-500 w-full py-3 rounded font-bold shadow-lg shadow-green-900/20 mt-4 transition transform active:scale-95 flex items-center justify-center gap-2"><i class="fas fa-save"></i> Planung Speichern</button></div></div>`; },
-            
-            viewSettings(c) { const initHrs = Math.floor(state.pilot.initialHours || 0); const initMins = Math.round(((state.pilot.initialHours || 0) - initHrs) * 60); const initTimeStr = `${initHrs}:${initMins.toString().padStart(2, '0')}`; 
-                const offsetPercent = Math.round((state.settings.mapOffset || 0) * 100);
-                
-                c.innerHTML = `
-                <div class="space-y-6">
-                    <!-- SECTION 1: PILOT -->
-                    <div class="bg-white/5 p-4 rounded-lg">
-                        <h4 class="text-blue-400 font-bold mb-3 border-b border-white/10 pb-1">Pilot & Basisdaten</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div><label>Name des Piloten</label><input type="text" id="set-pilot-name" value="${state.pilot.name}" onchange="ui.saveSettings(true)"></div>
-                            <div class="grid grid-cols-2 gap-2">
-                                <div><label>Gewicht (kg)</label><input type="number" id="set-pilot-weight" value="${state.pilot.weight}" onchange="ui.saveSettings(true)"></div>
-                                
-                                <!-- Combined Row for Experience -->
-                                <div class="col-span-1 grid grid-cols-2 gap-2">
-                                    <div><label>Stunden</label><input type="text" id="set-pilot-hours" value="${initTimeStr}" placeholder="hh:mm" onchange="ui.saveSettings(true)"></div>
-                                    <div><label>Fahrten</label><input type="number" id="set-pilot-flights" value="${state.pilot.initialFlights || 0}" onchange="ui.saveSettings(true)"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- SECTION 2: DISPLAY & UNITS -->
-                    <div class="bg-white/5 p-4 rounded-lg">
-                        <h4 class="text-blue-400 font-bold mb-3 border-b border-white/10 pb-1">Anzeige & Einheiten</h4>
-                        <div class="space-y-3">
-                             <div class="flex items-center justify-between bg-black/20 p-2 rounded">
-                                 <span class="text-sm" id="lbl-settings-mode">Betriebsmodus: <b>${state.settings.mode === 'gps' ? 'GPS LIVE' : 'SIMULATION'}</b></span>
-                                 <label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="set-mode-toggle" class="sr-only peer" ${state.settings.mode === 'gps' ? 'checked' : ''} onchange="ui.saveSettings(true)"><div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div></label>
-                             </div>
-                             <div class="flex items-center justify-between bg-black/20 p-2 rounded">
-                                 <span class="text-sm">Zeiten in UTC anzeigen</span>
-                                 <label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="set-use-utc" class="sr-only peer" ${state.settings.useUTC ? 'checked' : ''} onchange="ui.saveSettings(true)"><div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div></label>
-                             </div>
-                             
-                             <!-- MAP OFFSET -->
-                             <div class="mb-4 pt-2 border-t border-white/10">
-                                <div class="flex justify-between text-sm mb-1">
-                                    <span>Karten-Offset (Vorausschau)</span>
-                                    <span class="font-bold text-blue-300" id="lbl-offset">${offsetPercent}%</span>
-                                </div>
-                                <input type="range" min="0" max="0.5" step="0.05" value="${state.settings.mapOffset}" 
-                                    oninput="state.settings.mapOffset = parseFloat(this.value); document.getElementById('lbl-offset').innerText = Math.round(this.value*100) + '%'; saveState();">
-                                <div class="text-[10px] text-slate-500 mt-1">Verschiebt die Karte entgegen der Flugrichtung.</div>
-                            </div>
-
-                             <div class="grid grid-cols-2 gap-2">
-                                <div><label>Kartenstil</label><select id="set-map-style" onchange="ui.saveSettings(true)"><option value="dark" ${state.settings.mapStyle==='dark'?'selected':''}>Dark Matter (Dunkel)</option><option value="light" ${state.settings.mapStyle==='light'?'selected':''}>OpenStreetMap (Hell)</option><option value="sat" ${state.settings.mapStyle==='sat'?'selected':''}>Satellit</option></select></div>
-                                <div><label>Track Farbe</label><input type="color" id="set-track-color" value="${state.settings.trackColor}" onchange="ui.saveSettings(true)"></div>
-                             </div>
-                        </div>
-                    </div>
-                    
-                    <!-- KML OVERLAYS -->
-                    <div class="bg-white/5 p-4 rounded-lg">
-                        <div class="flex justify-between items-center mb-3 border-b border-white/10 pb-1">
-                            <h4 class="text-amber-400 font-bold">KML Luftraum-Overlays</h4>
-                            <button onclick="document.getElementById('kml-import-input').click()" class="bg-slate-700 hover:bg-slate-600 text-xs px-2 py-1 rounded"><i class="fas fa-upload"></i> KML hinzufügen</button>
-                        </div>
-                        
-                        <div id="kml-list" class="space-y-2 max-h-40 overflow-y-auto">
-                            ${state.kmlOverlays.length === 0 ? '<div class="text-xs text-slate-500 italic text-center">Keine Overlays geladen.</div>' : ''}
-                            ${state.kmlOverlays.map(kml => `
-                                <div class="kml-item ${kml.visible ? 'active' : ''}">
-                                    <div class="flex-1 truncate text-sm font-medium text-white pr-2">${kml.name}</div>
-                                    <div class="flex gap-2">
-                                        <button onclick="ui.toggleKml('${kml.id}')" class="text-xs p-1 ${kml.visible ? 'text-green-400' : 'text-slate-500'} hover:text-white" title="An/Aus">
-                                            <i class="fas ${kml.visible ? 'fa-eye' : 'fa-eye-slash'}"></i>
-                                        </button>
-                                        <button onclick="ui.deleteKml('${kml.id}')" class="text-xs p-1 text-red-400 hover:text-red-300" title="Löschen">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                        <div class="text-[10px] text-slate-500 mt-2">Hinweis: Große KML-Dateien können den Speicher verlangsamen.</div>
-                    </div>
-
-                    <!-- SECTION 3: STORAGE & WIND CONFIG -->
-                    <div class="bg-white/5 p-4 rounded-lg">
-                        <h4 class="text-amber-400 font-bold mb-3 border-b border-white/10 pb-1">Speicher & Wind-Konfig</h4>
-                        <div class="space-y-3">
-                            <div class="flex items-end gap-2">
-                                <div class="flex-1">
-                                    <label class="text-[10px]">Fotos aufbewahren (Tage)</label>
-                                    <input type="number" id="set-image-retention" value="${state.settings.imageRetention || 30}" onchange="ui.saveSettings(true)" class="bg-slate-800 border border-slate-600 rounded p-2 text-sm w-full">
-                                </div>
-                                <button onclick="flightManager.cleanOldPhotosNow()" class="bg-amber-700/50 hover:bg-amber-600 text-amber-100 p-2 rounded text-sm mb-[1px]">Jetzt bereinigen</button>
-                            </div>
-                            
-                            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-white/5">
-                                <div>
-                                    <label class="text-[10px] text-blue-300">Mess-Intervall (Höhe)</label>
-                                    <div class="flex items-center gap-1">
-                                        <input type="number" id="set-wind-interval" value="${state.settings.windMeasInterval || 50}" onchange="ui.saveSettings(true)" class="bg-slate-800 border border-slate-600 rounded p-2 text-sm w-full">
-                                        <span class="text-xs text-slate-500">m</span>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="text-[10px] text-blue-300">Mess-Abweichung (Min)</label>
-                                    <div class="flex items-center gap-1">
-                                        <input type="number" id="set-wind-threshold" value="${state.settings.windThreshold || 5}" onchange="ui.saveSettings(true)" class="bg-slate-800 border border-slate-600 rounded p-2 text-sm w-full">
-                                        <span class="text-xs text-slate-500">°</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- SECTION 3.5: AI SETTINGS (Moved API Key here) -->
-                    <div class="bg-white/5 p-4 rounded-lg mt-4">
-                        <h4 class="text-purple-400 font-bold mb-3 border-b border-white/10 pb-1">KI Konfiguration</h4>
-                        <div class="space-y-3">
-                            <div>
-                                <label class="text-xs text-purple-200">Gemini API Key</label>
-                                <input type="password" id="set-api-key" value="${state.settings.apiKey || ''}" placeholder="AI Key eingeben..." onchange="ui.saveSettings(true)" class="border-purple-500/30 focus:border-purple-500">
-                            </div>
-                            <div class="flex items-end gap-2">
-                                <div class="flex-1">
-                                    <label class="text-[10px]">Max. Wörter (Taufname)</label>
-                                    <input type="number" id="set-baptism-words" value="${state.settings.baptismMaxWords || 15}" onchange="ui.saveSettings(true)" class="bg-slate-800 border border-slate-600 rounded p-2 text-sm w-full">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- SECTION 4: DANGER ZONE -->
-                    <div class="bg-red-900/10 border border-red-900/30 p-4 rounded-lg mt-8">
-                        <h4 class="text-red-400 font-bold mb-3 text-sm uppercase">System & Daten (Gefahrenzone)</h4>
-                        <div class="flex flex-col gap-2">
-                            <button onclick="system.exportData()" class="bg-slate-800 hover:bg-slate-700 py-2 rounded text-sm border border-white/10">Backup erstellen (Export)</button>
-                            <button onclick="system.triggerImport()" class="bg-slate-800 hover:bg-slate-700 py-2 rounded text-sm border border-white/10 text-blue-200">Backup wiederherstellen (Import)</button>
-                            <button onclick="system.resetData()" class="bg-red-900/40 hover:bg-red-900/60 text-red-200 py-2 rounded text-sm mt-2 border border-red-500/30">Werkseinstellungen (Reset)</button>
-                        </div>
-                    </div>
-                </div>`; 
-            },
             
             viewEnvironment(c) { c.innerHTML = `<h3 class="text-xl font-bold mb-4">Wetter & Wind Simulation</h3><div class="glass-panel p-6 border-white/10 border"><div class="flex justify-between items-start mb-4"><p class="text-sm text-slate-400">Hier definierst du die Windschichten für die Simulation. Der Ballon bewegt sich basierend auf der aktuellen Höhe und diesen Werten.</p><button onclick="weatherService.fetchLiveWind()" class="bg-green-600/20 text-green-400 border border-green-500/50 px-3 py-1 rounded text-xs whitespace-nowrap hover:bg-green-600 hover:text-white transition"><i class="fas fa-satellite-dish mr-1"></i> Live-Daten laden</button></div><div class="grid grid-cols-4 gap-2 text-xs uppercase text-slate-500 font-bold mb-2"><div>Höhe (m)</div><div>Richtung (°)</div><div>Speed (kt)</div><div></div></div><div id="wind-rows" class="space-y-2 mb-4">${state.windLayers.sort((a,b)=>a.alt-b.alt).map((w, idx) => `<div class="grid grid-cols-4 gap-2 items-center"><input type="number" class="wind-edit-alt" value="${w.alt}" placeholder="Höhe"><input type="number" class="wind-edit-dir" value="${w.dir}" placeholder="Dir"><input type="number" class="wind-edit-spd" value="${w.speed}" placeholder="Knots"><button onclick="ui.removeWindLayer(${idx})" class="text-red-400 hover:text-red-300"><i class="fas fa-trash"></i></button></div>`).join('')}</div><button onclick="ui.addWindLayer()" class="bg-slate-700 px-4 py-2 rounded text-xs mb-6">+ Schicht hinzufügen</button><button onclick="ui.saveEnvironment()" class="bg-blue-600 w-full py-3 rounded font-bold shadow-lg">Wetterdaten Speichern</button><div class="mt-4"><label class="text-xs uppercase text-slate-500 font-bold mb-1 block">Wind-Filter (Grad)</label><div class="flex items-center gap-2"><input type="number" id="set-wind-threshold" class="w-20 bg-slate-800 text-sm p-1 rounded" value="${state.settings.windThreshold || 5}"><span class="text-xs text-slate-400">Nur Änderungen > X° anzeigen</span></div></div><p class="text-[10px] text-slate-500 mt-2 text-center">Live-Daten bereitgestellt durch Open-Meteo.com (Kein Key erforderlich)</p></div>`; },
             
