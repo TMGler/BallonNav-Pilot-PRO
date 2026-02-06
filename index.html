@@ -2503,60 +2503,59 @@
                 
                 c.innerHTML = `
                     <h3 class="text-xl font-bold mb-4">${this.editingId === 'new' ? 'Neuer Ballon' : 'Ballon bearbeiten'}</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="space-y-4">
-                            <div><label>Kennung</label><input type="text" id="f-callsign" value="${b.callsign}" placeholder="z.B. D-OAAA"></div>
-                            
-                            <!-- Bild Upload -->
-                            <div>
-                                <label>Ballon Bild (für Karte)</label>
-                                <div class="flex items-center gap-4 bg-white/5 p-2 rounded border border-white/10">
-                                    <div class="w-12 h-12 bg-slate-800 rounded-full border border-white/20 flex items-center justify-center overflow-hidden shrink-0">
-                                        <img id="preview-balloon-img" src="${b.image || ''}" class="w-full h-full object-cover ${b.image ? '' : 'hidden'}">
-                                        <span class="${b.image ? 'hidden' : ''} text-[8px] text-slate-500 uppercase">Kein Bild</span>
-                                    </div>
-                                    <div class="flex-1">
-                                        <input type="file" id="f-image" accept="image/*" class="text-xs w-full file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700" onchange="ui.handleImageUpload(this)">
-                                    </div>
+                    <div class="space-y-4 max-w-2xl">
+                        <div><label>Kennung</label><input type="text" id="f-callsign" value="${b.callsign}" placeholder="z.B. D-OAAA"></div>
+                        
+                        <!-- Bild Upload -->
+                        <div>
+                            <label>Ballon Bild (für Karte)</label>
+                            <div class="flex items-center gap-4 bg-white/5 p-2 rounded border border-white/10">
+                                <div class="w-12 h-12 bg-slate-800 rounded-full border border-white/20 flex items-center justify-center overflow-hidden shrink-0">
+                                    <img id="preview-balloon-img" src="${b.image || ''}" class="w-full h-full object-cover ${b.image ? '' : 'hidden'}">
+                                    <span class="${b.image ? 'hidden' : ''} text-[8px] text-slate-500 uppercase">Kein Bild</span>
                                 </div>
-                            </div>
-
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <div><label>Volumen (m³)</label><input type="number" id="f-volume" value="${b.volume}"></div>
-                                <div><label>Leergewicht (kg)</label><input type="number" id="f-weight" value="${b.weight}"></div>
-                            </div>
-                            
-                            <div class="grid grid-cols-2 gap-2 bg-slate-800/50 p-2 rounded border border-white/5">
-                                <div>
-                                    <label class="text-green-400">Max Steigen (${climbUnit})</label>
-                                    <input type="number" step="0.1" id="f-maxClimb" value="${valClimb}">
-                                </div>
-                                <div>
-                                    <label class="text-red-400">Max Sinken (${climbUnit})</label>
-                                    <input type="number" step="0.1" id="f-maxDescent" value="${valDescent}">
-                                </div>
-                                <div class="col-span-2 text-[10px] text-slate-500 italic text-center">
-                                   ${isFt ? 'Eingabe in m/s (wird intern umgerechnet)' : 'Werte in m/s'}
-                                </div>
-                            </div>
-
-                            <div><label>MTOM (kg)</label><input type="number" id="f-mtom" value="${b.mtom}"></div>
-                            
-                            <div class="border-t border-white/10 pt-4 mt-2">
-                                <label class="text-blue-400 font-bold mb-2">Standard-Flaschenbestückung</label>
-                                <div class="glass-panel p-3 border border-white/5 bg-slate-900/40">
-                                    <div id="edit-cyl-list" class="mb-3 max-h-32 overflow-y-auto">${defCyls.length > 0 ? renderDefaultList() : '<div class="text-xs text-slate-500 italic">Keine Standard-Flaschen</div>'}</div>
-                                    <div class="w-full">
-                                        <select id="edit-cyl-select" class="text-xs bg-slate-800 border-none w-full" onchange="ui.addEditCylinder()">
-                                            <option value="">+ Flasche hinzufügen</option>
-                                            ${state.cylinders.map(c => `<option value="${c.id}">${c.label} (${c.type})</option>`).join('')}
-                                        </select>
-                                    </div>
+                                <div class="flex-1">
+                                    <input type="file" id="f-image" accept="image/*" class="text-xs w-full file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700" onchange="ui.handleImageUpload(this)">
                                 </div>
                             </div>
                         </div>
-                        <div>
-                            <!-- Collapseable Matrix -->
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div><label>Volumen (m³)</label><input type="number" id="f-volume" value="${b.volume}"></div>
+                            <div><label>Leergewicht (kg)</label><input type="number" id="f-weight" value="${b.weight}"></div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-2 bg-slate-800/50 p-2 rounded border border-white/5">
+                            <div>
+                                <label class="text-green-400">Max Steigen (${climbUnit})</label>
+                                <input type="number" step="0.1" id="f-maxClimb" value="${valClimb}">
+                            </div>
+                            <div>
+                                <label class="text-red-400">Max Sinken (${climbUnit})</label>
+                                <input type="number" step="0.1" id="f-maxDescent" value="${valDescent}">
+                            </div>
+                            <div class="col-span-2 text-[10px] text-slate-500 italic text-center">
+                               ${isFt ? 'Eingabe in m/s (wird intern umgerechnet)' : 'Werte in m/s'}
+                            </div>
+                        </div>
+
+                        <div><label>MTOM (kg)</label><input type="number" id="f-mtom" value="${b.mtom}"></div>
+                        
+                        <div class="border-t border-white/10 pt-4 mt-2">
+                            <label class="text-blue-400 font-bold mb-2">Standard-Flaschenbestückung</label>
+                            <div class="glass-panel p-3 border border-white/5 bg-slate-900/40">
+                                <div id="edit-cyl-list" class="mb-3 max-h-32 overflow-y-auto">${defCyls.length > 0 ? renderDefaultList() : '<div class="text-xs text-slate-500 italic">Keine Standard-Flaschen</div>'}</div>
+                                <div class="w-full">
+                                    <select id="edit-cyl-select" class="text-xs bg-slate-800 border-none w-full" onchange="ui.addEditCylinder()">
+                                        <option value="">+ Flasche wählen</option>
+                                        ${state.cylinders.map(c => `<option value="${c.id}">${c.label} (${c.type})</option>`).join('')}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Collapseable Matrix (Moved here) -->
+                        <div class="pt-2">
                             <details class="bg-slate-800/50 rounded border border-white/5 open:bg-slate-800/80 transition group">
                                 <summary class="p-2 cursor-pointer text-xs font-bold text-slate-400 hover:text-white select-none list-none flex items-center justify-between">
                                     <span>Tragkraft-Matrix (Erweitert)</span>
