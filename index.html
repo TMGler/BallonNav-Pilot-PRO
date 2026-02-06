@@ -327,6 +327,12 @@
             transition: all 0.3s;
         }
 
+        /* Added Active Altitude Style */
+        .wind-layer.active-altitude {
+            background-color: rgba(34, 197, 94, 0.3) !important;
+            border-left: 3px solid #22c55e !important;
+        }
+
         /* TOAST CONTAINER FIXED POSITION */
         #toast-container {
             position: fixed;
@@ -1710,15 +1716,34 @@
                         <div class="text-[10px] text-slate-500 mt-2">Hinweis: Große KML-Dateien können den Speicher verlangsamen.</div>
                     </div>
 
-                    <!-- SECTION 3: STORAGE -->
+                    <!-- SECTION 3: STORAGE & WIND CONFIG -->
                     <div class="bg-white/5 p-4 rounded-lg">
-                        <h4 class="text-amber-400 font-bold mb-3 border-b border-white/10 pb-1">Speicher & Bereinigung</h4>
-                        <div class="flex items-end gap-2">
-                            <div class="flex-1">
-                                <label class="text-[10px]">Fotos aufbewahren (Tage)</label>
-                                <input type="number" id="set-image-retention" value="${state.settings.imageRetention || 30}" onchange="ui.saveSettings(true)" class="bg-slate-800 border border-slate-600 rounded p-2 text-sm w-full">
+                        <h4 class="text-amber-400 font-bold mb-3 border-b border-white/10 pb-1">Speicher & Wind-Konfig</h4>
+                        <div class="space-y-3">
+                            <div class="flex items-end gap-2">
+                                <div class="flex-1">
+                                    <label class="text-[10px]">Fotos aufbewahren (Tage)</label>
+                                    <input type="number" id="set-image-retention" value="${state.settings.imageRetention || 30}" onchange="ui.saveSettings(true)" class="bg-slate-800 border border-slate-600 rounded p-2 text-sm w-full">
+                                </div>
+                                <button onclick="flightManager.cleanOldPhotosNow()" class="bg-amber-700/50 hover:bg-amber-600 text-amber-100 p-2 rounded text-sm mb-[1px]">Jetzt bereinigen</button>
                             </div>
-                            <button onclick="flightManager.cleanOldPhotosNow()" class="bg-amber-700/50 hover:bg-amber-600 text-amber-100 p-2 rounded text-sm mb-[1px]">Jetzt bereinigen</button>
+                            
+                            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-white/5">
+                                <div>
+                                    <label class="text-[10px] text-blue-300">Mess-Intervall (Höhe)</label>
+                                    <div class="flex items-center gap-1">
+                                        <input type="number" id="set-wind-interval" value="${state.settings.windMeasInterval || 50}" onchange="ui.saveSettings(true)" class="bg-slate-800 border border-slate-600 rounded p-2 text-sm w-full">
+                                        <span class="text-xs text-slate-500">m</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="text-[10px] text-blue-300">Mess-Abweichung (Min)</label>
+                                    <div class="flex items-center gap-1">
+                                        <input type="number" id="set-wind-threshold" value="${state.settings.windThreshold || 5}" onchange="ui.saveSettings(true)" class="bg-slate-800 border border-slate-600 rounded p-2 text-sm w-full">
+                                        <span class="text-xs text-slate-500">°</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -1827,7 +1852,8 @@
                         if (isKmh) speed *= 1.852; 
 
                         const colorClass = layer.isMeasured ? 'text-green-400 font-bold' : 'text-blue-300';
-                        const arrowClass = layer.isMeasured ? 'text-green-400' : 'text-blue-400';
+                        const labelClass = layer.isMeasured ? 'text-green-400' : '';
+                        const arrowClass = layer.isMeasured ? 'compass-arrow arrow-green' : 'compass-arrow';
 
                         // HIGHLIGHT CURRENT ALTITUDE
                         const isCurrentAlt = Math.abs(layer.alt - simulation.alt) < 25;
