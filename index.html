@@ -183,8 +183,10 @@
         }
 
         .hud-value { text-align: center; }
-        /* CHANGED: removed uppercase, smaller font size */
-        .hud-label { font-size: 0.6rem; color: #94a3b8; letter-spacing: 0.05em; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 2px; }
+        /* CHANGED: Increased font size for label, specific font size for unit */
+        .hud-label { font-size: 0.75rem; color: #94a3b8; letter-spacing: 0.05em; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 2px; }
+        .hud-label small { font-size: 0.55rem; opacity: 0.7; font-weight: normal; margin-left: 2px; }
+        
         .hud-num { font-size: 1.4rem; font-weight: 700; font-family: 'Courier New', Courier, monospace; }
         .hud-nav .hud-num { font-size: 1.2rem; color: var(--accent-yellow); }
 
@@ -288,6 +290,12 @@
         #photo-overlay { position: fixed; inset: 0; z-index: 7000; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; padding: 20px; }
         #photo-overlay img { max-width: 95%; max-height: 95%; border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
         
+        /* LAYERS MENU */
+        #layers-menu { position: absolute; bottom: 90px; left: 10px; width: 220px; z-index: 2000; display: none; flex-direction: column; gap: 1px; }
+        .layer-btn { text-align: left; padding: 12px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; color: #cbd5e1; transition: background 0.2s; }
+        .layer-btn:hover { background: rgba(255,255,255,0.1); }
+        .layer-btn.active { color: var(--accent-blue); background: rgba(59, 130, 246, 0.1); }
+        
         /* SELECTION OVERLAY */
         #selection-overlay { position: fixed; inset: 0; z-index: 10001; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; padding: 20px; backdrop-filter: blur(4px); }
         .selection-box { background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 100%; max-width: 400px; max-height: 80vh; display: flex; flex-direction: column; shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
@@ -314,6 +322,11 @@
 <body>
 
     <div id="map"></div>
+    
+    <!-- Layers Menu Popover -->
+    <div id="layers-menu" class="glass-panel overflow-hidden">
+        <!-- Content injected by JS -->
+    </div>
     
     <!-- Fullscreen Loading Overlay for Report Gen -->
     <div id="loading-overlay" class="fixed inset-0 z-[6000] bg-slate-900/95 flex flex-col items-center justify-center hidden backdrop-blur-sm">
@@ -357,15 +370,15 @@
 
         <div id="hud-top" class="hud-top glass-panel">
             <div class="hud-value">
-                <div class="hud-label">Höhe <small class="text-[0.6rem] font-normal text-slate-400" id="lbl-alt">m</small></div>
+                <div class="hud-label">Höhe <small id="lbl-alt">m</small></div>
                 <div class="hud-num"><span id="hud-alt">0</span></div>
             </div>
             <div class="hud-value">
-                <div class="hud-label">Vario <small class="text-[0.6rem] font-normal text-slate-400" id="lbl-vario">m/s</small></div>
+                <div class="hud-label">Vario <small id="lbl-vario">m/s</small></div>
                 <div class="hud-num"><span id="hud-vario">0.0</span></div>
             </div>
             <div class="hud-value">
-                <div class="hud-label">Speed <small class="text-[0.6rem] font-normal text-slate-400" id="lbl-speed">km/h</small></div>
+                <div class="hud-label">Speed <small id="lbl-speed">km/h</small></div>
                 <div class="hud-num"><span id="hud-speed">0.0</span></div>
             </div>
             <div class="hud-value">
@@ -407,7 +420,7 @@
 
         <div id="hud-nav" class="hud-nav glass-panel">
             <div class="hud-value">
-                <div class="hud-label">Distanz <small class="text-[0.6rem] font-normal text-slate-400" id="lbl-nav-dist">km</small></div>
+                <div class="hud-label">Distanz <small id="lbl-nav-dist">km</small></div>
                 <div class="hud-num"><span id="nav-dist">0.0</span></div>
             </div>
             <div class="hud-value">
@@ -893,7 +906,9 @@
                 this.map.on('contextmenu', (e) => ui.setTarget(e.latlng));
                 
                 document.getElementById('btn-center').onclick = () => { this.lock = !this.lock; document.getElementById('btn-center').classList.toggle('active', this.lock); };
-                document.getElementById('btn-layers').onclick = () => this.cycle();
+                
+                // NEW: Layers Menu Toggle instead of Cycle
+                document.getElementById('btn-layers').onclick = () => ui.toggleLayersMenu();
                 
                 ui.updateLockBtn();
 
@@ -978,15 +993,8 @@
                 saveState();
             },
 
-            cycle() {
-                if (state.settings.mapStyle === 'dark') this.setLayer('light');
-                else if (state.settings.mapStyle === 'light') this.setLayer('sat');
-                else this.setLayer('dark');
-                if (ui.tab === 'settings' && document.getElementById('set-map-style')) {
-                    document.getElementById('set-map-style').value = state.settings.mapStyle;
-                }
-            },
-
+            // Cycle removed, direct set via menu used now
+            
             renderTarget() {
                 this.targetLayer.clearLayers();
                 if (state.targetWaypoint) {
@@ -1025,11 +1033,6 @@
                                         const text = ((feature.properties.name || '') + ' ' + (feature.properties.description || '')).toUpperCase();
                                         
                                         // Check for Restricted (ED-R), Prohibited (ED-P) or Danger (ED-D) areas
-                                        // LOGIC UPDATE: 
-                                        // 1. Match explicit hyphenated types: ED-R, ED-P, ED-D
-                                        // 2. Match non-hyphenated ONLY if followed by a digit (EDR116) to avoid airports like EDRY
-                                        // 3. Match explicit keywords like RESTRICTED
-                                        
                                         const isRestricted = 
                                             text.includes('ED-R') || text.includes('ED-P') || text.includes('ED-D') || 
                                             /ED[RPD]\s*\d/.test(text) || // EDR/EDP/EDD followed by digit (e.g. EDR116)
@@ -1426,7 +1429,7 @@
                     
                     if (data.vario > maxClimb || data.vario < -maxDescent) {
                          varioValEl.classList.add('text-blink-red');
-                         varioLblEl.classList.add('text-blink-red');
+                         // varioLblEl.classList.add('text-blink-red'); // REMOVED as requested
                     } else if (data.vario >= 0.1) { 
                         varioValEl.classList.add('text-green-400'); varioLblEl.classList.add('text-green-400'); 
                     } else if (data.vario <= -0.1) { 
@@ -1708,6 +1711,17 @@
                 this.renderWind(); 
                 this.updateLockBtn(); 
                 this.updateAiButtonVisibility(); // Check initially
+
+                // Global click listener for menus
+                document.addEventListener('click', (e) => {
+                    const menu = document.getElementById('layers-menu');
+                    const btn = document.getElementById('btn-layers');
+                    
+                    // Close layers menu if clicked outside
+                    if (menu.style.display === 'flex' && !menu.contains(e.target) && !btn.contains(e.target)) {
+                        menu.style.display = 'none';
+                    }
+                });
             },
             
             formatTime(isoString) {
@@ -1784,6 +1798,56 @@
                 }
             },
             
+            // --- NEW: Layers Menu Toggle ---
+            toggleLayersMenu() {
+                const menu = document.getElementById('layers-menu');
+                if (menu.style.display === 'flex') {
+                    menu.style.display = 'none';
+                } else {
+                    menu.style.display = 'flex';
+                    this.renderLayersMenu();
+                }
+            },
+            
+            renderLayersMenu() {
+                const menu = document.getElementById('layers-menu');
+                const styles = [
+                    { id: 'dark', label: 'Dark Matter (Dunkel)' },
+                    { id: 'light', label: 'OpenStreetMap (Hell)' },
+                    { id: 'sat', label: 'Satellit' }
+                ];
+                
+                let html = '<div class="text-xs uppercase font-bold text-slate-500 px-3 py-2 border-b border-white/5">Kartenstil</div>';
+                
+                styles.forEach(s => {
+                    const isActive = state.settings.mapStyle === s.id;
+                    // Added event.stopPropagation() to prevent menu closing due to DOM update
+                    html += `
+                        <button onclick="event.stopPropagation(); mapManager.setLayer('${s.id}'); ui.renderLayersMenu();" class="layer-btn ${isActive ? 'active' : ''}">
+                            <span>${s.label}</span>
+                            ${isActive ? '<i class="fas fa-check text-green-400"></i>' : ''}
+                        </button>
+                    `;
+                });
+                
+                if (state.kmlOverlays.length > 0) {
+                    html += '<div class="text-xs uppercase font-bold text-slate-500 px-3 py-2 border-b border-white/5 border-t mt-1">Overlays</div>';
+                    state.kmlOverlays.forEach(kml => {
+                        // Added event.stopPropagation()
+                        html += `
+                            <button onclick="event.stopPropagation(); ui.toggleKml('${kml.id}'); ui.renderLayersMenu();" class="layer-btn ${kml.visible ? 'active' : ''}">
+                                <span class="truncate pr-2">${kml.name}</span>
+                                <i class="fas ${kml.visible ? 'fa-eye text-blue-400' : 'fa-eye-slash text-slate-500'}"></i>
+                            </button>
+                        `;
+                    });
+                } else {
+                    html += '<div class="text-xs text-slate-600 px-3 py-2 italic border-t border-white/5">Keine KML Overlays</div>';
+                }
+                
+                menu.innerHTML = html;
+            },
+
             switchTab(t) { 
                 this.tab = t; 
                 this.editingId = null; 
@@ -2963,39 +3027,45 @@
                             <button onclick="ui.switchTab('logbook')" class="text-slate-400">Schließen</button>
                         </div>
                         
-                        <!-- Header with Balloon Image -->
-                        <div class="flex items-center gap-4 mb-4">
-                            ${balloonImg ? `<img src="${balloonImg}" class="w-16 h-16 rounded-full border-2 border-white object-cover">` : '<div class="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center text-2xl border-2 border-white">🎈</div>'}
-                            <div>
-                                <div class="font-bold text-lg">${log.balloon}</div>
-                                <div class="text-slate-400 text-xs">${new Date(log.start).toLocaleDateString()}</div>
+                        <!-- Map Container (Moved Top) -->
+                        <div class="relative w-full h-64 bg-slate-900 rounded-xl mb-4 border border-white/10 overflow-hidden">
+                            <div id="summary-map" class="absolute inset-0 z-0"></div>
+                            
+                            <!-- Balloon Overlay (Left on Map) -->
+                            <div class="absolute top-4 left-4 z-[400] flex items-center gap-3 pointer-events-none">
+                                ${balloonImg ? 
+                                    `<img src="${balloonImg}" class="w-16 h-16 rounded-full border-2 border-white object-cover shadow-lg bg-slate-800">` : 
+                                    `<div class="w-16 h-16 rounded-full bg-blue-600/90 backdrop-blur flex items-center justify-center text-3xl border-2 border-white shadow-lg text-white">🎈</div>`
+                                }
+                                <div class="bg-slate-900/80 backdrop-blur-md px-3 py-2 rounded-lg border border-white/10 shadow-lg">
+                                    <div class="font-bold text-white leading-tight">${log.balloon}</div>
+                                    <div class="text-slate-400 text-xs">${new Date(log.start).toLocaleDateString()}</div>
+                                </div>
                             </div>
                         </div>
 
                         <div class="glass-panel p-4 mb-4">
-                            <div class="flex justify-between mb-2">
+                            <!-- Locations & Duration -->
+                             <div class="flex justify-between mb-2">
                                 <span class="text-slate-400 text-sm">Startort:</span>
-                                <span class="font-bold">${log.startLoc}</span>
+                                <span class="font-bold text-right">${log.startLoc}</span>
                             </div>
                             <div class="flex justify-between mb-2">
                                 <span class="text-slate-400 text-sm">Landeort:</span>
-                                <span class="font-bold">${log.endLoc}</span>
+                                <span class="font-bold text-right">${log.endLoc}</span>
                             </div>
                             <div class="flex justify-between mb-2">
                                 <span class="text-slate-400 text-sm">Dauer:</span>
                                 <span class="font-bold text-blue-400">${Math.floor((new Date(log.end)-new Date(log.start))/60000)} min</span>
                             </div>
-                            
-                            <!-- Bemerkungsfeld Read-Only -->
+
+                            <!-- Notes -->
                             <div class="mt-4 pt-2 border-t border-white/10">
                                 <span class="text-xs text-slate-500 uppercase font-bold mb-1 block">Bemerkungen</span>
                                 <div class="text-sm italic text-slate-300 bg-slate-900/50 p-2 rounded min-h-[40px] whitespace-pre-wrap">${log.notes || "Keine Notizen vorhanden."}</div>
                             </div>
                         </div>
                         
-                        <!-- Interactive Map Container -->
-                        <div id="summary-map" class="w-full h-48 bg-slate-900 rounded-lg mb-4 border border-white/10 relative z-0"></div>
-
                         <h4 class="font-bold mb-2 text-sm text-slate-400 uppercase">Passagiere</h4>
                         <div class="space-y-2 mb-4">
                             ${log.pax.map(pid => {
@@ -3102,8 +3172,7 @@
                                     }).join('') : '<div class="text-slate-500 italic text-xs p-1">Keine Standard-Flaschen</div>'}
                                 </div>
                                 <div class="flex gap-2">
-                                    <select id="edit-cyl-select" class="text-xs"><option value="">+ Flasche wählen</option>${state.cylinders.map(cyl => `<option value="${cyl.id}">${cyl.label} (${cyl.type})</option>`).join('')}</select>
-                                    <button onclick="ui.addEditCylinder()" class="bg-slate-700 px-3 rounded hover:bg-slate-600"><i class="fas fa-plus"></i></button>
+                                    <select id="edit-cyl-select" onchange="ui.addEditCylinder()" class="text-xs"><option value="">+ Flasche wählen (Auto-Add)</option>${state.cylinders.map(cyl => `<option value="${cyl.id}">${cyl.label} (${cyl.type})</option>`).join('')}</select>
                                 </div>
                             </div>
 
