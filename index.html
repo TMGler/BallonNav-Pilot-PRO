@@ -123,7 +123,6 @@
         /* --- NAVIGATION HUD --- */
         .hud-nav-container {
             position: absolute;
-            /* CHANGED: Reduced top distance to close gap to HUD Top */
             top: 80px; 
             left: 50%;
             transform: translateX(-50%);
@@ -214,7 +213,6 @@
         
         .sidebar-right-container { 
             position: absolute; 
-            /* CHANGED: Moved up because HUD gap decreased */
             top: 150px; 
             right: 10px; 
             z-index: 1000; 
@@ -376,13 +374,13 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
-            pointer-events: none;
+            pointer-events: none; /* Allows clicking through empty space */
             width: 90%;
             max-width: 400px;
             align-items: center;
         }
         .toast-notification {
-            pointer-events: auto;
+            pointer-events: auto; /* Allows interaction with the toast itself */
         }
 
     </style>
@@ -510,10 +508,10 @@
     </div>
 
     <!-- AI NAV ADVICE OVERLAY -->
-    <div id="ai-nav-overlay">
+    <div id="ai-nav-overlay" class="hidden absolute top-[180px] left-1/2 -translate-x-1/2 w-[90%] max-w-[400px] glass-panel p-4 z-[2000] border border-blue-500/30 shadow-2xl">
         <div class="flex justify-between items-start mb-2">
             <h4 class="text-blue-400 font-bold text-xs uppercase flex items-center gap-2"><i class="fas fa-robot"></i> AeroNav AI</h4>
-            <button onclick="document.getElementById('ai-nav-overlay').style.display='none'" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
+            <button onclick="document.getElementById('ai-nav-overlay').classList.add('hidden')" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
         </div>
         <div id="ai-nav-content" class="text-sm text-white font-mono leading-relaxed">
             Berechne Route...
@@ -876,15 +874,92 @@
          * AI SERVICE (GEMINI)
          */
         const aiService = {
-            async getNavigationAdvice() {
-                if (!state.settings.apiKey) { ui.showToast("Kein API Key in Einstellungen!", "error"); return; }
-                if (!state.targetWaypoint) { ui.showToast("Kein Ziel gesetzt!", "error"); return; }
-                // Implementation... (Abbreviated for brevity as not key to request)
-                ui.showToast("KI Routenberechnung in diesem Update nicht aktiv.", "info");
+            // Helper to call API
+            async callGemini(prompt) {
+                const apiKey = state.settings.apiKey;
+                if (!apiKey) throw new Error("API Key fehlt");
+
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                const payload = {
+                    contents: [{ parts: [{ text: prompt }] }]
+                };
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error("API Fehler: " + response.status);
+                const data = await response.json();
+                return data.candidates?.[0]?.content?.parts?.[0]?.text || "Keine Antwort";
             },
-            async getBaptismSuggestions(paxName, startLoc, endLoc, time, notes, btn, targetInputId) {
-                // Implementation...
-                ui.showToast("KI Feature: API Key fehlt.", "error");
+
+            async getNavigationAdvice() {
+                if (!state.settings.apiKey) { ui.showToast("Kein API Key!", "error"); return; }
+                if (!state.targetWaypoint) { ui.showToast("Kein Ziel!", "error"); return; }
+
+                const overlay = document.getElementById('ai-nav-overlay');
+                const content = document.getElementById('ai-nav-content');
+                const time = document.getElementById('ai-nav-time');
+                
+                overlay.classList.remove('hidden');
+                content.innerText = "Analysiere Windschichten...";
+                
+                try {
+                    // Gather Context
+                    const pos = simulation.getCurrentState();
+                    const target = state.targetWaypoint;
+                    const dist = getDistance(pos.lat, pos.lng, target.lat, target.lng).toFixed(2);
+                    const bearing = getBearing(pos.lat, pos.lng, target.lat, target.lng).toFixed(0);
+                    
+                    // Format Wind Layers
+                    const winds = state.windLayers.map(l => 
+                        `${l.alt}m: ${l.dir}°/${l.speed}kt`
+                    ).join('\n');
+
+                    const prompt = `Du bist ein Ballonfahrt-Navigator.
+        Aktuelle Position: Lat ${pos.lat.toFixed(4)}, Lng ${pos.lng.toFixed(4)}, Höhe ${pos.alt.toFixed(0)}m.
+        Aktueller Kurs: ${pos.course.toFixed(0)}°, Speed: ${pos.speed.toFixed(1)}kt.
+        Ziel: Lat ${target.lat}, Lng ${target.lng} (Distanz: ${dist}km, Peilung: ${bearing}°).
+        Windschichten:
+        ${winds}
+
+        Gib eine kurze, präzise Empfehlung (max 3 Sätze) für den Piloten: Steigen, Sinken oder Höhe halten, um das Ziel zu erreichen? Erkläre kurz warum basierend auf der Windrichtung.`;
+
+                    const text = await this.callGemini(prompt);
+                    content.innerText = text;
+                    time.innerText = new Date().toLocaleTimeString();
+
+                } catch (e) {
+                    content.innerText = "Fehler: " + e.message;
+                }
+            },
+
+            async getBaptismSuggestions(paxName, start, end, date, notes, btn, targetId) {
+                if (!state.settings.apiKey) { ui.showToast("Kein API Key!", "error"); return; }
+                
+                const input = document.getElementById(targetId);
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                btn.disabled = true;
+
+                try {
+                    const prompt = `Erstelle einen lustigen, traditionellen Ballonfahrer-Adelstitel (Taufnamen) für einen Passagier namens "${paxName}".
+        Startort: ${start}. Landeort: ${end}.
+        Besonderheiten: ${notes}.
+        Format: "Graf/Gräfin [Name] zu [Ort], [Lustiger Zusatz]". Nur den Titel ausgeben.`;
+
+                    const text = await this.callGemini(prompt);
+                    if (input) input.value = text.replace(/["']/g, ''); // Clean quotes
+                    ui.showToast("Vorschlag generiert!");
+
+                } catch (e) {
+                    ui.showToast("KI Fehler: " + e.message, "error");
+                } finally {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
             }
         };
 
@@ -1513,9 +1588,32 @@
             
             formatTime(isoString) { /* ... */ const date = new Date(isoString); if (state.settings.useUTC) { const h = date.getUTCHours().toString().padStart(2, '0'); const m = date.getUTCMinutes().toString().padStart(2, '0'); return `${h}:${m} (UTC)`; } return date.toLocaleTimeString('de-DE', {hour: '2-digit', minute:'2-digit'}); },
 
+            // --- FIXED: AUTO-COLLAPSING TOASTS ---
             showToast(msg, type = 'success') {
-                let t = document.getElementById('toast-msg'); if(!t) { const container = document.getElementById('toast-container'); t = document.createElement('div'); t.id = 'toast-msg'; t.className = 'toast-notification'; container.appendChild(t); }
-                let icon = type === 'error' ? '<i class="fas fa-exclamation-circle"></i>' : '<i class="fas fa-check-circle"></i>'; t.innerHTML = `${icon} <span>${msg}</span>`; t.className = 'bg-slate-800 text-white px-4 py-2 rounded shadow-lg border border-white/10 transition-opacity duration-300 ' + (type === 'error' ? 'border-red-500' : 'border-green-500'); t.style.opacity = '1'; if(this.toastTimeout) clearTimeout(this.toastTimeout); this.toastTimeout = setTimeout(() => { t.style.opacity = '0'; }, 3000);
+                const container = document.getElementById('toast-container');
+                
+                // Create element
+                const t = document.createElement('div');
+                t.className = `transform transition-all duration-500 ease-in-out opacity-0 translate-y-2 bg-slate-800 text-white px-4 py-2 rounded shadow-lg border border-white/10 flex items-center gap-3 toast-notification mb-2 ${type === 'error' ? 'border-red-500 text-red-100' : 'border-green-500 text-green-100'}`;
+                
+                const icon = type === 'error' ? '<i class="fas fa-exclamation-circle text-red-400"></i>' : '<i class="fas fa-check-circle text-green-400"></i>';
+                t.innerHTML = `${icon} <span class="font-medium text-sm">${msg}</span>`;
+                
+                // Append to container
+                container.appendChild(t);
+                
+                // Trigger animation in next frame
+                requestAnimationFrame(() => {
+                    t.classList.remove('opacity-0', 'translate-y-2');
+                });
+                
+                // Remove after 3s
+                setTimeout(() => {
+                    t.classList.add('opacity-0', '-translate-y-2'); // Fade out and move up
+                    setTimeout(() => {
+                        if(t && t.parentElement) t.parentElement.removeChild(t);
+                    }, 500); // Wait for transition before DOM removal
+                }, 3000);
             },
             
             toggleWindPanel() {
@@ -1525,16 +1623,11 @@
                 
                 // Toggle Chevron Direction
                 if (chevron) {
-                     // Check current rotation or class state
                      const isCollapsed = panel.classList.contains('collapsed');
-                     // If collapsed (width 0), we want it to point Left (<) to indicate "Open".
-                     // If open, we want it to point Right (>) to indicate "Close".
-                     // FontAwesome 'fa-chevron-right' points > by default.
-                     // So: Open = > (default). Closed = < (rotate 180).
                      if (isCollapsed) {
-                         chevron.classList.add('collapsed'); // Rotate 180 -> Points Left
+                         chevron.classList.add('collapsed'); // Rotate 180
                      } else {
-                         chevron.classList.remove('collapsed'); // Default -> Points Right
+                         chevron.classList.remove('collapsed'); // Default
                      }
                 }
             },
@@ -1658,7 +1751,6 @@
                 c.innerHTML = `
                     <h3 class="text-xl font-bold mb-4">Ballon-Flotte</h3>
                     <div class="mb-4 glass-panel border border-white/10 p-4">
-                        <!-- ... (Tab buttons preserved) ... -->
                         <div class="flex gap-4 border-b border-white/10 pb-2 mb-4 text-sm">
                             <button onclick="ui.setFleetView('active')" class="${!isArchive ? 'text-blue-400 font-bold border-b-2 border-blue-400' : 'text-slate-500 hover:text-slate-300'} pb-1 transition">Aktiv</button>
                             <button onclick="ui.setFleetView('archive')" class="${isArchive ? 'text-blue-400 font-bold border-b-2 border-blue-400' : 'text-slate-500 hover:text-slate-300'} pb-1 transition">Archiv</button>
@@ -1676,8 +1768,6 @@
                              ${balloons.length === 0 ? `<div class="text-center text-slate-500 italic py-4">Keine Einträge in dieser Liste</div>` : ''}
                              ${balloons.map(b => {
                                  const defaultCount = b.defaultCylinders ? b.defaultCylinders.length : 0;
-                                 
-                                 // Berechne Startgewicht (Leergewicht + Summe der Standardflaschen)
                                  let cylWeight = 0;
                                  if (b.defaultCylinders && b.defaultCylinders.length > 0) {
                                      b.defaultCylinders.forEach(cId => {
@@ -1733,13 +1823,13 @@
             cloneCylinder(id) {
                 const original = state.cylinders.find(c => c.id === id);
                 if (original) {
-                    const newCyl = { ...original }; // Deep copy properties
+                    const newCyl = { ...original };
                     newCyl.id = Date.now().toString();
                     newCyl.label = original.label + " (Kopie)";
-                    newCyl.sn = ""; // Clear Serial Number
+                    newCyl.sn = "";
                     state.cylinders.push(newCyl);
                     saveState();
-                    this.render(); // Refresh View
+                    this.render();
                     ui.showToast("Flasche geklont", "success");
                 }
             },
@@ -1753,15 +1843,12 @@
                 
                 c.innerHTML = `
                 <div class="space-y-6">
-                    <!-- SECTION 1: PILOT -->
                     <div class="bg-white/5 p-4 rounded-lg">
                         <h4 class="text-blue-400 font-bold mb-3 border-b border-white/10 pb-1">Pilot & Basisdaten</h4>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div><label>Name des Piloten</label><input type="text" id="set-pilot-name" value="${state.pilot.name}" onchange="ui.saveSettings(true)"></div>
                             <div class="grid grid-cols-2 gap-2">
                                 <div><label>Gewicht (kg)</label><input type="number" id="set-pilot-weight" value="${state.pilot.weight}" onchange="ui.saveSettings(true)"></div>
-                                
-                                <!-- Combined Row for Experience -->
                                 <div class="col-span-1 grid grid-cols-2 gap-2">
                                     <div><label>Stunden</label><input type="text" id="set-pilot-hours" value="${initTimeStr}" placeholder="hh:mm" onchange="ui.saveSettings(true)"></div>
                                     <div><label>Fahrten</label><input type="number" id="set-pilot-flights" value="${state.pilot.initialFlights || 0}" onchange="ui.saveSettings(true)"></div>
@@ -1770,7 +1857,6 @@
                         </div>
                     </div>
 
-                    <!-- SECTION 2: DISPLAY & UNITS -->
                     <div class="bg-white/5 p-4 rounded-lg">
                         <h4 class="text-blue-400 font-bold mb-3 border-b border-white/10 pb-1">Anzeige & Einheiten</h4>
                         <div class="space-y-3">
@@ -1783,7 +1869,6 @@
                                  <label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="set-use-utc" class="sr-only peer" ${state.settings.useUTC ? 'checked' : ''} onchange="ui.saveSettings(true)"><div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div></label>
                              </div>
                              
-                             <!-- MAP OFFSET -->
                              <div class="mb-4 pt-2 border-t border-white/10">
                                 <div class="flex justify-between text-sm mb-1">
                                     <span>Karten-Offset (Vorausschau)</span>
@@ -1794,7 +1879,6 @@
                                 <div class="text-[10px] text-slate-500 mt-1">Verschiebt die Karte entgegen der Flugrichtung.</div>
                             </div>
                             
-                            <!-- TRACK LINE WIDTH (NEW) -->
                             <div class="mb-4 pt-2 border-t border-white/10">
                                 <div class="flex justify-between text-sm mb-1">
                                     <span>Track-Stärke</span>
@@ -1811,7 +1895,6 @@
                         </div>
                     </div>
                     
-                    <!-- KML OVERLAYS -->
                     <div class="bg-white/5 p-4 rounded-lg">
                         <div class="flex justify-between items-center mb-3 border-b border-white/10 pb-1">
                             <h4 class="text-amber-400 font-bold">KML Luftraum-Overlays</h4>
@@ -1837,7 +1920,6 @@
                         <div class="text-[10px] text-slate-500 mt-2">Hinweis: Große KML-Dateien können den Speicher verlangsamen.</div>
                     </div>
 
-                    <!-- SECTION 3: STORAGE & WIND CONFIG -->
                     <div class="bg-white/5 p-4 rounded-lg">
                         <h4 class="text-amber-400 font-bold mb-3 border-b border-white/10 pb-1">Speicher & Wind-Konfig</h4>
                         <div class="space-y-3">
@@ -1868,7 +1950,6 @@
                         </div>
                     </div>
 
-                    <!-- SECTION 3.5: AI SETTINGS (Moved API Key here) -->
                     <div class="bg-white/5 p-4 rounded-lg mt-4">
                         <h4 class="text-purple-400 font-bold mb-3 border-b border-white/10 pb-1">KI Konfiguration</h4>
                         <div class="space-y-3">
@@ -1876,7 +1957,6 @@
                                 <label class="text-xs text-purple-200">Gemini API Key</label>
                                 <input type="password" id="set-api-key" value="${state.settings.apiKey || ''}" placeholder="AI Key eingeben..." onchange="ui.saveSettings(true)" class="border-purple-500/30 focus:border-purple-500">
                             </div>
-                            <!-- NEW: Nav Strategy Selector -->
                             <div>
                                 <label class="text-xs text-purple-200">Navigations-Strategie</label>
                                 <select id="set-nav-mode" onchange="state.settings.navMode=this.value; saveState();" class="w-full bg-slate-800 border border-purple-500/30 rounded text-sm p-2 text-white focus:border-purple-500">
@@ -1893,7 +1973,6 @@
                         </div>
                     </div>
 
-                    <!-- SECTION 4: DANGER ZONE -->
                     <div class="bg-red-900/10 border border-red-900/30 p-4 rounded-lg mt-8">
                         <h4 class="text-red-400 font-bold mb-3 text-sm uppercase">System & Daten (Gefahrenzone)</h4>
                         <div class="flex flex-col gap-2">
@@ -1913,7 +1992,6 @@
                         <button onclick="weatherService.fetchLiveWind()" class="bg-green-600/20 text-green-400 border border-green-500/50 px-3 py-1 rounded text-xs whitespace-nowrap hover:bg-green-600 hover:text-white transition"><i class="fas fa-satellite-dish mr-1"></i> Live-Daten laden</button>
                     </div>
                     
-                    <!-- Wind Configuration (Moved from Settings) -->
                     <div class="grid grid-cols-2 gap-4 mb-6 pb-6 border-b border-white/10">
                          <div>
                             <label class="text-xs uppercase text-blue-300 font-bold mb-1">Mess-Intervall (Höhe)</label>
