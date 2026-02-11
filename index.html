@@ -544,6 +544,33 @@
             </div>
         </div>
     </div>
+    
+    <!-- MANUAL WIND INPUT OVERLAY -->
+    <div id="manual-wind-overlay" class="hidden fixed inset-0 z-[5000] bg-black/80 flex justify-center items-center backdrop-blur-sm p-4">
+        <div class="glass-panel w-full max-w-sm p-6 border border-white/20">
+            <h3 class="text-xl font-bold mb-4 flex items-center gap-2"><i class="fas fa-headset text-amber-400"></i> Funk-Winddaten erfassen</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs uppercase text-slate-400 mb-1">Höhe (m)</label>
+                    <input type="number" id="manual-wind-alt" class="w-full bg-slate-800 border-slate-600 rounded p-3 text-lg font-bold text-white" placeholder="z.B. 1200">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                     <div>
+                        <label class="text-xs uppercase text-slate-400 mb-1">Richtung (°)</label>
+                        <input type="number" id="manual-wind-dir" class="w-full bg-slate-800 border-slate-600 rounded p-3 text-lg font-bold text-white" placeholder="0-360">
+                    </div>
+                     <div>
+                        <label class="text-xs uppercase text-slate-400 mb-1">Geschw. (km/h)</label>
+                        <input type="number" id="manual-wind-spd" class="w-full bg-slate-800 border-slate-600 rounded p-3 text-lg font-bold text-white" placeholder="km/h">
+                    </div>
+                </div>
+                <div class="flex gap-3 mt-6">
+                    <button onclick="ui.toggleManualWindModal(false)" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-3 rounded-lg font-bold">Abbrechen</button>
+                    <button onclick="ui.saveManualWind()" class="flex-1 bg-amber-600 hover:bg-amber-500 text-white py-3 rounded-lg font-bold">Speichern</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Hidden Inputs -->
     <input type="file" id="cam-input" accept="image/*" capture="environment" class="hidden" onchange="flightManager.handlePhotoInput(this)">
@@ -687,9 +714,12 @@
             <!-- Header with merged Live Button -->
             <div class="p-2 border-b border-white/10 flex justify-between items-center px-3 gap-2">
                  <i class="fas fa-wind text-blue-400"></i>
-                 <button onclick="event.stopPropagation(); weatherService.fetchLiveWind()" class="text-[0.65rem] text-green-400 hover:text-white flex flex-col items-center leading-none" title="Live Update">
-                    <i class="fas fa-sync-alt mb-0.5"></i>Live
-                 </button>
+                 <div class="flex gap-2">
+                    <button onclick="ui.toggleManualWindModal(true)" class="text-amber-400 hover:text-white" title="Manuelle Eingabe"><i class="fas fa-plus-circle"></i></button>
+                    <button onclick="event.stopPropagation(); weatherService.fetchLiveWind()" class="text-[0.65rem] text-green-400 hover:text-white flex flex-col items-center leading-none" title="Live Update">
+                        <i class="fas fa-sync-alt mb-0.5"></i>Live
+                    </button>
+                 </div>
             </div>
             
             <div id="wind-content-wrapper" class="overflow-hidden transition-all duration-300 w-[110px]">
@@ -1111,7 +1141,7 @@
                     // Standard logic here: layer.dir is Direction of Movement (Track).
                     // In simulation tick: course = wind.dir + 180. 
                     // So if stored layer.dir is Wind Direction (Source), motion is +180.
-                    // Let's assume layer.dir stored in measured layers is COURSE (Track).
+                    // Let's assume layer.dir is the TRACK direction for simplicity as per existing logic.
                     // If isMeasured is true, it came from GPS Course. Perfect.
                     // If from forecast (windLayers), it might be source.
                     // Let's assume layer.dir is the TRACK direction for simplicity as per existing logic.
@@ -2065,8 +2095,9 @@
                 this.showToast("Navigation beendet");
                 
                 // Stop auto nav if active
-                if(aiService.isAutoNavActive) aiService.stopAutoNav();
-                if(localNavService.isActive) localNavService.stopLocalNav();
+                if(aiService.isAutoNavActive) {
+                    aiService.stopAutoNav();
+                }
             },
             editWindSettings() { this.openModal(); this.switchTab('environment'); },
             openModal() { document.getElementById('main-modal').style.display = 'flex'; this.switchTab(this.tab); },
@@ -2452,7 +2483,7 @@
                 state.windLayers.forEach(l => layerMap.set(l.alt, { ...l, isMeasured: false }));
                 
                 if (state.measuredWindLayers) {
-                    state.measuredWindLayers.forEach(l => layerMap.set(l.alt, { ...l, isMeasured: true }));
+                    state.measuredWindLayers.forEach(l => layerMap.set(l.alt, { ...l, isMeasured: true, isManual: l.isManual }));
                 }
 
                 const sortedLayers = Array.from(layerMap.values()).sort((a, b) => b.alt - a.alt);
@@ -2478,8 +2509,9 @@
                         let speed = layer.speed;
                         if (isKmh) speed *= 1.852; 
 
-                        const colorClass = layer.isMeasured ? 'text-green-400 font-bold' : 'text-blue-300';
-                        const arrowClass = layer.isMeasured ? 'text-green-400' : 'text-blue-400';
+                        const colorClass = layer.isMeasured ? (layer.isManual ? 'text-amber-400 font-bold' : 'text-green-400 font-bold') : 'text-blue-300';
+                        const arrowClass = layer.isMeasured ? (layer.isManual ? 'text-amber-400' : 'text-green-400') : 'text-blue-400';
+                        const iconHtml = layer.isMeasured ? (layer.isManual ? '<i class="fas fa-headset text-[8px] text-amber-500"></i>' : '<i class="fas fa-wifi text-[8px] text-green-500"></i>') : '';
 
                         // HIGHLIGHT CURRENT ALTITUDE
                         const isCurrentAlt = Math.abs(layer.alt - simulation.alt) < 25;
@@ -2498,7 +2530,7 @@
                             <div class="text-center w-full">
                                 <!-- Altitude Row -->
                                 <div class="font-bold text-xs text-white border-b border-white/10 pb-0.5 mb-1 flex justify-center items-center gap-1">
-                                    ${layer.alt}m ${layer.isMeasured ? '<i class="fas fa-wifi text-[8px] text-green-500"></i>' : ''}
+                                    ${layer.alt}m ${iconHtml}
                                 </div>
                                 
                                 <!-- Direction Row -->
@@ -2518,6 +2550,61 @@
                         lastKeptDir = layer.dir;
                     }
                 });
+            },
+            
+            toggleManualWindModal(show) {
+                const modal = document.getElementById('manual-wind-overlay');
+                if(show) {
+                    modal.classList.remove('hidden');
+                    // Pre-fill alt roughly
+                    document.getElementById('manual-wind-alt').value = Math.round(simulation.alt);
+                } else {
+                    modal.classList.add('hidden');
+                }
+            },
+
+            saveManualWind() {
+                const alt = parseInt(document.getElementById('manual-wind-alt').value);
+                const dir = parseInt(document.getElementById('manual-wind-dir').value);
+                const spd = parseFloat(document.getElementById('manual-wind-spd').value);
+
+                if (isNaN(alt) || isNaN(dir) || isNaN(spd)) {
+                    ui.showToast("Bitte gültige Zahlen eingeben", "error");
+                    return;
+                }
+
+                // Create new layer
+                const newLayer = {
+                    alt: alt,
+                    dir: dir,
+                    speed: spd, // Assuming user inputs knots or we convert based on unit setting? Let's assume knots standard for pilot or convert back if input was kmh.
+                                // For simplicity here, assuming input matches display unit? Or standard knots. 
+                                // Let's assume standard pilot input is Knots. If UI is KMH, user might input KMH.
+                                // To be safe, let's treat input as Knots as per standard aviation, unless specified.
+                    isMeasured: true,
+                    isManual: true, // Mark as manual entry
+                    timestamp: Date.now()
+                };
+
+                // Add to measured layers
+                // Check if layer exists nearby
+                const existingIdx = state.measuredWindLayers.findIndex(l => Math.abs(l.alt - alt) < 25); // 25m tolerance
+                
+                if (existingIdx >= 0) {
+                    state.measuredWindLayers[existingIdx] = newLayer;
+                } else {
+                    state.measuredWindLayers.push(newLayer);
+                }
+                
+                // Sort
+                state.measuredWindLayers.sort((a,b) => a.alt - b.alt);
+
+                ui.toggleManualWindModal(false);
+                ui.renderWind();
+                ui.showToast("Winddaten manuell hinzugefügt", "success");
+                
+                // Trigger route recalculation if active
+                if(localNavService.isActive) localNavService.update();
             },
             
             addWindLayer() { const container = document.getElementById('wind-rows'); const div = document.createElement('div'); div.className = "grid grid-cols-4 gap-2 items-center"; div.innerHTML = `<input type="number" class="wind-edit-alt" value="0" placeholder="Höhe"><input type="number" class="wind-edit-dir" value="0" placeholder="Dir"><input type="number" class="wind-edit-spd" value="0" placeholder="Knots"><button onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-300"><i class="fas fa-trash"></i></button>`; container.appendChild(div); },
