@@ -131,7 +131,7 @@
             max-width: 600px;
             min-height: 75px; 
             display: flex;
-            flex-direction: column; /* Changed for AI instruction below */
+            flex-direction: column; 
             align-items: center;
             padding-left: 40px;
             pointer-events: none;
@@ -166,31 +166,49 @@
             position: absolute;
         }
 
-        /* AI Car-Style Instruction */
-        #ai-nav-instruction {
+        /* CAR-STYLE INSTRUCTION BAR */
+        #nav-instruction-bar {
+            position: fixed;
+            bottom: 100px; /* Above Bottom Toolbar */
+            left: 50%;
+            transform: translateX(-50%) translateY(20px); /* Start slightly down */
+            z-index: 2000;
             pointer-events: auto;
-            margin-top: 5px;
-            background: rgba(30, 58, 138, 0.9); /* Dark Blue */
-            border: 1px solid rgba(96, 165, 250, 0.5);
+            
+            background: rgba(15, 23, 42, 0.95); /* Darker, more solid */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-left-width: 4px; /* Colored accent bar */
+            
             color: white;
-            padding: 8px 12px;
+            padding: 12px 20px;
             border-radius: 8px;
-            font-size: 0.9rem;
-            font-weight: bold;
+            
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            
             display: flex;
             align-items: center;
-            gap: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-            transition: all 0.3s ease;
+            gap: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             opacity: 0;
-            transform: translateY(-10px);
-            max-width: 100%;
+            visibility: hidden;
+            max-width: 90%;
+            width: auto;
+            text-align: center;
         }
         
-        #ai-nav-instruction.visible {
+        #nav-instruction-bar.visible {
             opacity: 1;
-            transform: translateY(0);
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
         }
+
+        /* Mode Styles for the Bar */
+        #nav-instruction-bar.mode-ai { border-left-color: #3b82f6; } /* Blue */
+        #nav-instruction-bar.mode-local { border-left-color: #f59e0b; } /* Amber */
 
         #btn-nav-toggle-wrapper {
             position: absolute;
@@ -316,7 +334,7 @@
         }
 
         /* Expanded State (Hover or Class) */
-        /* REMOVED HOVER EXPANSION AS REQUESTED */
+        /* REMOVED HOVER EXPANSION AS REQUESTED - ONLY CLICK NOW */
         .status-badge.expanded {
             transform: translateX(0);
         }
@@ -478,16 +496,17 @@
         /* Loader inside AI Nav */
         .ai-pulse {
             display: inline-block;
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
-            background-color: #60a5fa;
+            background-color: currentColor;
             animation: ai-pulse 1.5s infinite;
+            flex-shrink: 0;
         }
         @keyframes ai-pulse {
-            0% { transform: scale(0.8); opacity: 0.5; }
-            50% { transform: scale(1.2); opacity: 1; }
-            100% { transform: scale(0.8); opacity: 0.5; }
+            0% { transform: scale(0.8); opacity: 0.5; box-shadow: 0 0 0 0 rgba(255,255,255, 0.4); }
+            50% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 0 5px rgba(255,255,255, 0); }
+            100% { transform: scale(0.8); opacity: 0.5; box-shadow: 0 0 0 0 rgba(255,255,255, 0); }
         }
 
     </style>
@@ -567,7 +586,7 @@
     </div>
 
     <!-- STATUS AREA (COLLAPSIBLE SIDE BADGES) -->
-    <!-- Updated for "Line on Right" behavior with hover expansion REMOVED - Click Only -->
+    <!-- Click Only Expansion -->
     <div class="status-area">
         <div id="sb-rec" class="status-badge red hidden" onclick="this.classList.toggle('expanded')">
              <i class="fas fa-circle text-[8px]"></i> <span>REC</span>
@@ -609,16 +628,20 @@
                 <div class="hud-num" id="nav-ete">--:--</div>
             </div>
             
-            <!-- Removed standard AI button, added toggle in separate wrapper or logic -->
-            <button onclick="aiService.toggleAutoNav()" id="btn-ai-nav" class="absolute -right-2 top-8 bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-xs shadow border border-white/20 hidden" title="Auto-Navi"><i class="fas fa-magic"></i></button>
+            <!-- AI Button (Blue) -->
+            <button onclick="aiService.toggleAutoNav()" id="btn-ai-nav" class="absolute -right-2 top-8 bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-xs shadow border border-white/20 hidden" title="Auto-Navi (KI)"><i class="fas fa-magic"></i></button>
+            
+            <!-- Local Nav Button (Amber) - NEW -->
+            <button onclick="localNavService.toggleLocalNav()" id="btn-local-nav" class="absolute -right-2 top-[68px] bg-amber-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-xs shadow border border-white/20" title="Local Navi (Calc)"><i class="fas fa-calculator"></i></button>
+
             <button onclick="ui.clearTarget()" class="absolute -right-2 -top-2 bg-slate-800 text-slate-400 hover:text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow border border-white/20"><i class="fas fa-times"></i></button>
         </div>
-        
-        <!-- NEW: Car Style AI Instruction -->
-        <div id="ai-nav-instruction">
-            <span class="ai-pulse"></span>
-            <span id="ai-nav-text">Berechne...</span>
-        </div>
+    </div>
+    
+    <!-- NEW: Car Style Instruction Bar (Bottom) -->
+    <div id="nav-instruction-bar" class="mode-ai">
+        <span class="ai-pulse"></span>
+        <span id="nav-instruction-text">Berechne...</span>
     </div>
 
     <!-- TOAST CONTAINER IN BODY FOR CSS TARGETING -->
@@ -776,7 +799,8 @@
                 mapOffset: 0.25,
                 showPathPrediction: false,
                 pathPredictionMinutes: 5,
-                navMode: 'direct' // New navMode
+                navMode: 'direct',
+                aiMaxWords: 10
             }
         };
 
@@ -972,6 +996,176 @@
         };
 
         /**
+         * LOCAL NAV SERVICE (Algorithm-based)
+         */
+        const localNavService = {
+            interval: null,
+            isActive: false,
+            settings: {
+                climbRate: 2.0, // m/s, assumed vertical speed for transit
+                maxDataAgeMin: 60 // Discard wind data older than this
+            },
+
+            toggleLocalNav() {
+                if(this.isActive) this.stopLocalNav();
+                else this.startLocalNav();
+            },
+
+            startLocalNav() {
+                if (!state.targetWaypoint) { ui.showToast("Kein Ziel!", "error"); return; }
+                
+                // Ensure AI Nav is off
+                if(aiService.isAutoNavActive) aiService.stopAutoNav();
+
+                this.isActive = true;
+                const btn = document.getElementById('btn-local-nav');
+                if(btn) { btn.classList.add('text-amber-400'); btn.classList.add('animate-pulse'); }
+                
+                // UI Setup
+                const bar = document.getElementById('nav-instruction-bar');
+                bar.className = 'mode-local visible'; // Switch to local style (Amber)
+                
+                this.update(); // Initial run
+                
+                // Interval loop
+                this.interval = setInterval(() => this.update(), 5000); 
+            },
+
+            stopLocalNav() {
+                this.isActive = false;
+                if(this.interval) clearInterval(this.interval);
+                
+                const btn = document.getElementById('btn-local-nav');
+                if(btn) { btn.classList.remove('text-amber-400'); btn.classList.remove('animate-pulse'); }
+                
+                document.getElementById('nav-instruction-bar').classList.remove('visible');
+            },
+
+            cleanupOldData() {
+                const threshold = Date.now() - (this.settings.maxDataAgeMin * 60 * 1000);
+                // Filter measured layers
+                if(state.measuredWindLayers) {
+                    state.measuredWindLayers = state.measuredWindLayers.filter(l => l.timestamp && l.timestamp >= threshold);
+                }
+            },
+
+            calculateBestLayer() {
+                const target = state.targetWaypoint;
+                if (!target) return null;
+                
+                const currentPos = simulation.getCurrentState(); // {lat, lng, alt, speed (knots), course}
+                
+                // Use measured layers if available, else forecast layers
+                let layersToScan = (state.measuredWindLayers && state.measuredWindLayers.length > 0) 
+                                   ? state.measuredWindLayers 
+                                   : state.windLayers;
+
+                // If absolutely no layers, return null
+                if(!layersToScan || layersToScan.length === 0) return null;
+
+                const candidates = [];
+                
+                // Conversions
+                // Speed: Knots to m/s for calculations
+                const KNOTS_TO_MS = 0.514444;
+
+                layersToScan.forEach(layer => {
+                    // 1. Transit Calculation (Time & Drift to get to layer altitude)
+                    const deltaAlt = Math.abs(layer.alt - currentPos.alt);
+                    const t_transit = deltaAlt / this.settings.climbRate; // seconds
+                    
+                    // Simple drift estimation: 
+                    // Assume drift speed/dir is average of current state and target layer
+                    const currentSpeedMs = currentPos.speed * KNOTS_TO_MS;
+                    const layerSpeedMs = layer.speed * KNOTS_TO_MS;
+                    const avgSpeedMs = (currentSpeedMs + layerSpeedMs) / 2;
+                    
+                    // Drift distance
+                    const driftDistM = avgSpeedMs * t_transit;
+                    
+                    // New Position after drift (Estimate)
+                    // Moving approx along current course (simplified)
+                    const R = 6371e3; // Earth radius m
+                    const radBrg = toRad(currentPos.course);
+                    const lat1 = toRad(currentPos.lat);
+                    const lon1 = toRad(currentPos.lng);
+                    
+                    const lat2 = Math.asin( Math.sin(lat1)*Math.cos(driftDistM/R) + Math.cos(lat1)*Math.sin(driftDistM/R)*Math.cos(radBrg) );
+                    const lon2 = lon1 + Math.atan2(Math.sin(radBrg)*Math.sin(driftDistM/R)*Math.cos(lat1), Math.cos(driftDistM/R)-Math.sin(lat1)*Math.sin(lat2));
+                    
+                    const startLat = toDeg(lat2);
+                    const startLng = toDeg(lon2);
+                    
+                    // 2. VMG Calculation from new start point
+                    // Distance from post-drift point to target
+                    const distToTargetM = getDistance(startLat, startLng, target.lat, target.lng) * 1000;
+                    const bearingToTarget = getBearing(startLat, startLng, target.lat, target.lng);
+                    
+                    const windDirRad = toRad(layer.dir);
+                    const targetBrgRad = toRad(bearingToTarget);
+                    
+                    // VMG = Speed * cos(WindAngle - TargetAngle)
+                    // Note: Wind 'from' vs 'to'.
+                    // layer.dir is Wind FROM (Metereological). Balloon moves TO opposite.
+                    // Actually, usually simulators store "Movement Direction" or convert.
+                    // Standard logic here: layer.dir is Direction of Movement (Track).
+                    // In simulation tick: course = wind.dir + 180. 
+                    // So if stored layer.dir is Wind Direction (Source), motion is +180.
+                    // Let's assume layer.dir stored in measured layers is COURSE (Track).
+                    // If isMeasured is true, it came from GPS Course. Perfect.
+                    // If from forecast (windLayers), it might be source.
+                    // Let's assume layer.dir is the TRACK direction for simplicity as per existing logic.
+                    
+                    const vmg = layerSpeedMs * Math.cos(toRad(layer.dir) - targetBrgRad);
+                    
+                    if (vmg > 0.1) { // Must be positive closing velocity
+                         const t_travel = distToTargetM / vmg; // seconds
+                         const total_time = t_transit + t_travel;
+                         
+                         candidates.push({
+                             layer: layer,
+                             vmg: vmg,
+                             totalTime: total_time,
+                             transitTime: t_transit,
+                             distM: distToTargetM
+                         });
+                    }
+                });
+                
+                if (candidates.length === 0) return null;
+                
+                // Sort by Total Time ASC (Fastest)
+                candidates.sort((a,b) => a.totalTime - b.totalTime);
+                return candidates[0];
+            },
+
+            update() {
+                if(!state.targetWaypoint) { this.stopLocalNav(); return; }
+                
+                this.cleanupOldData();
+                const best = this.calculateBestLayer();
+                const textEl = document.getElementById('nav-instruction-text');
+                
+                if (!best) {
+                    textEl.innerText = "Kein günstiger Wind gefunden";
+                    return;
+                }
+                
+                const currentAlt = simulation.alt;
+                const targetAlt = best.layer.alt;
+                const diff = targetAlt - currentAlt;
+                
+                let action = "Höhe halten";
+                if (diff > 50) action = `Steigen auf ${targetAlt}m`;
+                else if (diff < -50) action = `Sinken auf ${targetAlt}m`;
+                
+                const etaMin = Math.round(best.totalTime / 60);
+                
+                textEl.innerText = `${action} (ETA: ${etaMin} min)`;
+            }
+        };
+
+        /**
          * AI SERVICE (GEMINI)
          */
         const aiService = {
@@ -980,7 +1174,7 @@
             lastCheckDir: null, // Track wind direction for auto-update
 
             // Helper to call API
-            async callGemini(prompt) {
+            async callGemini(prompt, outputJson = false) {
                 const apiKey = state.settings.apiKey;
                 if (!apiKey) throw new Error("API Key fehlt");
 
@@ -988,6 +1182,10 @@
                 const payload = {
                     contents: [{ parts: [{ text: prompt }] }]
                 };
+                
+                if (outputJson) {
+                    payload.generationConfig = { responseMimeType: "application/json" };
+                }
 
                 const response = await fetch(url, {
                     method: 'POST',
@@ -997,7 +1195,7 @@
 
                 if (!response.ok) throw new Error("API Fehler: " + response.status);
                 const data = await response.json();
-                return data.candidates?.[0]?.content?.parts?.[0]?.text || "Keine Antwort";
+                return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
             },
 
             toggleAutoNav() {
@@ -1009,10 +1207,17 @@
                 if (!state.settings.apiKey) { ui.showToast("Kein API Key!", "error"); return; }
                 if (!state.targetWaypoint) { ui.showToast("Kein Ziel!", "error"); return; }
                 
+                // Stop Local Nav if active
+                if(localNavService.isActive) localNavService.stopLocalNav();
+
                 this.isAutoNavActive = true;
                 const btn = document.getElementById('btn-ai-nav');
                 if(btn) { btn.classList.add('text-green-400'); btn.classList.add('animate-pulse'); }
                 
+                // UI Setup for AI
+                const bar = document.getElementById('nav-instruction-bar');
+                bar.className = 'mode-ai visible'; 
+
                 this.updateNavAdvice(true); // Force first update
                 
                 // Check every 5 seconds for changes
@@ -1026,7 +1231,7 @@
                 if(this.autoNavInterval) clearInterval(this.autoNavInterval);
                 const btn = document.getElementById('btn-ai-nav');
                 if(btn) { btn.classList.remove('text-green-400'); btn.classList.remove('animate-pulse'); }
-                document.getElementById('ai-nav-instruction').classList.remove('visible');
+                document.getElementById('nav-instruction-bar').classList.remove('visible');
             },
 
             checkConditions() {
@@ -1049,10 +1254,7 @@
             },
 
             async updateNavAdvice(force = false) {
-                const instrBox = document.getElementById('ai-nav-instruction');
-                const textEl = document.getElementById('ai-nav-text');
-                
-                instrBox.classList.add('visible');
+                const textEl = document.getElementById('nav-instruction-text');
                 textEl.innerText = "Berechne...";
                 
                 try {
@@ -1066,14 +1268,13 @@
 
                     const winds = state.windLayers.map(l => `${l.alt}m: ${l.dir}°/${l.speed}kt`).join('\n');
 
-                    // Updated Prompt for Conciseness
                     const prompt = `Du bist ein Auto-Navi für Heißluftballone.
         Ziel-Peilung: ${bearing}°. Distanz: ${dist}km.
         Aktueller Wind auf ${Math.round(pos.alt)}m kommt aus ${Math.round(this.lastCheckDir)}°.
         Verfügbare Winde (Höhe: Richtung):
         ${winds}
 
-        Gib EIN einziges, extrem kurzes Kommando (maximal ${maxWords} Wörter) im Imperativ. 
+        Gib EIN einziges, kurzes, prägnantes Kommando (maximal ${maxWords} Wörter) im Imperativ. 
         Beispiele: "Steigen auf 500m", "Sinken auf 100m", "Höhe halten", "Ziel erreicht".
         Keine Erklärungen.`;
 
@@ -1093,20 +1294,43 @@
             async getBaptismSuggestions(paxName, start, end, date, notes, btn, targetId) {
                 if (!state.settings.apiKey) { ui.showToast("Kein API Key!", "error"); return; }
                 
-                const input = document.getElementById(targetId);
                 const originalText = btn.innerHTML;
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
                 btn.disabled = true;
 
                 try {
-                    const prompt = `Erstelle einen lustigen, traditionellen Ballonfahrer-Adelstitel (Taufnamen) für einen Passagier namens "${paxName}".
+                    const prompt = `Erstelle eine Liste von 5 lustigen, traditionellen Ballonfahrer-Adelstiteln (Taufnamen) für einen Passagier namens "${paxName}".
         Startort: ${start}. Landeort: ${end}.
         Besonderheiten: ${notes}.
-        Format: "Graf/Gräfin [Name] zu [Ort], [Lustiger Zusatz]". Nur den Titel ausgeben.`;
+        WICHTIG: Nutze das Wort "fahren" statt "fliegen" (Ballone fahren!).
+        Format: Ein JSON Array von Strings. Beispiel: ["Graf X zu Y", "Baron Z von A"].`;
 
-                    const text = await this.callGemini(prompt);
-                    if (input) input.value = text.replace(/["']/g, ''); // Clean quotes
-                    ui.showToast("Vorschlag generiert!");
+                    const text = await this.callGemini(prompt, true); // JSON Mode
+                    let suggestions = [];
+                    try {
+                        suggestions = JSON.parse(text);
+                        if (!Array.isArray(suggestions)) throw new Error("Kein Array");
+                    } catch(e) {
+                        // Fallback parsing if strict JSON fails (though model usually obeys)
+                        suggestions = text.split('\n').filter(l => l.trim().length > 5).map(l => l.replace(/^\d+[\.\)]\s*/, '').replace(/"/g, ''));
+                    }
+
+                    if(suggestions.length > 0) {
+                        // Prepare items for selection modal
+                        const items = suggestions.map((s, i) => ({
+                            id: s, // value is the text itself
+                            main: s,
+                            sub: `Vorschlag ${i+1}`
+                        }));
+                        
+                        ui.showSelectionModal("Taufnamen wählen", items, (selectedText) => {
+                            const input = document.getElementById(targetId);
+                            if(input) input.value = selectedText;
+                            ui.showToast("Taufname übernommen!");
+                        });
+                    } else {
+                        throw new Error("Keine Vorschläge erhalten");
+                    }
 
                 } catch (e) {
                     ui.showToast("KI Fehler: " + e.message, "error");
@@ -1450,7 +1674,10 @@
                     const interval = state.settings.windMeasInterval || 50;
                     const bucketAlt = Math.round(data.alt / interval) * interval;
                     const existingIdx = state.measuredWindLayers.findIndex(l => l.alt === bucketAlt);
-                    const newLayer = { alt: bucketAlt, dir: data.course, speed: data.speed, isMeasured: true };
+                    
+                    // NEW: Add timestamp
+                    const newLayer = { alt: bucketAlt, dir: data.course, speed: data.speed, isMeasured: true, timestamp: Date.now() };
+                    
                     if (existingIdx >= 0) { state.measuredWindLayers[existingIdx] = newLayer; } else { state.measuredWindLayers.push(newLayer); }
                     ui.renderWind();
                     if (data.alt > this.maxAlt) this.maxAlt = data.alt;
@@ -1512,6 +1739,7 @@
                     document.getElementById('hud-nav-container').classList.add('hidden'); 
                     // Stop Auto Nav if active when target cleared
                     if(aiService.isAutoNavActive) aiService.stopAutoNav();
+                    if(localNavService.isActive) localNavService.stopLocalNav();
                 }
             }
         };
@@ -1837,9 +2065,8 @@
                 this.showToast("Navigation beendet");
                 
                 // Stop auto nav if active
-                if(aiService.isAutoNavActive) {
-                    aiService.stopAutoNav();
-                }
+                if(aiService.isAutoNavActive) aiService.stopAutoNav();
+                if(localNavService.isActive) localNavService.stopLocalNav();
             },
             editWindSettings() { this.openModal(); this.switchTab('environment'); },
             openModal() { document.getElementById('main-modal').style.display = 'flex'; this.switchTab(this.tab); },
