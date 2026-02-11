@@ -1085,10 +1085,8 @@
                 
                 const currentPos = simulation.getCurrentState(); // {lat, lng, alt, speed (knots), course}
                 
-                // Use measured layers if available, else forecast layers
-                let layersToScan = (state.measuredWindLayers && state.measuredWindLayers.length > 0) 
-                                   ? state.measuredWindLayers 
-                                   : state.windLayers;
+                // Use combined layers (from Simulation helper)
+                let layersToScan = simulation.getCombinedLayers();
 
                 // If absolutely no layers, return null
                 if(!layersToScan || layersToScan.length === 0) return null;
@@ -1131,22 +1129,16 @@
                     const distToTargetM = getDistance(startLat, startLng, target.lat, target.lng) * 1000;
                     const bearingToTarget = getBearing(startLat, startLng, target.lat, target.lng);
                     
-                    const windDirRad = toRad(layer.dir);
+                    // layer.dir is WIND FROM direction.
+                    // Balloon travels TO opposite direction.
+                    // So movement direction = layer.dir + 180
+                    const movementDir = (layer.dir + 180) % 360;
+                    
+                    const movementDirRad = toRad(movementDir);
                     const targetBrgRad = toRad(bearingToTarget);
                     
-                    // VMG = Speed * cos(WindAngle - TargetAngle)
-                    // Note: Wind 'from' vs 'to'.
-                    // layer.dir is Wind FROM (Metereological). Balloon moves TO opposite.
-                    // Actually, usually simulators store "Movement Direction" or convert.
-                    // Standard logic here: layer.dir is Direction of Movement (Track).
-                    // In simulation tick: course = wind.dir + 180. 
-                    // So if stored layer.dir is Wind Direction (Source), motion is +180.
-                    // Let's assume layer.dir is the TRACK direction for simplicity as per existing logic.
-                    // If isMeasured is true, it came from GPS Course. Perfect.
-                    // If from forecast (windLayers), it might be source.
-                    // Let's assume layer.dir is the TRACK direction for simplicity as per existing logic.
-                    
-                    const vmg = layerSpeedMs * Math.cos(toRad(layer.dir) - targetBrgRad);
+                    // VMG = Speed * cos(MovementAngle - TargetAngle)
+                    const vmg = layerSpeedMs * Math.cos(movementDirRad - targetBrgRad);
                     
                     if (vmg > 0.1) { // Must be positive closing velocity
                          const t_travel = distToTargetM / vmg; // seconds
@@ -1162,7 +1154,7 @@
                     }
                 });
                 
-                if (candidates.length === 0) return null;
+                if (candidates.length === 0) return "unreachable";
                 
                 // Sort by Total Time ASC (Fastest)
                 candidates.sort((a,b) => a.totalTime - b.totalTime);
@@ -1176,8 +1168,14 @@
                 const best = this.calculateBestLayer();
                 const textEl = document.getElementById('nav-instruction-text');
                 
+                if (best === "unreachable") {
+                     textEl.innerText = "Ziel nicht erreichbar (Gegenwind)";
+                     // Make text red/orange to indicate warning? For now just text.
+                     return;
+                }
+                
                 if (!best) {
-                    textEl.innerText = "Kein günstiger Wind gefunden";
+                    textEl.innerText = "Keine Winddaten verfügbar";
                     return;
                 }
                 
@@ -1296,7 +1294,7 @@
                     
                     this.lastCheckDir = simulation.getWindAtAlt(pos.alt).dir; // Update last check
 
-                    const winds = state.windLayers.map(l => `${l.alt}m: ${l.dir}°/${l.speed}kt`).join('\n');
+                    const winds = simulation.getCombinedLayers().map(l => `${l.alt}m: ${l.dir}°/${l.speed}kt`).join('\n');
 
                     const prompt = `Du bist ein Auto-Navi für Heißluftballone.
         Ziel-Peilung: ${bearing}°. Distanz: ${dist}km.
@@ -1881,8 +1879,32 @@
                 flightManager.updateHUD(this.getCurrentState());
             },
 
+            // Helper to merge layers correctly
+            getCombinedLayers() {
+                // Start with base layers (forecast)
+                const allLayers = [...state.windLayers];
+                
+                // Add measured/manual layers
+                if (state.measuredWindLayers) {
+                    state.measuredWindLayers.forEach(m => {
+                        // Find if there is a layer at basically the same altitude and replace it
+                        // Or just add it. Since we sort by altitude, adding is fine unless exact duplicate.
+                        // Let's replace if within 1m to avoid double layers
+                        const idx = allLayers.findIndex(l => Math.abs(l.alt - m.alt) < 1);
+                        if(idx >= 0) allLayers[idx] = m;
+                        else allLayers.push(m);
+                    });
+                }
+                // Sort by altitude ascending
+                return allLayers.sort((a,b) => a.alt - b.alt);
+            },
+
             getWindAtAlt(altitude) {
-                const sorted = [...state.windLayers].sort((a,b) => a.alt - b.alt);
+                // Use combined layers for consistent physics
+                const sorted = this.getCombinedLayers();
+                
+                if (sorted.length === 0) return { dir: 0, speed: 0 }; // Fallback
+
                 let lower = sorted[0], upper = sorted[sorted.length-1];
                 for (let i = 0; i < sorted.length - 1; i++) {
                     if (altitude >= sorted[i].alt && altitude <= sorted[i+1].alt) {
