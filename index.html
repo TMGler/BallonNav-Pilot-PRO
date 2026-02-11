@@ -556,8 +556,9 @@
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                      <div>
-                        <label class="text-xs uppercase text-slate-400 mb-1">Richtung (°)</label>
+                        <label class="text-xs uppercase text-slate-400 mb-1">Fahrtrichtung (Track °)</label>
                         <input type="number" id="manual-wind-dir" class="w-full bg-slate-800 border-slate-600 rounded p-3 text-lg font-bold text-white" placeholder="0-360">
+                        <div class="text-[9px] text-slate-500 mt-1">Wohin fährt der andere Ballon?</div>
                     </div>
                      <div>
                         <label class="text-xs uppercase text-slate-400 mb-1">Geschw. (km/h)</label>
@@ -819,8 +820,8 @@
                 mapStyle: 'dark',
                 mode: 'sim', 
                 activeBalloonId: null,
-                windThreshold: 5,           
-                windMeasInterval: 50,       
+                windThreshold: 5,            
+                windMeasInterval: 50,        
                 windMeasurementMinDeviation: 5, 
                 imageRetention: 30,
                 baptismMaxWords: 15,
@@ -830,7 +831,7 @@
                 showPathPrediction: false,
                 pathPredictionMinutes: 5,
                 navMode: 'direct',
-                aiMaxWords: 10
+                toastTimeout: 60 // New: Default 60s
             }
         };
 
@@ -852,6 +853,7 @@
         if(state.settings.pathPredictionMinutes === undefined) state.settings.pathPredictionMinutes = 5;
         if(state.settings.navMode === undefined) state.settings.navMode = 'direct';
         if(state.settings.aiMaxWords === undefined) state.settings.aiMaxWords = 10;
+        if(state.settings.toastTimeout === undefined) state.settings.toastTimeout = 60; // Initialize toast timeout
 
         // Ensure archived property exists on balloons
         if (state.balloons) {
@@ -1724,8 +1726,6 @@
                     } 
                 });
                 // Find closest just in case none were < 25 (e.g. at 75m between 50 and 100)
-                // Actually, let's keep the simple logic to avoid jumping around too much, or implement a "closest" finder if desired.
-                // The user requested continuous: Let's find the absolute closest one and highlight it.
                 let minDiff = Infinity;
                 let closestRow = null;
                 windRows.forEach(row => {
@@ -1766,7 +1766,9 @@
                 } else { 
                     document.getElementById('hud-nav-container').classList.add('hidden'); 
                     // Stop Auto Nav if active when target cleared
-                    if(aiService.isAutoNavActive) aiService.stopAutoNav();
+                    if(aiService.isAutoNavActive) {
+                        aiService.stopAutoNav();
+                    }
                     if(localNavService.isActive) localNavService.stopLocalNav();
                 }
             }
@@ -2064,12 +2066,18 @@
                     t.classList.add('show');
                 });
                 
-                // Auto collapse logic
+                // Auto collapse logic (visual minimize)
                 setTimeout(() => {
                     if (t && t.parentElement) {
                         t.classList.add('collapsed');
                     }
                 }, 3000); // 3 seconds visible, then collapse
+
+                // NEW: Auto Remove Logic based on Settings
+                const timeoutSec = state.settings.toastTimeout || 60; // Default 60s
+                setTimeout(() => {
+                    if (t && t.parentElement) t.remove();
+                }, timeoutSec * 1000);
             },
             
             toggleWindPanel() {
@@ -2120,6 +2128,7 @@
                 if(aiService.isAutoNavActive) {
                     aiService.stopAutoNav();
                 }
+                if(localNavService.isActive) localNavService.stopLocalNav();
             },
             editWindSettings() { this.openModal(); this.switchTab('environment'); },
             openModal() { document.getElementById('main-modal').style.display = 'flex'; this.switchTab(this.tab); },
@@ -2361,6 +2370,12 @@
                                 <div><label>Kartenstil</label><select id="set-map-style" onchange="ui.saveSettings(true)"><option value="dark" ${state.settings.mapStyle==='dark'?'selected':''}>Dark Matter (Dunkel)</option><option value="light" ${state.settings.mapStyle==='light'?'selected':''}>OpenStreetMap (Hell)</option><option value="sat" ${state.settings.mapStyle==='sat'?'selected':''}>Satellit</option></select></div>
                                 <div><label>Track Farbe</label><input type="color" id="set-track-color" value="${state.settings.trackColor}" onchange="ui.saveSettings(true)"></div>
                              </div>
+                             
+                             <!-- Toast Timeout Setting -->
+                             <div>
+                                <label>Nachrichten automatisch löschen nach (Sekunden)</label>
+                                <input type="number" id="set-toast-timeout" value="${state.settings.toastTimeout || 60}" onchange="ui.saveSettings(true)">
+                             </div>
                         </div>
                     </div>
                     
@@ -2587,22 +2602,23 @@
 
             saveManualWind() {
                 const alt = parseInt(document.getElementById('manual-wind-alt').value);
-                const dir = parseInt(document.getElementById('manual-wind-dir').value);
+                const dirInput = parseInt(document.getElementById('manual-wind-dir').value);
                 const spd = parseFloat(document.getElementById('manual-wind-spd').value);
 
-                if (isNaN(alt) || isNaN(dir) || isNaN(spd)) {
+                if (isNaN(alt) || isNaN(dirInput) || isNaN(spd)) {
                     ui.showToast("Bitte gültige Zahlen eingeben", "error");
                     return;
                 }
 
+                // Convert Input (Track/Direction of other pilot) to Wind Source (From)
+                // If Pilot drives East (90), Wind comes from West (270).
+                const windFrom = (dirInput + 180) % 360;
+
                 // Create new layer
                 const newLayer = {
                     alt: alt,
-                    dir: dir,
-                    speed: spd, // Assuming user inputs knots or we convert based on unit setting? Let's assume knots standard for pilot or convert back if input was kmh.
-                                // For simplicity here, assuming input matches display unit? Or standard knots. 
-                                // Let's assume standard pilot input is Knots. If UI is KMH, user might input KMH.
-                                // To be safe, let's treat input as Knots as per standard aviation, unless specified.
+                    dir: windFrom,
+                    speed: spd, 
                     isMeasured: true,
                     isManual: true, // Mark as manual entry
                     timestamp: Date.now()
@@ -2666,7 +2682,6 @@
                 const maxLift = b.volume * liftFactor;
 
                 const res = document.getElementById('wb-result');
-                // REMOVED MTOM DISPLAY AS REQUESTED
                 const isOverLift = totalWeight > maxLift;
 
                 res.innerHTML = `
@@ -2722,7 +2737,7 @@
                                     <button onclick="flightManager.startRecording('${p.id}')" class="w-full bg-slate-800 hover:bg-slate-700 p-3 rounded-lg flex justify-between items-center text-left border border-white/5 transition active:scale-95">
                                         <div>
                                             <div class="font-bold text-white">${p.name}</div>
-                                            <div class="text-[10px] text-slate-400">${p.date} | ${p.balloonName}</div>
+                                            <div class="text-xs text-slate-400">${p.date} | ${p.balloonName}</div>
                                         </div>
                                         <i class="fas fa-chevron-right text-slate-500"></i>
                                     </button>
@@ -3380,6 +3395,7 @@
                 state.settings.windMeasInterval = parseInt(document.getElementById('set-wind-interval').value);
                 state.settings.windThreshold = parseInt(document.getElementById('set-wind-threshold').value);
                 state.settings.aiMaxWords = parseInt(document.getElementById('set-ai-max-words').value);
+                state.settings.toastTimeout = parseInt(document.getElementById('set-toast-timeout').value); // Save Toast Timeout
                 
                 saveState();
                 if(!skipToast) ui.showToast("Einstellungen gespeichert!");
