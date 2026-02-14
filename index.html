@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
   <title>CompNavAir</title>
 
-  <!-- PWA / “native-ish” -->
+  <!-- PWA / “native-ish” (Single-File via data-manifest; für echtes “ohne Browser” => als PWA installieren) -->
   <meta name="theme-color" content="#020617" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="CompNavAir" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <link rel="icon" href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs/><rect width="64" height="64" rx="14" fill="%23020b1a"/><path d="M32 10c10 0 18 9 18 20 0 7-3 13-8 17l-2 10H24l-2-10c-5-4-8-10-8-17 0-11 8-20 18-20Z" fill="%23ffffff"/><path d="M26 50h12l2-8c-2 1-5 2-8 2s-6-1-8-2l2 8Z" fill="%2394a3b8"/></svg>' />
+  <link rel="icon" href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%23020b1a"/><path d="M32 10c10 0 18 9 18 20 0 7-3 13-8 17l-2 10H24l-2-10c-5-4-8-10-8-17 0-11 8-20 18-20Z" fill="%23ffffff"/><path d="M26 50h12l2-8c-2 1-5 2-8 2s-6-1-8-2l2 8Z" fill="%2394a3b8"/></svg>' />
   <link rel="manifest" href='data:application/manifest+json;charset=utf-8,{
     "name":"CompNavAir",
     "short_name":"CompNavAir",
@@ -49,12 +49,12 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 
   <style>
-    /* Prevent rubber band scroll affecting the app feel */
     html, body { overscroll-behavior: none; }
-    #map { height: 100%; width: 100%; }
+    #map { height: 100%; width: 100%; position: relative; z-index: 0; }
 
-    /* Leaflet control z-index vs overlays */
-    .leaflet-control-container { z-index: 10; }
+    /* Leaflet panes/controls can be very “high”; keep our overlays higher */
+    .leaflet-pane, .leaflet-control { z-index: 1000; }
+    .leaflet-control-container { z-index: 1000; }
 
     /* Balloon icon */
     .balloon-marker {
@@ -68,17 +68,15 @@
       place-items: center;
       box-shadow: 0 10px 30px rgba(0,0,0,0.45);
     }
-    .balloon-marker i {
-      font-size: 18px;
-      color: #e2e8f0;
-    }
+    .balloon-marker i { font-size: 18px; color: #e2e8f0; }
     .balloon-needle {
       width: 0; height: 0;
       border-left: 7px solid transparent;
       border-right: 7px solid transparent;
-      border-top: 12px solid rgba(34,197,94,0.95); /* green needle */
+      border-top: 12px solid rgba(34,197,94,0.95);
       margin-top: -2px;
     }
+    .balloon-rot { transform-origin: 50% 50%; will-change: transform; }
 
     /* Toast animation */
     .toast-pop { animation: toastPop 180ms ease-out; }
@@ -87,13 +85,11 @@
       to { transform: translateY(0); opacity: 1; }
     }
 
-    /* Better tap targets */
     button, input, select { touch-action: manipulation; }
   </style>
 </head>
 
 <body class="h-full text-slate-100">
-  <!-- App Shell -->
   <div class="h-full w-full flex flex-col">
     <!-- Header -->
     <header class="fixed top-0 left-0 right-0 z-40 bg-slate-950/80 backdrop-blur border-b border-slate-800">
@@ -104,9 +100,7 @@
           </div>
           <div class="min-w-0">
             <div class="text-sm font-semibold leading-tight truncate">CompNavAir</div>
-            <div id="gpsStatus" class="text-[11px] text-slate-400 leading-tight truncate">
-              GPS: — · Fix: —
-            </div>
+            <div id="gpsStatus" class="text-[11px] text-slate-400 leading-tight truncate">GPS: — · Fix: —</div>
           </div>
         </div>
 
@@ -139,7 +133,7 @@
     </main>
 
     <!-- Nav Toast -->
-    <div id="navToastWrap" class="pointer-events-none fixed top-16 left-0 right-0 z-40 flex justify-center px-3">
+    <div id="navToastWrap" class="pointer-events-none fixed top-16 left-0 right-0 z-[9999] flex justify-center px-3">
       <div id="navToast" class="hidden toast-pop pointer-events-auto max-w-[92vw] rounded-2xl bg-slate-900/80 border border-slate-700 backdrop-blur px-3 py-2 shadow-xl">
         <div class="flex items-center gap-2">
           <i class="fa-solid fa-location-arrow text-slate-200"></i>
@@ -152,7 +146,7 @@
     </div>
 
     <!-- Wind HUD -->
-    <div id="windHud" class="hidden fixed top-16 left-3 z-50 w-[320px] max-w-[90vw] rounded-2xl bg-slate-950/75 border border-slate-700 backdrop-blur shadow-2xl">
+    <div id="windHud" class="hidden fixed top-16 left-3 z-[9999] w-[320px] max-w-[90vw] rounded-2xl bg-slate-950/75 border border-slate-700 backdrop-blur shadow-2xl">
       <div class="p-3 border-b border-slate-800 flex items-center gap-2">
         <div class="font-semibold text-sm"><i class="fa-solid fa-wind mr-2"></i>Wind HUD</div>
         <div class="flex-1"></div>
@@ -180,13 +174,13 @@
           </table>
         </div>
         <div class="mt-3 text-[11px] text-slate-400 leading-snug">
-          Hinweis: Richtung im HUD ist <span class="text-slate-200 font-semibold">Wind-von</span> (meteorologisch). Drift nutzt automatisch <span class="text-slate-200 font-semibold">Wind-nach</span>.
+          Richtung ist <span class="text-slate-200 font-semibold">Wind-von</span>. Drift nutzt <span class="text-slate-200 font-semibold">Wind-nach</span>.
         </div>
       </div>
     </div>
 
     <!-- Simulation Controls -->
-    <div id="simControls" class="hidden fixed left-3 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-3">
+    <div id="simControls" class="hidden fixed left-3 top-1/2 -translate-y-1/2 z-[9999] flex flex-col gap-3">
       <button id="btnBurner" class="h-16 w-16 rounded-2xl bg-orange-500/90 text-slate-950 font-extrabold shadow-2xl active:scale-95">
         <i class="fa-solid fa-fire text-xl"></i>
         <div class="text-[11px] mt-1">Auf</div>
@@ -236,7 +230,7 @@
     </footer>
 
     <!-- Right Side Menu -->
-    <div id="menuOverlay" class="hidden fixed inset-0 z-50">
+    <div id="menuOverlay" class="hidden fixed inset-0 z-[9999]">
       <div id="menuBackdrop" class="absolute inset-0 bg-black/50"></div>
 
       <aside class="absolute right-0 top-0 bottom-0 w-[390px] max-w-[92vw] bg-slate-950 border-l border-slate-800 shadow-2xl flex flex-col">
@@ -248,7 +242,6 @@
           </button>
         </div>
 
-        <!-- Tabs -->
         <div class="p-3 border-b border-slate-800">
           <div class="grid grid-cols-4 gap-2">
             <button data-tab="task" class="tabBtn h-10 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-sm font-semibold">
@@ -266,7 +259,6 @@
           </div>
         </div>
 
-        <!-- Content -->
         <div class="flex-1 overflow-auto p-3">
           <!-- TASK TAB -->
           <section id="tab-task" class="tabPanel space-y-4">
@@ -289,8 +281,7 @@
 
               <div class="space-y-2">
                 <label class="text-xs text-slate-400">CIA Task</label>
-                <select id="taskType" class="w-full h-11 rounded-xl bg-slate-950 border border-slate-700 px-3">
-                </select>
+                <select id="taskType" class="w-full h-11 rounded-xl bg-slate-950 border border-slate-700 px-3"></select>
 
                 <label class="text-xs text-slate-400">Titel</label>
                 <input id="taskTitle" class="w-full h-11 rounded-xl bg-slate-950 border border-slate-700 px-3" placeholder="z.B. Task 3 · JDG Speyer" />
@@ -402,9 +393,7 @@
               <div class="flex items-center gap-2">
                 <div class="font-semibold"><i class="fa-solid fa-wind mr-2"></i>Windprofil</div>
                 <div class="flex-1"></div>
-                <button id="btnWindClear" class="h-9 px-3 rounded-xl bg-slate-900 border border-slate-700 hover:bg-slate-800 text-xs font-semibold">
-                  Leeren
-                </button>
+                <button id="btnWindClear" class="h-9 px-3 rounded-xl bg-slate-900 border border-slate-700 hover:bg-slate-800 text-xs font-semibold">Leeren</button>
               </div>
 
               <div class="grid grid-cols-3 gap-2">
@@ -436,7 +425,7 @@
               </div>
 
               <div class="text-[11px] text-slate-400 leading-snug">
-                Auto-Recording (Real): Wenn GS &gt; 10 km/h und ALT &Delta;&gt;50m oder Kurs &Delta;&gt;5°, wird ein Windpunkt aus Drift geschätzt.
+                Auto-Recording (Real): Wenn GS &gt; 10 km/h und ALT Δ&gt;50m oder Kurs Δ&gt;5°, wird ein Windpunkt aus Drift geschätzt.
               </div>
             </div>
 
@@ -450,6 +439,13 @@
           <section id="tab-setup" class="tabPanel hidden space-y-4">
             <div class="rounded-2xl bg-slate-900/70 border border-slate-800 p-3 space-y-3">
               <div class="font-semibold"><i class="fa-solid fa-gear mr-2"></i>Allgemein</div>
+
+              <div class="rounded-2xl bg-slate-950/60 border border-slate-800 p-3">
+                <div class="font-semibold text-sm">App-Modus</div>
+                <div id="standaloneHint" class="text-[12px] text-slate-400 mt-1">
+                  Für “ohne Browser-Leiste”: in Chrome öffnen → Menü (⋮) → <b>App installieren</b> / “Zum Startbildschirm”.
+                </div>
+              </div>
 
               <div class="flex items-center justify-between gap-3 rounded-2xl bg-slate-950/60 border border-slate-800 p-3">
                 <div>
@@ -511,7 +507,8 @@
 
             <div class="rounded-2xl bg-slate-900/70 border border-slate-800 p-3 space-y-3">
               <div class="font-semibold"><i class="fa-solid fa-file-import mr-2"></i>KML Import</div>
-              <input id="kmlFile" type="file" accept=".kml,application/vnd.google-earth.kml+xml" class="block w-full text-sm text-slate-300 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:bg-slate-900 file:text-slate-100 hover:file:bg-slate-800" />
+              <input id="kmlFile" type="file" accept=".kml,application/vnd.google-earth.kml+xml"
+                class="block w-full text-sm text-slate-300 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:bg-slate-900 file:text-slate-100 hover:file:bg-slate-800" />
               <div class="text-[11px] text-slate-400 leading-snug">
                 Importierte KML wird als Overlay angezeigt (z.B. Scoring Areas, Briefing-Layer, Lufträume).
               </div>
@@ -525,9 +522,7 @@
               <div class="flex items-center gap-2">
                 <div class="font-semibold"><i class="fa-solid fa-box-archive mr-2"></i>Fahrten</div>
                 <div class="flex-1"></div>
-                <button id="btnArchiveClear" class="h-9 px-3 rounded-xl bg-slate-900 border border-slate-700 hover:bg-slate-800 text-xs font-semibold">
-                  Leeren
-                </button>
+                <button id="btnArchiveClear" class="h-9 px-3 rounded-xl bg-slate-900 border border-slate-700 hover:bg-slate-800 text-xs font-semibold">Leeren</button>
               </div>
               <div class="mt-2 text-[12px] text-slate-400">
                 “Fertig” beendet eine Fahrt und legt sie hier ab. Export enthält Track + Marker (Zeitstempel).
@@ -538,17 +533,14 @@
           </section>
         </div>
 
-        <!-- Bottom mini-status -->
         <div class="p-3 border-t border-slate-800">
-          <div id="appStatus" class="text-[11px] text-slate-400">
-            —
-          </div>
+          <div id="appStatus" class="text-[11px] text-slate-400">—</div>
         </div>
       </aside>
     </div>
 
-    <!-- Map Settings Panel (small modal) -->
-    <div id="mapSettings" class="hidden fixed inset-0 z-50">
+    <!-- Map Settings Panel -->
+    <div id="mapSettings" class="hidden fixed inset-0 z-[9999]">
       <div id="mapSettingsBackdrop" class="absolute inset-0 bg-black/50"></div>
       <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[360px] max-w-[92vw] rounded-2xl bg-slate-950 border border-slate-800 shadow-2xl">
         <div class="p-3 border-b border-slate-800 flex items-center gap-2">
@@ -560,12 +552,8 @@
         </div>
         <div class="p-3 space-y-3">
           <div class="grid grid-cols-2 gap-2">
-            <button id="btnBaseOSM" class="h-11 rounded-xl bg-slate-900 border border-slate-700 hover:bg-slate-800 text-sm font-semibold">
-              OSM
-            </button>
-            <button id="btnBaseSAT" class="h-11 rounded-xl bg-slate-900 border border-slate-700 hover:bg-slate-800 text-sm font-semibold">
-              Satellit
-            </button>
+            <button id="btnBaseOSM" class="h-11 rounded-xl bg-slate-900 border border-slate-700 hover:bg-slate-800 text-sm font-semibold">OSM</button>
+            <button id="btnBaseSAT" class="h-11 rounded-xl bg-slate-900 border border-slate-700 hover:bg-slate-800 text-sm font-semibold">Satellit</button>
           </div>
 
           <div class="flex items-center justify-between gap-3 rounded-2xl bg-slate-950/60 border border-slate-800 p-3">
@@ -601,8 +589,8 @@
       </div>
     </div>
 
-    <!-- Simple toast -->
-    <div id="snackbar" class="hidden fixed bottom-24 left-0 right-0 z-50 flex justify-center px-3">
+    <!-- Snackbar -->
+    <div id="snackbar" class="hidden fixed bottom-24 left-0 right-0 z-[9999] flex justify-center px-3">
       <div class="toast-pop max-w-[92vw] rounded-2xl bg-slate-900/90 border border-slate-700 backdrop-blur px-3 py-2 shadow-xl text-sm">
         <span id="snackbarText">—</span>
       </div>
@@ -614,8 +602,8 @@
      * 1) Konstanten & Konfiguration
      *********************************************************************/
     const CONFIG = {
-      APP_VERSION: "1.0.0",
-      DEFAULT_CENTER: { lat: 49.3033, lon: 8.4519, zoom: 12 }, // Speyer / EDRY (approx)
+      APP_VERSION: "1.0.1",
+      DEFAULT_CENTER: { lat: 49.3033, lon: 8.4519, zoom: 12 },
       STORAGE_KEY: "compnavair_state_v1",
       STORAGE_ARCHIVE_KEY: "compnavair_archive_v1",
       STORAGE_KML_KEY: "compnavair_kml_overlays_v1",
@@ -624,22 +612,21 @@
       GPS: {
         ENABLE_HIGH_ACCURACY: true,
         TIMEOUT_MS: 12000,
-        MAX_AGE_MS: 1000,
-        MIN_INTERVAL_MS: 1000,   // throttling in app
-        MIN_DIST_M: 8            // min distance for track point
+        MAX_AGE_MS: 0,        // <- IMPORTANT: avoid stale cached fixes that "jump"
+        MIN_INTERVAL_MS: 1000,
+        MIN_DIST_M: 8
       },
-      UNITS: {
-        SPEED: "kmh" // kmh | kn | ms
-      },
+      UNITS: { SPEED: "kmh" },
       TRAJ_MINUTES: [5, 10, 15],
-      WIND_AUTO: {
-        MIN_GS_KMH: 10,
-        ALT_DELTA_M: 50,
-        CRS_DELTA_DEG: 5
+      WIND_AUTO: { MIN_GS_KMH: 10, ALT_DELTA_M: 50, CRS_DELTA_DEG: 5 },
+      GPS_FILTER: {
+        MAX_BAD_ACCURACY_M: 80,   // discard if worse (when already locked)
+        ALPHA_GOOD: 0.35,         // smoothing good accuracy
+        ALPHA_MED: 0.22,          // smoothing medium accuracy
+        ALPHA_BAD: 0.12           // smoothing bad accuracy
       },
       OPEN_METEO: {
         BASE_URL: "https://api.open-meteo.com/v1/forecast",
-        // Pressure levels good for ballooning; altitudes are approx above sea level
         PRESSURE_LEVELS: [
           { hPa: 1000, approxM: 110 },
           { hPa: 975,  approxM: 320 },
@@ -673,7 +660,6 @@
       { id: "15.18", code: "XDD", title: "MAXIMUM DISTANCE ZWEI MARKER", kind: "area_2mark", defaultPoints: 1 },
       { id: "15.19", code: "ANG", title: "WINKEL", kind: "angle_2pt", defaultPoints: 2 },
       { id: "15.20", code: "3DT", title: "3D-AUFGABE", kind: "donut_track", defaultPoints: 1 },
-      // CIA COH 2025 mentions “Altitude Profile Task (15.21)” – we keep it here for Vollständigkeit.
       { id: "15.21", code: "APT", title: "HÖHENPROFIL-AUFGABE", kind: "alt_profile", defaultPoints: 1 }
     ];
 
@@ -691,7 +677,8 @@
         trajLines: [],
         tasksLayer: null,
         markersLayer: null,
-        kmlOverlays: [] // {id,name,layer,visible}
+        kmlOverlays: [],
+        balloonMarker: null
       },
       ui: {
         menuOpen: false,
@@ -712,37 +699,22 @@
         watching: false,
         watchId: null,
         lastUIUpdateTs: 0,
-        lastTrackPt: null,     // {lat,lon,alt,ts}
-        lastHeadingDeg: null,
-        lastSpeedKmh: 0,
+        lastTrackPt: null,
         lastAltM: null,
-        lastWindAuto: null     // {alt,dirFrom,spdKmh,ts,headingTo}
+        lastWindAuto: null,
+        filtered: null  // {lat,lon,altM,ts}
       },
-      wake: {
-        supported: "wakeLock" in navigator,
-        lock: null
-      },
+      wake: { supported: "wakeLock" in navigator, lock: null },
       sim: {
         enabled: false,
         timerId: null,
         verticalRateMps: 0,
         state: { lat: CONFIG.DEFAULT_CENTER.lat, lon: CONFIG.DEFAULT_CENTER.lon, altM: 120, headingDeg: 0, speedKmh: 0, ts: Date.now() }
       },
-      wind: {
-        // entries sorted by altitude: { altM, dirFromDeg, speedKmh, ts, source }
-        entries: []
-      },
-      tasks: {
-        list: [],        // { id, typeId, typeCode, typeTitle, title, points:[{label,lat,lon}], r1M, r2M, angleDeg, altMinM, altMaxM, markerColor, createdTs }
-        activeTaskId: null
-      },
-      flight: {
-        active: false,
-        startedTs: null,
-        track: [],       // {lat,lon,altM,ts}
-        markers: []      // {lat,lon,altM,ts, color, label}
-      },
-      archive: [] // {id, title, startedTs, finishedTs, track[], markers[], tasksSnapshot?, windSnapshot?}
+      wind: { entries: [] },
+      tasks: { list: [], activeTaskId: null },
+      flight: { active: false, startedTs: null, track: [], markers: [] },
+      archive: []
     };
 
     /*********************************************************************
@@ -755,7 +727,6 @@
       const n = Number(String(v).trim().replace(",", "."));
       return Number.isFinite(n) ? n : null;
     }
-    function nowISO() { return new Date().toISOString(); }
     function fmtTs(ts) {
       try {
         const d = new Date(ts);
@@ -767,10 +738,7 @@
       if (m < 1000) return `${Math.round(m)} m`;
       return `${(m/1000).toFixed(2)} km`;
     }
-    function fmtAlt(m) {
-      if (!isFiniteNum(m)) return "—";
-      return `${Math.round(m)} m`;
-    }
+    function fmtAlt(m) { return isFiniteNum(m) ? `${Math.round(m)} m` : "—"; }
     function fmtSpeedKmh(kmh) {
       if (!isFiniteNum(kmh)) return "—";
       const u = STATE.setup.unitSpeed;
@@ -786,17 +754,9 @@
     }
     function degToRad(d) { return d * Math.PI / 180; }
     function radToDeg(r) { return r * 180 / Math.PI; }
-    function normDeg(d) {
-      let x = d % 360;
-      if (x < 0) x += 360;
-      return x;
-    }
-    function angDiffDeg(a, b) {
-      const d = Math.abs(normDeg(a) - normDeg(b));
-      return Math.min(d, 360 - d);
-    }
+    function normDeg(d) { let x = d % 360; if (x < 0) x += 360; return x; }
+    function angDiffDeg(a, b) { const d = Math.abs(normDeg(a) - normDeg(b)); return Math.min(d, 360 - d); }
 
-    // Haversine distance (meters)
     function distMeters(a, b) {
       const R = 6371000;
       const lat1 = degToRad(a.lat), lat2 = degToRad(b.lat);
@@ -807,7 +767,6 @@
       return R * c;
     }
 
-    // Bearing from A to B (degrees, 0=N, 90=E)
     function bearingDeg(a, b) {
       const lat1 = degToRad(a.lat), lat2 = degToRad(b.lat);
       const dLon = degToRad(b.lon - a.lon);
@@ -816,37 +775,22 @@
       return normDeg(radToDeg(Math.atan2(y, x)));
     }
 
-    // Move point by distance (m) at bearing (deg)
     function movePoint(a, bearing, distM) {
       const R = 6371000;
       const br = degToRad(bearing);
       const lat1 = degToRad(a.lat);
       const lon1 = degToRad(a.lon);
       const dr = distM / R;
-
       const lat2 = Math.asin(Math.sin(lat1)*Math.cos(dr) + Math.cos(lat1)*Math.sin(dr)*Math.cos(br));
       const lon2 = lon1 + Math.atan2(Math.sin(br)*Math.sin(dr)*Math.cos(lat1), Math.cos(dr)-Math.sin(lat1)*Math.sin(lat2));
       return { lat: radToDeg(lat2), lon: radToDeg(lon2) };
     }
 
-    // meteorological wind direction "from" -> drift direction "to"
-    function windFromTo(windFromDeg) {
-      return normDeg(windFromDeg + 180);
-    }
+    function windFromTo(windFromDeg) { return normDeg(windFromDeg + 180); }
 
-    function safeJsonParse(s, fallback) {
-      try { return JSON.parse(s); } catch { return fallback; }
-    }
-
-    function genId(prefix="id") {
-      return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`;
-    }
-
-    function setStatus(msg) {
-      const el = document.getElementById("appStatus");
-      if (el) el.textContent = msg;
-    }
-
+    function safeJsonParse(s, fallback) { try { return JSON.parse(s); } catch { return fallback; } }
+    function genId(prefix="id") { return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`; }
+    function setStatus(msg) { const el = document.getElementById("appStatus"); if (el) el.textContent = msg; }
     function showSnackbar(msg, ms=2000) {
       const wrap = document.getElementById("snackbar");
       const text = document.getElementById("snackbarText");
@@ -858,7 +802,6 @@
     }
 
     function colorToTailwind(color) {
-      // maps markerColor to Tailwind-ish classes
       const map = {
         fuchsia: { btn: "bg-fuchsia-500", ring: "#d946ef" },
         orange:  { btn: "bg-orange-500",  ring: "#f97316" },
@@ -880,12 +823,8 @@
           ui: { trackVisible: STATE.ui.trackVisible, trajVisible: STATE.ui.trajVisible }
         }));
         localStorage.setItem(CONFIG.STORAGE_ARCHIVE_KEY, JSON.stringify(STATE.archive));
-        localStorage.setItem(CONFIG.STORAGE_KML_KEY, JSON.stringify(STATE.layers.kmlOverlays.map(o => ({
-          id: o.id, name: o.name, visible: o.visible
-        }))));
-      } catch (e) {
-        console.warn("persistAll failed", e);
-      }
+        localStorage.setItem(CONFIG.STORAGE_KML_KEY, JSON.stringify(STATE.layers.kmlOverlays.map(o => ({ id: o.id, name: o.name, visible: o.visible }))));
+      } catch (e) { console.warn("persistAll failed", e); }
     }
 
     function restoreAll() {
@@ -923,15 +862,55 @@
 
         const arch = safeJsonParse(localStorage.getItem(CONFIG.STORAGE_ARCHIVE_KEY) || "", null);
         if (Array.isArray(arch)) STATE.archive = arch;
+      } catch (e) { console.warn("restoreAll failed", e); }
+    }
 
-      } catch (e) {
-        console.warn("restoreAll failed", e);
+    // Low-pass GPS filter to remove jitter + avoid "jumping" visuals
+    function filterGpsSample({ lat, lon, altM, accM, ts }) {
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+
+      const prev = STATE.gps.filtered;
+      if (prev && ts <= prev.ts) return null;
+
+      // If accuracy is very bad, ignore unless we have nothing yet
+      if (Number.isFinite(accM) && accM > CONFIG.GPS_FILTER.MAX_BAD_ACCURACY_M && prev) return null;
+
+      if (!prev) {
+        STATE.gps.filtered = { lat, lon, altM: Number.isFinite(altM) ? altM : null, ts };
+        return STATE.gps.filtered;
       }
+
+      let alpha = CONFIG.GPS_FILTER.ALPHA_GOOD;
+      if (Number.isFinite(accM)) {
+        if (accM > 50) alpha = CONFIG.GPS_FILTER.ALPHA_BAD;
+        else if (accM > 25) alpha = CONFIG.GPS_FILTER.ALPHA_MED;
+      }
+
+      const fLat = prev.lat + alpha * (lat - prev.lat);
+      const fLon = prev.lon + alpha * (lon - prev.lon);
+
+      let fAlt = prev.altM;
+      if (Number.isFinite(altM)) {
+        const aAlt = alpha * 0.7;
+        fAlt = (prev.altM === null || prev.altM === undefined) ? altM : (prev.altM + aAlt * (altM - prev.altM));
+      }
+
+      STATE.gps.filtered = { lat: fLat, lon: fLon, altM: fAlt, ts };
+      return STATE.gps.filtered;
     }
 
     /*********************************************************************
      * 4) UI-Render-Funktionen
      *********************************************************************/
+    function escapeHtml(s) {
+      return String(s)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
     function renderTaskTypeDropdown() {
       const sel = document.getElementById("taskType");
       if (!sel) return;
@@ -953,11 +932,26 @@
       if (c) c.classList.toggle("hidden", cnt < 3);
     }
 
+    function taskHint(task) {
+      if (!task) return "—";
+      if (task.typeCode === "3DT") return "3DT: Innerer Kreis ungültig · Ring = Distanz maximieren · Außen = Zentrum anfliegen.";
+      if (task.typeCode === "ANG") return "ANG: Winkel zwischen Vorgaberichtung und Linie A–B maximieren.";
+      if (task.typeCode === "LRN") return "LRN: Fläche Dreieck A–B–C maximieren (Logger/Track).";
+      if (task.typeCode === "ELB") return "ELB: Größte Richtungsänderung (180° − Winkel ABC).";
+      if (String(task.kind||"").includes("area")) return "Area-Task: Nutze KML-Overlay oder setze Radius als Näherung.";
+      return "Zielnavigation: Distanz/Bearing zum Ziel wird angezeigt.";
+    }
+
+    function getActiveTask() {
+      const id = STATE.tasks.activeTaskId;
+      if (!id) return null;
+      return STATE.tasks.list.find(t => t.id === id) || null;
+    }
+
     function renderActiveTaskBox() {
       const label = document.getElementById("activeTaskLabel");
       const hint  = document.getElementById("activeTaskHint");
       const btnFinish = document.getElementById("btnFinish");
-
       const task = getActiveTask();
       if (!label || !hint || !btnFinish) return;
 
@@ -973,24 +967,14 @@
       btnFinish.classList.toggle("hidden", !STATE.flight.active);
     }
 
-    function taskHint(task) {
-      if (!task) return "—";
-      if (task.typeCode === "3DT") {
-        return "3DT: Innerer Kreis ungültig · Ring = Distanz maximieren · Außen = Zentrum anfliegen.";
-      }
-      if (task.typeCode === "ANG") {
-        return "ANG: Winkel zwischen Vorgaberichtung und Linie A–B maximieren.";
-      }
-      if (task.typeCode === "LRN") {
-        return "LRN: Fläche Dreieck A–B–C maximieren (Logger/Track).";
-      }
-      if (task.typeCode === "ELB") {
-        return "ELB: Größte Richtungsänderung (180° − Winkel ABC).";
-      }
-      if (task.kind.includes("area")) {
-        return "Area-Task: Nutze KML-Overlay oder setze Radius als Näherung.";
-      }
-      return "Zielnavigation: Distanz/Bearing zum Ziel wird angezeigt.";
+    function pointSummary(t) {
+      if (!t || !Array.isArray(t.points) || !t.points.length) return "—";
+      const first = t.points[0];
+      const s = `${first.label}: ${first.lat.toFixed(5)}, ${first.lon.toFixed(5)}`;
+      const r = [];
+      if (isFiniteNum(t.r1M) && t.r1M > 0) r.push(`R1=${Math.round(t.r1M)}m`);
+      if (isFiniteNum(t.r2M) && t.r2M > 0) r.push(`R2=${Math.round(t.r2M)}m`);
+      return `${s}${r.length ? " · " + r.join(" · ") : ""}`;
     }
 
     function renderTaskList() {
@@ -1008,7 +992,6 @@
 
       for (const t of STATE.tasks.list.slice().sort((a,b) => (b.createdTs||0)-(a.createdTs||0))) {
         const active = t.id === STATE.tasks.activeTaskId;
-
         const row = document.createElement("div");
         row.className = `rounded-2xl border ${active ? "border-emerald-500/40 bg-emerald-500/10" : "border-slate-800 bg-slate-950/40"} p-3`;
         row.innerHTML = `
@@ -1038,25 +1021,6 @@
           if (act === "delete") deleteTask(id);
         });
       });
-    }
-
-    function pointSummary(t) {
-      if (!t || !Array.isArray(t.points) || !t.points.length) return "—";
-      const first = t.points[0];
-      const s = `${first.label}: ${first.lat.toFixed(5)}, ${first.lon.toFixed(5)}`;
-      const r = [];
-      if (isFiniteNum(t.r1M) && t.r1M > 0) r.push(`R1=${Math.round(t.r1M)}m`);
-      if (isFiniteNum(t.r2M) && t.r2M > 0) r.push(`R2=${Math.round(t.r2M)}m`);
-      return `${s}${r.length ? " · " + r.join(" · ") : ""}`;
-    }
-
-    function escapeHtml(s) {
-      return String(s)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
     }
 
     function renderWindList() {
@@ -1168,9 +1132,7 @@
         wrap.appendChild(row);
       }
 
-      wrap.querySelectorAll("button[data-kml]").forEach(btn => {
-        btn.addEventListener("click", () => exportFlightKml(btn.getAttribute("data-kml")));
-      });
+      wrap.querySelectorAll("button[data-kml]").forEach(btn => btn.addEventListener("click", () => exportFlightKml(btn.getAttribute("data-kml"))));
       wrap.querySelectorAll("button[data-delarch]").forEach(btn => {
         btn.addEventListener("click", () => {
           const id = btn.getAttribute("data-delarch");
@@ -1181,9 +1143,7 @@
           showSnackbar("Archiv-Eintrag gelöscht.");
         });
       });
-      wrap.querySelectorAll("button[data-zoomflight]").forEach(btn => {
-        btn.addEventListener("click", () => zoomToFlight(btn.getAttribute("data-zoomflight")));
-      });
+      wrap.querySelectorAll("button[data-zoomflight]").forEach(btn => btn.addEventListener("click", () => zoomToFlight(btn.getAttribute("data-zoomflight"))));
     }
 
     function renderKmlLayersList() {
@@ -1266,7 +1226,6 @@
     function updateMarkerButtonColor(colorName) {
       const btn = document.getElementById("btnMarker");
       if (!btn) return;
-      // remove known bg classes
       btn.classList.remove("bg-fuchsia-500","bg-orange-500","bg-emerald-500","bg-sky-400","bg-rose-500","bg-amber-400");
       btn.classList.add(colorToTailwind(colorName).btn);
     }
@@ -1280,22 +1239,9 @@
       s.textContent = sub || "—";
       wrap.classList.remove("hidden");
     }
-
-    function hideNavToast() {
-      const wrap = document.getElementById("navToast");
-      if (wrap) wrap.classList.add("hidden");
-    }
-
-    function updateStrategyLine(text) {
-      const el = document.getElementById("strategyLine");
-      if (el) el.textContent = text || "—";
-    }
-
-    function updateWakeBadge() {
-      const badge = document.getElementById("wakeLockBadge");
-      if (!badge) return;
-      badge.classList.toggle("hidden", !STATE.wake.lock);
-    }
+    function hideNavToast() { const wrap = document.getElementById("navToast"); if (wrap) wrap.classList.add("hidden"); }
+    function updateStrategyLine(text) { const el = document.getElementById("strategyLine"); if (el) el.textContent = text || "—"; }
+    function updateWakeBadge() { const badge = document.getElementById("wakeLockBadge"); if (badge) badge.classList.toggle("hidden", !STATE.wake.lock); }
 
     function renderAll() {
       renderActiveTaskBox();
@@ -1313,13 +1259,10 @@
     function initMap() {
       const map = L.map("map", { zoomControl: false });
 
-      // Base layers
       STATE.layers.baseOSM = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
         attribution: "&copy; OpenStreetMap"
       });
-
-      // Esri World Imagery
       STATE.layers.baseSAT = L.tileLayer(
         "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
         { maxZoom: 19, attribution: "Tiles &copy; Esri" }
@@ -1328,23 +1271,18 @@
       STATE.layers.baseOSM.addTo(map);
       STATE.layers.activeBase = "OSM";
 
-      // Overlays
       STATE.layers.track = L.layerGroup().addTo(map);
       STATE.layers.tasksLayer = L.layerGroup().addTo(map);
       STATE.layers.markersLayer = L.layerGroup().addTo(map);
 
-      // Track polyline (created later)
       STATE.layers.trackLine = L.polyline([], { color: "#ef4444", weight: 4, opacity: 0.9 }).addTo(STATE.layers.track);
-
-      // Trajectory lines
       STATE.layers.trajLines = [];
 
-      // Balloon marker (rotating)
       const balloonIcon = L.divIcon({
         className: "",
         html: `
           <div class="balloon-marker">
-            <div style="display:flex;flex-direction:column;align-items:center;line-height:1;">
+            <div class="balloon-rot" style="display:flex;flex-direction:column;align-items:center;line-height:1;">
               <i class="fa-solid fa-location-arrow"></i>
               <div class="balloon-needle"></div>
             </div>
@@ -1355,15 +1293,11 @@
       });
       STATE.layers.balloonMarker = L.marker([CONFIG.DEFAULT_CENTER.lat, CONFIG.DEFAULT_CENTER.lon], { icon: balloonIcon, interactive: false }).addTo(map);
 
-      // Center initial
       map.setView([CONFIG.DEFAULT_CENTER.lat, CONFIG.DEFAULT_CENTER.lon], CONFIG.DEFAULT_CENTER.zoom);
-
-      // Simple zoom control bottom-right
       L.control.zoom({ position: "bottomright" }).addTo(map);
 
       STATE.map = map;
 
-      // Draw from restored flight
       if (STATE.flight.track.length) {
         const latlngs = STATE.flight.track.map(p => [p.lat, p.lon]);
         STATE.layers.trackLine.setLatLngs(latlngs);
@@ -1382,8 +1316,6 @@
         updateHeaderGpsStatus({ ok:false, provider:"Real" });
         return;
       }
-
-      // If already watching, stop first
       stopGps();
 
       try {
@@ -1394,11 +1326,15 @@
           maximumAge: CONFIG.GPS.MAX_AGE_MS
         };
 
+        // Optional: one immediate fix to reduce initial "jump"
+        navigator.geolocation.getCurrentPosition(
+          (pos) => { if (!STATE.sim.enabled) onGpsPosition(pos, true); },
+          () => {},
+          opts
+        );
+
         STATE.gps.watchId = navigator.geolocation.watchPosition(
-          (pos) => {
-            if (STATE.sim.enabled) return; // ignore in sim mode
-            onGpsPosition(pos);
-          },
+          (pos) => { if (!STATE.sim.enabled) onGpsPosition(pos, false); },
           (err) => {
             console.warn("GPS error", err);
             updateHeaderGpsStatus({ ok:false, provider:"Real" });
@@ -1413,42 +1349,41 @@
     }
 
     function stopGps() {
-      try {
-        if (STATE.gps.watchId !== null && navigator.geolocation) {
-          navigator.geolocation.clearWatch(STATE.gps.watchId);
-        }
-      } catch {}
+      try { if (STATE.gps.watchId !== null) navigator.geolocation.clearWatch(STATE.gps.watchId); } catch {}
       STATE.gps.watchId = null;
       STATE.gps.watching = false;
     }
 
-    function onGpsPosition(pos) {
+    function onGpsPosition(pos, isFirst) {
       const ts = pos?.timestamp || Date.now();
       const c = pos?.coords;
       if (!c) return;
 
-      // app-level throttling
       if (ts - STATE.gps.lastUIUpdateTs < STATE.setup.gpsMinInterval) return;
       STATE.gps.lastUIUpdateTs = ts;
 
-      const lat = c.latitude;
-      const lon = c.longitude;
+      const rawLat = c.latitude;
+      const rawLon = c.longitude;
       const acc = c.accuracy;
-      const alt = isFiniteNum(c.altitude) ? c.altitude : null;
+      const rawAlt = isFiniteNum(c.altitude) ? c.altitude : null;
       const spdMps = isFiniteNum(c.speed) ? c.speed : null;
       const spdKmh = isFiniteNum(spdMps) ? (spdMps * 3.6) : null;
 
-      // Heading: use sensor if available else compute from last track point
+      // Filtered position for stable map + track
+      const filtered = filterGpsSample({ lat: rawLat, lon: rawLon, altM: rawAlt, accM: acc, ts });
+      if (!filtered) return;
+
+      const lat = filtered.lat;
+      const lon = filtered.lon;
+      const alt = filtered.altM;
+
+      // Heading: prefer sensor; else compute from last track pt (filtered)
       let heading = isFiniteNum(c.heading) ? c.heading : null;
-
-      const pt = { lat, lon, altM: alt, ts };
-
       if (heading === null && STATE.gps.lastTrackPt) {
         const last = STATE.gps.lastTrackPt;
         heading = bearingDeg({ lat:last.lat, lon:last.lon }, { lat, lon });
       }
 
-      // Vario from last alt
       let vario = null;
       if (STATE.gps.lastAltM !== null && alt !== null && STATE.gps.lastTrackPt) {
         const dt = (ts - STATE.gps.lastTrackPt.ts) / 1000;
@@ -1459,24 +1394,21 @@
       updateHeaderGpsStatus({ ok:true, accM: acc, altM: alt, speedKmh: spdKmh, provider:"Real" });
       updateCockpitInstruments({ speedKmh: spdKmh, altM: alt, varioMps: vario });
 
-      // Update balloon marker + rotation
       updateBalloonMarker(lat, lon, heading);
 
-      // Start flight automatically on first good fix if not active
-      if (!STATE.flight.active) {
-        beginFlight("Live Flight");
-      }
+      if (!STATE.flight.active) beginFlight("Live Flight");
 
-      // Track logging
-      maybeAddTrackPoint(pt);
+      maybeAddTrackPoint({ lat, lon, altM: alt, ts });
 
-      // Auto wind recording
       maybeAutoRecordWind({ altM: alt, headingToDeg: heading, speedKmh: spdKmh, ts });
 
-      // Strategy + nav toast
       updateNavAndStrategy();
 
-      // Persist occasionally
+      // center once at first stable fix (nice UX)
+      if (isFirst) {
+        try { STATE.map?.setView([lat, lon], Math.max(STATE.map.getZoom(), 14), { animate: true }); } catch {}
+      }
+
       persistAll();
     }
 
@@ -1484,11 +1416,12 @@
       if (!STATE.layers.balloonMarker) return;
       try {
         STATE.layers.balloonMarker.setLatLng([lat, lon]);
-        const iconEl = STATE.layers.balloonMarker.getElement();
-        if (iconEl && headingDegVal !== null && headingDegVal !== undefined) {
-          // rotate the whole marker around center
-          iconEl.style.transformOrigin = "center center";
-          iconEl.style.transform = `rotate(${Math.round(headingDegVal)}deg)`;
+
+        // IMPORTANT: do NOT overwrite Leaflet's transform on the root element (causes “jumping”)
+        const root = STATE.layers.balloonMarker.getElement();
+        const rot = root ? root.querySelector(".balloon-rot") : null;
+        if (rot && headingDegVal !== null && headingDegVal !== undefined && Number.isFinite(headingDegVal)) {
+          rot.style.transform = `rotate(${Math.round(headingDegVal)}deg)`;
         }
       } catch {}
     }
@@ -1516,22 +1449,17 @@
         finishedTs,
         track: STATE.flight.track.slice(),
         markers: STATE.flight.markers.slice(),
-        tasksSnapshot: {
-          activeTaskId: STATE.tasks.activeTaskId,
-          list: STATE.tasks.list.slice()
-        },
+        tasksSnapshot: { activeTaskId: STATE.tasks.activeTaskId, list: STATE.tasks.list.slice() },
         windSnapshot: STATE.wind.entries.slice()
       };
 
       STATE.archive.push(entry);
 
-      // Reset current flight
       STATE.flight.active = false;
       STATE.flight.startedTs = null;
       STATE.flight.track = [];
       STATE.flight.markers = [];
 
-      // Clear map layers
       try { STATE.layers.trackLine.setLatLngs([]); } catch {}
       try { STATE.layers.markersLayer.clearLayers(); } catch {}
 
@@ -1550,7 +1478,6 @@
       const minDist = STATE.setup.trackMinDist;
 
       if (!last) {
-        // first
         STATE.gps.lastTrackPt = { lat: pt.lat, lon: pt.lon, altM: pt.altM, ts: pt.ts };
         STATE.flight.track.push({ lat: pt.lat, lon: pt.lon, altM: pt.altM ?? null, ts: pt.ts });
         appendTrackToMap(pt.lat, pt.lon);
@@ -1564,7 +1491,7 @@
       STATE.flight.track.push({ lat: pt.lat, lon: pt.lon, altM: pt.altM ?? null, ts: pt.ts });
 
       appendTrackToMap(pt.lat, pt.lon);
-      rebuildTrajectory(); // keep it live
+      rebuildTrajectory();
     }
 
     function appendTrackToMap(lat, lon) {
@@ -1582,9 +1509,11 @@
       if (speedKmh < CONFIG.WIND_AUTO.MIN_GS_KMH) return;
 
       const last = STATE.gps.lastWindAuto;
+      const dirFrom = normDeg(headingToDeg + 180);
+
       if (!last) {
         STATE.gps.lastWindAuto = { altM, headingToDeg, speedKmh, ts };
-        addWindEntry({ altM, dirFromDeg: windFromTo(headingToDeg + 180) /* noop */, speedKmh, source: "auto(gps)" });
+        addWindEntry({ altM, dirFromDeg: dirFrom, speedKmh, source: "auto(gps)" });
         return;
       }
 
@@ -1593,8 +1522,6 @@
 
       if (altDelta >= CONFIG.WIND_AUTO.ALT_DELTA_M || crsDelta >= CONFIG.WIND_AUTO.CRS_DELTA_DEG) {
         STATE.gps.lastWindAuto = { altM, headingToDeg, speedKmh, ts };
-        // Convert drift heading (to) -> wind from
-        const dirFrom = normDeg(headingToDeg + 180);
         addWindEntry({ altM, dirFromDeg: dirFrom, speedKmh, source: "auto(gps)" });
       }
     }
@@ -1608,7 +1535,6 @@
         ts: Date.now(),
         source: source || "manuell"
       };
-      // merge if a very close altitude exists (avoid spam)
       const nearIdx = STATE.wind.entries.findIndex(x => Math.abs(x.altM - e.altM) <= 10 && x.source === e.source);
       if (nearIdx >= 0) STATE.wind.entries.splice(nearIdx, 1, e);
       else STATE.wind.entries.push(e);
@@ -1619,10 +1545,60 @@
       rebuildTrajectory();
     }
 
-    function getActiveTask() {
-      const id = STATE.tasks.activeTaskId;
-      if (!id) return null;
-      return STATE.tasks.list.find(t => t.id === id) || null;
+    function rebuildTrajectory() {
+      if (!STATE.map) return;
+
+      for (const l of STATE.layers.trajLines) { try { STATE.map.removeLayer(l); } catch {} }
+      STATE.layers.trajLines = [];
+      if (!STATE.ui.trajVisible) return;
+
+      const p = getCurrentPosition();
+      if (!p) return;
+
+      const wind = getWindAtAltitude(p.altM ?? 0);
+      if (!wind) return;
+
+      const mins = STATE.setup.trajMinutes;
+      const dirTo = windFromTo(wind.dirFromDeg);
+      const speedMps = wind.speedKmh / 3.6;
+
+      for (const m of mins) {
+        const dist = speedMps * (m * 60);
+        const q = movePoint({ lat:p.lat, lon:p.lon }, dirTo, dist);
+        const poly = L.polyline([[p.lat,p.lon],[q.lat,q.lon]], {
+          color: "#22c55e",
+          weight: 4,
+          opacity: 0.75,
+          dashArray: m === mins[0] ? null : (m === mins[1] ? "8 8" : "3 10")
+        }).addTo(STATE.map);
+        poly.bindTooltip(`Traj ${m} min · ${Math.round(dist)} m`, { opacity: 0.9 });
+        STATE.layers.trajLines.push(poly);
+      }
+    }
+
+    function getWindAtAltitude(altM) {
+      const entries = STATE.wind.entries.slice().sort((a,b)=>a.altM-b.altM);
+      if (!entries.length) return null;
+      let best = entries[0];
+      let bestD = Math.abs(entries[0].altM - altM);
+      for (const e of entries) {
+        const d = Math.abs(e.altM - altM);
+        if (d < bestD) { best = e; bestD = d; }
+      }
+      return best;
+    }
+
+    function getCurrentPosition() {
+      if (STATE.sim.enabled) return { lat: STATE.sim.state.lat, lon: STATE.sim.state.lon, altM: STATE.sim.state.altM, ts: STATE.sim.state.ts, provider: "Sim" };
+      const last = STATE.gps.lastTrackPt;
+      if (!last) return null;
+      return { lat: last.lat, lon: last.lon, altM: last.altM ?? null, ts: last.ts, provider: "Real" };
+    }
+
+    function centerMap() {
+      const p = getCurrentPosition();
+      if (!p || !STATE.map) return;
+      STATE.map.setView([p.lat, p.lon], Math.max(STATE.map.getZoom(), 14), { animate: true });
     }
 
     function setActiveTask(taskId) {
@@ -1682,10 +1658,7 @@
     function rebuildTaskOverlays() {
       if (!STATE.layers.tasksLayer) return;
       try { STATE.layers.tasksLayer.clearLayers(); } catch {}
-
-      for (const t of STATE.tasks.list) {
-        drawTask(t, t.id === STATE.tasks.activeTaskId);
-      }
+      for (const t of STATE.tasks.list) drawTask(t, t.id === STATE.tasks.activeTaskId);
     }
 
     function drawTask(t, isActive) {
@@ -1695,9 +1668,7 @@
       const weight = isActive ? 4 : 2;
       const opacity = isActive ? 0.95 : 0.6;
 
-      // Points
       const pts = t.points.map(p => ({ ...p }));
-
       for (const p of pts) {
         const m = L.circleMarker([p.lat, p.lon], {
           radius: isActive ? 9 : 7,
@@ -1709,7 +1680,6 @@
         m.bindTooltip(`${t.typeCode} ${p.label}`, { direction: "top", offset: [0,-8], opacity: 0.9 });
       }
 
-      // Circles / Donut
       const center = pts[0];
       if (isFiniteNum(t.r2M) && t.r2M > 0) {
         L.circle([center.lat, center.lon], { radius: t.r2M, color, weight, opacity, fillOpacity: 0.06 }).addTo(STATE.layers.tasksLayer);
@@ -1718,17 +1688,16 @@
         L.circle([center.lat, center.lon], { radius: t.r1M, color, weight, opacity: opacity*0.9, fillOpacity: 0.02, dashArray: "4 6" }).addTo(STATE.layers.tasksLayer);
       }
 
-      // Connection lines for multi-point tasks
       if (pts.length >= 2) {
         const line = L.polyline(pts.map(p => [p.lat, p.lon]), { color: "#60a5fa", weight: isActive ? 4 : 2, opacity: isActive ? 0.9 : 0.55 }).addTo(STATE.layers.tasksLayer);
         line.bindTooltip(`${t.typeId} ${t.typeCode} Linie`, { opacity: 0.9 });
       }
 
-      // ANG direction helper (from A, show "set direction")
       if (t.typeCode === "ANG" && isFiniteNum(t.angleDeg) && pts[0]) {
         const lenM = 1200;
         const toPt = movePoint({ lat: pts[0].lat, lon: pts[0].lon }, normDeg(t.angleDeg), lenM);
-        L.polyline([[pts[0].lat, pts[0].lon],[toPt.lat, toPt.lon]], { color: "#fbbf24", weight: 3, opacity: 0.85, dashArray: "6 6" }).addTo(STATE.layers.tasksLayer)
+        L.polyline([[pts[0].lat, pts[0].lon],[toPt.lat, toPt.lon]], { color: "#fbbf24", weight: 3, opacity: 0.85, dashArray: "6 6" })
+          .addTo(STATE.layers.tasksLayer)
           .bindTooltip(`Vorgaberichtung ${Math.round(t.angleDeg)}°`, { opacity: 0.9 });
       }
     }
@@ -1736,7 +1705,6 @@
     function rebuildMarkersOverlays() {
       if (!STATE.layers.markersLayer) return;
       try { STATE.layers.markersLayer.clearLayers(); } catch {}
-
       const markers = STATE.flight.active ? STATE.flight.markers : [];
       for (const m of markers) drawMarker(m);
     }
@@ -1751,70 +1719,22 @@
         fillColor: c,
         fillOpacity: 0.35
       }).addTo(STATE.layers.markersLayer);
-
       mk.bindTooltip(`Marker · ${fmtTs(m.ts)}`, { opacity: 0.95 });
     }
 
-    function getCurrentPosition() {
-      if (STATE.sim.enabled) return { lat: STATE.sim.state.lat, lon: STATE.sim.state.lon, altM: STATE.sim.state.altM, ts: STATE.sim.state.ts, provider: "Sim" };
-      const last = STATE.gps.lastTrackPt;
-      if (!last) return null;
-      return { lat: last.lat, lon: last.lon, altM: last.altM ?? null, ts: last.ts, provider: "Real" };
-    }
+    function dropMarker() {
+      const pos = getCurrentPosition();
+      if (!pos) { showSnackbar("Keine Position verfügbar."); return; }
+      if (!STATE.flight.active) beginFlight("Live Flight");
 
-    function centerMap() {
-      const p = getCurrentPosition();
-      if (!p || !STATE.map) return;
-      STATE.map.setView([p.lat, p.lon], Math.max(STATE.map.getZoom(), 14), { animate: true });
-    }
+      const task = getActiveTask();
+      const color = task?.markerColor || "fuchsia";
 
-    function rebuildTrajectory() {
-      if (!STATE.map) return;
-
-      // remove old
-      for (const l of STATE.layers.trajLines) {
-        try { STATE.map.removeLayer(l); } catch {}
-      }
-      STATE.layers.trajLines = [];
-
-      if (!STATE.ui.trajVisible) return;
-
-      const p = getCurrentPosition();
-      if (!p) return;
-
-      const wind = getWindAtAltitude(p.altM ?? 0);
-      if (!wind) return;
-
-      const mins = STATE.setup.trajMinutes;
-      const dirTo = windFromTo(wind.dirFromDeg);
-      const speedMps = wind.speedKmh / 3.6;
-
-      for (const m of mins) {
-        const dist = speedMps * (m * 60);
-        const q = movePoint({ lat:p.lat, lon:p.lon }, dirTo, dist);
-        const poly = L.polyline([[p.lat,p.lon],[q.lat,q.lon]], {
-          color: "#22c55e",
-          weight: 4,
-          opacity: 0.75,
-          dashArray: m === mins[0] ? null : (m === mins[1] ? "8 8" : "3 10")
-        }).addTo(STATE.map);
-        poly.bindTooltip(`Traj ${m} min · ${Math.round(dist)} m`, { opacity: 0.9 });
-        STATE.layers.trajLines.push(poly);
-      }
-    }
-
-    function getWindAtAltitude(altM) {
-      const entries = STATE.wind.entries.slice().sort((a,b)=>a.altM-b.altM);
-      if (!entries.length) return null;
-
-      // direct nearest (simple + robust)
-      let best = entries[0];
-      let bestD = Math.abs(entries[0].altM - altM);
-      for (const e of entries) {
-        const d = Math.abs(e.altM - altM);
-        if (d < bestD) { best = e; bestD = d; }
-      }
-      return best;
+      const m = { lat: pos.lat, lon: pos.lon, altM: pos.altM ?? null, ts: Date.now(), color, label: "Marker" };
+      STATE.flight.markers.push(m);
+      drawMarker(m);
+      persistAll();
+      showSnackbar("Marker gesetzt.");
     }
 
     function updateNavAndStrategy() {
@@ -1829,21 +1749,14 @@
 
       updateMarkerButtonColor(task.markerColor || "fuchsia");
 
-      // Distance to primary target A (best effort)
       const target = task.points?.[0];
-      if (!target) {
-        hideNavToast();
-        updateStrategyLine("Task ohne Zielpunkt A.");
-        return;
-      }
+      if (!target) { hideNavToast(); updateStrategyLine("Task ohne Zielpunkt A."); return; }
 
       const d = distMeters({ lat:pos.lat, lon:pos.lon }, { lat:target.lat, lon:target.lon });
       const brg = bearingDeg({ lat:pos.lat, lon:pos.lon }, { lat:target.lat, lon:target.lon });
 
-      // Toast content
       showNavToast(`${task.typeCode} · ${task.title || task.typeTitle}`, `Distanz: ${fmtDist(d)} · Bearing: ${Math.round(brg)}°`);
 
-      // 3DT special
       if (task.typeCode === "3DT" && isFiniteNum(task.r1M) && isFiniteNum(task.r2M) && task.r2M > 0) {
         const inner = task.r1M || 0;
         const outer = task.r2M;
@@ -1855,23 +1768,15 @@
         return;
       }
 
-      // Best layer recommendation (angle match to target bearing)
-      if (!STATE.wind.entries.length) {
-        updateStrategyLine("Kein Windprofil. Lade Winddaten.");
-        return;
-      }
+      if (!STATE.wind.entries.length) { updateStrategyLine("Kein Windprofil. Lade Winddaten."); return; }
 
       const best = chooseBestWindLayer({ pos, targetBearingDeg: brg });
-      if (!best) {
-        updateStrategyLine("Kein passender Windlayer.");
-        return;
-      }
+      if (!best) { updateStrategyLine("Kein passender Windlayer."); return; }
 
       const altNow = pos.altM ?? null;
       const altTarget = best.altM;
-      let rec = "Layer: ";
-      rec += `${Math.round(best.altM)}m · Wind ${Math.round(best.dirFromDeg)}°/${Math.round(best.speedKmh)} km/h`;
 
+      let rec = `Layer: ${Math.round(best.altM)}m · Wind ${Math.round(best.dirFromDeg)}°/${Math.round(best.speedKmh)} km/h`;
       if (isFiniteNum(altNow)) {
         const delta = altTarget - altNow;
         if (Math.abs(delta) < 40) rec = `Halten auf ~${Math.round(altTarget)}m · ${rec}`;
@@ -1884,59 +1789,29 @@
       updateStrategyLine(rec);
     }
 
-    function chooseBestWindLayer({ pos, targetBearingDeg }) {
+    function chooseBestWindLayer({ targetBearingDeg }) {
       const entries = STATE.wind.entries.slice().sort((a,b)=>a.altM-b.altM);
       if (!entries.length) return null;
 
-      // minimize angular difference between drift direction and bearing-to-target
       let best = null;
       let bestScore = Infinity;
 
       for (const e of entries) {
         const driftTo = windFromTo(e.dirFromDeg);
         const diff = angDiffDeg(driftTo, targetBearingDeg);
-
-        // slight preference for more speed (faster correction)
-        const speedBonus = clamp(e.speedKmh, 0, 40) / 40; // 0..1
-        const score = diff - speedBonus * 6; // up to 6° improvement
-
-        if (score < bestScore) {
-          bestScore = score;
-          best = e;
-        }
+        const speedBonus = clamp(e.speedKmh, 0, 40) / 40;
+        const score = diff - speedBonus * 6;
+        if (score < bestScore) { bestScore = score; best = e; }
       }
       return best;
     }
 
-    function dropMarker() {
-      const pos = getCurrentPosition();
-      if (!pos) {
-        showSnackbar("Keine Position verfügbar.");
-        return;
-      }
-      if (!STATE.flight.active) beginFlight("Live Flight");
-
-      const task = getActiveTask();
-      const color = task?.markerColor || "fuchsia";
-
-      const m = { lat: pos.lat, lon: pos.lon, altM: pos.altM ?? null, ts: Date.now(), color, label: "Marker" };
-      STATE.flight.markers.push(m);
-      drawMarker(m);
-      persistAll();
-      showSnackbar("Marker gesetzt.");
-    }
-
     async function fetchWindFromOpenMeteo() {
       const pos = getCurrentPosition();
-      if (!pos) {
-        showSnackbar("Keine Position für Online-Wind.");
-        return;
-      }
+      if (!pos) { showSnackbar("Keine Position für Online-Wind."); return; }
 
       const levels = CONFIG.OPEN_METEO.PRESSURE_LEVELS.map(x => x.hPa);
       const hourlyVars = [];
-
-      // wind speed/direction + geopotential height for precise level alt
       for (const hPa of levels) {
         hourlyVars.push(`wind_speed_${hPa}hPa`);
         hourlyVars.push(`wind_direction_${hPa}hPa`);
@@ -1949,7 +1824,7 @@
       url.searchParams.set("hourly", hourlyVars.join(","));
       url.searchParams.set("wind_speed_unit", "kmh");
       url.searchParams.set("timezone", "auto");
-      url.searchParams.set("forecast_hours", "6"); // small window
+      url.searchParams.set("forecast_hours", "6");
       url.searchParams.set("past_hours", "0");
 
       showSnackbar("Lade Open-Meteo Wind…", 1800);
@@ -1958,14 +1833,11 @@
         const res = await fetch(url.toString(), { method: "GET" });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-
         const hourly = data?.hourly;
         if (!hourly || !Array.isArray(hourly.time)) throw new Error("Ungültige API-Antwort");
 
-        // pick the closest time to "now"
         const now = Date.now();
-        let idx = 0;
-        let best = Infinity;
+        let idx = 0, best = Infinity;
         for (let i=0;i<hourly.time.length;i++) {
           const t = Date.parse(hourly.time[i]);
           if (!Number.isFinite(t)) continue;
@@ -1976,208 +1848,25 @@
         let added = 0;
         for (const meta of CONFIG.OPEN_METEO.PRESSURE_LEVELS) {
           const hPa = meta.hPa;
-
           const sp = hourly[`wind_speed_${hPa}hPa`];
           const di = hourly[`wind_direction_${hPa}hPa`];
           const gh = hourly[`geopotential_height_${hPa}hPa`];
-
           const spv = Array.isArray(sp) ? sp[idx] : null;
           const div = Array.isArray(di) ? di[idx] : null;
           const ghv = Array.isArray(gh) ? gh[idx] : null;
 
           if (Number.isFinite(spv) && Number.isFinite(div)) {
-            // Use geopotential height if available, else fallback to approx
             const alt = Number.isFinite(ghv) ? ghv : meta.approxM;
             addWindEntry({ altM: alt, dirFromDeg: div, speedKmh: spv, source: "open-meteo" });
             added++;
           }
         }
 
-        if (added) {
-          showSnackbar(`Open-Meteo: ${added} Layer aktualisiert.`);
-        } else {
-          showSnackbar("Open-Meteo: Keine Winddaten gefunden.");
-        }
+        showSnackbar(added ? `Open-Meteo: ${added} Layer aktualisiert.` : "Open-Meteo: Keine Winddaten gefunden.");
       } catch (e) {
         console.warn("Open-Meteo failed", e);
         showSnackbar(`Open-Meteo Fehler: ${e?.message || e}`);
       }
-    }
-
-    function startSimulation() {
-      stopGps();
-
-      // If no wind, still allow sim but it won't drift
-      STATE.sim.enabled = true;
-      document.getElementById("simControls")?.classList.remove("hidden");
-
-      // init sim at last known position or default
-      const last = STATE.gps.lastTrackPt;
-      if (last) {
-        STATE.sim.state.lat = last.lat;
-        STATE.sim.state.lon = last.lon;
-        STATE.sim.state.altM = last.altM ?? 120;
-      } else {
-        STATE.sim.state.lat = CONFIG.DEFAULT_CENTER.lat;
-        STATE.sim.state.lon = CONFIG.DEFAULT_CENTER.lon;
-        STATE.sim.state.altM = 120;
-      }
-      STATE.sim.state.ts = Date.now();
-      STATE.sim.state.speedKmh = 0;
-
-      // Ensure flight is active
-      if (!STATE.flight.active) beginFlight("Sim Flight");
-
-      // Tick @ 1 Hz
-      window.clearInterval(STATE.sim.timerId);
-      STATE.sim.timerId = window.setInterval(() => simTick(), 1000);
-
-      updateHeaderGpsStatus({ ok:true, accM: 0, altM: STATE.sim.state.altM, speedKmh: STATE.sim.state.speedKmh, provider:"Sim" });
-      centerMap();
-      rebuildTrajectory();
-      showSnackbar("Simulation aktiviert.");
-    }
-
-    function stopSimulation() {
-      STATE.sim.enabled = false;
-      document.getElementById("simControls")?.classList.add("hidden");
-      window.clearInterval(STATE.sim.timerId);
-      STATE.sim.timerId = null;
-      STATE.sim.verticalRateMps = 0;
-      startGps();
-      showSnackbar("Simulation deaktiviert.");
-    }
-
-    function simTick() {
-      const s = STATE.sim.state;
-      const ts = Date.now();
-      const dt = (ts - s.ts) / 1000;
-      s.ts = ts;
-
-      // vertical
-      s.altM = Math.max(0, s.altM + STATE.sim.verticalRateMps * dt);
-
-      // drift from wind profile
-      const w = getWindAtAltitude(s.altM);
-      let speedKmh = 0;
-      let headingTo = 0;
-      if (w) {
-        speedKmh = w.speedKmh;
-        headingTo = windFromTo(w.dirFromDeg);
-        const distM = (speedKmh/3.6) * dt;
-        const np = movePoint({ lat: s.lat, lon: s.lon }, headingTo, distM);
-        s.lat = np.lat;
-        s.lon = np.lon;
-      }
-
-      s.speedKmh = speedKmh;
-      s.headingDeg = headingTo;
-
-      // update UI + map
-      updateHeaderGpsStatus({ ok:true, accM: 0, altM: s.altM, speedKmh: s.speedKmh, provider:"Sim" });
-
-      // compute vario (use vertical rate as truth)
-      updateCockpitInstruments({ speedKmh: s.speedKmh, altM: s.altM, varioMps: STATE.sim.verticalRateMps });
-
-      updateBalloonMarker(s.lat, s.lon, s.headingDeg);
-
-      // Track
-      maybeAddTrackPoint({ lat: s.lat, lon: s.lon, altM: s.altM, ts: ts });
-
-      updateNavAndStrategy();
-      persistAll();
-    }
-
-    function setSimVerticalRate(rateMps) {
-      STATE.sim.verticalRateMps = rateMps;
-    }
-
-    function exportFlightKml(flightId) {
-      const f = STATE.archive.find(x => x.id === flightId);
-      if (!f) {
-        showSnackbar("Fahrt nicht gefunden.");
-        return;
-      }
-
-      try {
-        const kml = buildKmlForFlight(f);
-        const blob = new Blob([kml], { type: "application/vnd.google-earth.kml+xml" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `${sanitizeFilename(f.title || "flight")}_${new Date(f.finishedTs||Date.now()).toISOString().slice(0,19).replaceAll(":","-")}.kml`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-        showSnackbar("KML Export gestartet.");
-      } catch (e) {
-        console.warn("KML export failed", e);
-        showSnackbar("KML Export fehlgeschlagen.");
-      }
-    }
-
-    function sanitizeFilename(s) {
-      return String(s).replace(/[^\w\-]+/g, "_").slice(0, 60);
-    }
-
-    function buildKmlForFlight(f) {
-      const name = escapeXml(f.title || "Flight");
-      const track = Array.isArray(f.track) ? f.track : [];
-      const markers = Array.isArray(f.markers) ? f.markers : [];
-
-      const coords = track.map(p => {
-        const alt = isFiniteNum(p.altM) ? p.altM : 0;
-        return `${p.lon},${p.lat},${alt}`;
-      }).join(" ");
-
-      const markerPlacemarks = markers.map((m, idx) => {
-        const alt = isFiniteNum(m.altM) ? m.altM : 0;
-        const when = new Date(m.ts).toISOString();
-        const mName = `Marker ${idx+1}`;
-        return `
-          <Placemark>
-            <name>${escapeXml(mName)}</name>
-            <TimeStamp><when>${escapeXml(when)}</when></TimeStamp>
-            <Point><coordinates>${m.lon},${m.lat},${alt}</coordinates></Point>
-          </Placemark>
-        `.trim();
-      }).join("\n");
-
-      // Valid KML 2.2 – simple & widely compatible
-      return `<?xml version="1.0" encoding="UTF-8"?>
-<kml xmlns="http://www.opengis.net/kml/2.2">
-  <Document>
-    <name>${name}</name>
-    <Folder>
-      <name>Track</name>
-      <Placemark>
-        <name>Flight Track</name>
-        <Style>
-          <LineStyle><color>ff4444ef</color><width>4</width></LineStyle>
-        </Style>
-        <LineString>
-          <tessellate>1</tessellate>
-          <altitudeMode>absolute</altitudeMode>
-          <coordinates>${coords}</coordinates>
-        </LineString>
-      </Placemark>
-    </Folder>
-    <Folder>
-      <name>Markers</name>
-      ${markerPlacemarks}
-    </Folder>
-  </Document>
-</kml>`;
-    }
-
-    function escapeXml(s) {
-      return String(s)
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&apos;");
     }
 
     function setBaseLayer(name) {
@@ -2194,12 +1883,15 @@
       showSnackbar(`Basemap: ${STATE.layers.activeBase}`);
     }
 
-    async function toggleWakeLock() {
-      if (!STATE.wake.supported) {
-        showSnackbar("Wake Lock nicht unterstützt.");
-        return;
-      }
+    function rebuildOverlays() {
+      rebuildTaskOverlays();
+      rebuildMarkersOverlays();
+      rebuildTrajectory();
+      showSnackbar("Overlays neu gezeichnet.");
+    }
 
+    async function toggleWakeLock() {
+      if (!STATE.wake.supported) { showSnackbar("Wake Lock nicht unterstützt."); return; }
       try {
         if (STATE.wake.lock) {
           await STATE.wake.lock.release();
@@ -2239,15 +1931,12 @@
         layer.on("ready", () => {
           try {
             layer.addTo(STATE.map);
-            // best-effort style: blue-ish
             try { layer.setStyle && layer.setStyle({ color:"#60a5fa", weight:3, opacity:0.8 }); } catch {}
             try {
               const b = layer.getBounds?.();
               if (b && b.isValid && b.isValid()) STATE.map.fitBounds(b.pad(0.15));
             } catch {}
-          } finally {
-            URL.revokeObjectURL(url);
-          }
+          } finally { URL.revokeObjectURL(url); }
         });
 
         layer.on("error", (e) => {
@@ -2267,29 +1956,103 @@
       }
     }
 
-    function rebuildOverlays() {
-      rebuildTaskOverlays();
+    function rebuildMarkersOverlaysForActive() {
       rebuildMarkersOverlays();
-      rebuildTrajectory();
-      showSnackbar("Overlays neu gezeichnet.");
+    }
+
+    function exportFlightKml(flightId) {
+      const f = STATE.archive.find(x => x.id === flightId);
+      if (!f) { showSnackbar("Fahrt nicht gefunden."); return; }
+      try {
+        const kml = buildKmlForFlight(f);
+        const blob = new Blob([kml], { type: "application/vnd.google-earth.kml+xml" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${sanitizeFilename(f.title || "flight")}_${new Date(f.finishedTs||Date.now()).toISOString().slice(0,19).replaceAll(":","-")}.kml`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        showSnackbar("KML Export gestartet.");
+      } catch (e) {
+        console.warn("KML export failed", e);
+        showSnackbar("KML Export fehlgeschlagen.");
+      }
+    }
+
+    function sanitizeFilename(s) { return String(s).replace(/[^\w\-]+/g, "_").slice(0, 60); }
+    function escapeXml(s) {
+      return String(s)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&apos;");
+    }
+
+    function buildKmlForFlight(f) {
+      const name = escapeXml(f.title || "Flight");
+      const track = Array.isArray(f.track) ? f.track : [];
+      const markers = Array.isArray(f.markers) ? f.markers : [];
+
+      const coords = track.map(p => `${p.lon},${p.lat},${isFiniteNum(p.altM)?p.altM:0}`).join(" ");
+
+      const markerPlacemarks = markers.map((m, idx) => {
+        const alt = isFiniteNum(m.altM) ? m.altM : 0;
+        const when = new Date(m.ts).toISOString();
+        return `
+          <Placemark>
+            <name>${escapeXml(`Marker ${idx+1}`)}</name>
+            <TimeStamp><when>${escapeXml(when)}</when></TimeStamp>
+            <Point><coordinates>${m.lon},${m.lat},${alt}</coordinates></Point>
+          </Placemark>
+        `.trim();
+      }).join("\n");
+
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>${name}</name>
+    <Folder>
+      <name>Track</name>
+      <Placemark>
+        <name>Flight Track</name>
+        <Style>
+          <LineStyle><color>ff4444ef</color><width>4</width></LineStyle>
+        </Style>
+        <LineString>
+          <tessellate>1</tessellate>
+          <altitudeMode>absolute</altitudeMode>
+          <coordinates>${coords}</coordinates>
+        </LineString>
+      </Placemark>
+    </Folder>
+    <Folder>
+      <name>Markers</name>
+      ${markerPlacemarks}
+    </Folder>
+  </Document>
+</kml>`;
     }
 
     /*********************************************************************
      * 6) Event-Listener & Initialisierung (window.onload am Ende)
      *********************************************************************/
     window.onload = () => {
-      // Restore state
       restoreAll();
-
-      // UI init
       renderTaskTypeDropdown();
 
-      // Fill defaults in setup UI
+      // Standalone hint
+      const isStandalone = window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone === true;
+      const hint = document.getElementById("standaloneHint");
+      if (hint && isStandalone) hint.textContent = "Du nutzt bereits den App-Modus (standalone).";
+
+      // setup UI defaults
       const unitSpeed = document.getElementById("unitSpeed");
       const trajMinutes = document.getElementById("trajMinutes");
       const gpsMinInterval = document.getElementById("gpsMinInterval");
       const trackMinDist = document.getElementById("trackMinDist");
-
       if (unitSpeed) unitSpeed.value = STATE.setup.unitSpeed;
       if (gpsMinInterval) gpsMinInterval.value = String(STATE.setup.gpsMinInterval);
       if (trackMinDist) trackMinDist.value = String(STATE.setup.trackMinDist);
@@ -2300,10 +2063,9 @@
       if (toggleTrack) toggleTrack.checked = STATE.ui.trackVisible;
       if (toggleTraj) toggleTraj.checked = STATE.ui.trajVisible;
 
-      // Initialize map
       initMap();
 
-      // Populate task form defaults
+      // Task form defaults based on task type
       const tSel = document.getElementById("taskType");
       const ptsCnt = document.getElementById("taskPointsCount");
       if (tSel && ptsCnt) {
@@ -2318,23 +2080,16 @@
         tSel.addEventListener("change", applyDefaults);
         applyDefaults();
       }
-      if (ptsCnt) ptsCnt.addEventListener("change", renderTaskPointsVisibility);
+      ptsCnt?.addEventListener("change", renderTaskPointsVisibility);
 
-      // Render everything
       renderAll();
       updateWakeBadge();
 
-      // Start GPS or sim
-      const toggleSim = document.getElementById("toggleSim");
-      if (toggleSim) {
-        toggleSim.checked = !!STATE.sim.enabled;
-      }
-      if (STATE.sim.enabled) startSimulation();
-      else startGps();
+      // start GPS
+      startGps();
 
       // Header buttons
       document.getElementById("btnCenter")?.addEventListener("click", centerMap);
-
       document.getElementById("btnWindHud")?.addEventListener("click", () => {
         STATE.ui.windHudOpen = !STATE.ui.windHudOpen;
         document.getElementById("windHud")?.classList.toggle("hidden", !STATE.ui.windHudOpen);
@@ -2367,10 +2122,7 @@
         if (!STATE.ui.trackVisible) {
           try { STATE.layers.trackLine.setLatLngs([]); } catch {}
         } else {
-          try {
-            const latlngs = STATE.flight.track.map(p => [p.lat, p.lon]);
-            STATE.layers.trackLine.setLatLngs(latlngs);
-          } catch {}
+          try { STATE.layers.trackLine.setLatLngs(STATE.flight.track.map(p => [p.lat, p.lon])); } catch {}
         }
         persistAll();
       });
@@ -2384,15 +2136,8 @@
       document.getElementById("btnRebuildOverlays")?.addEventListener("click", rebuildOverlays);
 
       // Menu open/close
-      const openMenu = () => {
-        STATE.ui.menuOpen = true;
-        document.getElementById("menuOverlay")?.classList.remove("hidden");
-      };
-      const closeMenu = () => {
-        STATE.ui.menuOpen = false;
-        document.getElementById("menuOverlay")?.classList.add("hidden");
-      };
-
+      const openMenu = () => { STATE.ui.menuOpen = true; document.getElementById("menuOverlay")?.classList.remove("hidden"); };
+      const closeMenu = () => { STATE.ui.menuOpen = false; document.getElementById("menuOverlay")?.classList.add("hidden"); };
       document.getElementById("btnMenu")?.addEventListener("click", openMenu);
       document.getElementById("btnMenuClose")?.addEventListener("click", closeMenu);
       document.getElementById("menuBackdrop")?.addEventListener("click", closeMenu);
@@ -2403,11 +2148,8 @@
           const tab = btn.getAttribute("data-tab");
           if (!tab) return;
           STATE.ui.activeTab = tab;
-
           document.querySelectorAll(".tabPanel").forEach(p => p.classList.add("hidden"));
           document.getElementById(`tab-${tab}`)?.classList.remove("hidden");
-
-          // small UX: refresh lists
           if (tab === "wind") renderWindList();
           if (tab === "task") renderTaskList();
           if (tab === "archive") renderArchive();
@@ -2417,14 +2159,11 @@
 
       // Task controls
       document.getElementById("btnTaskDeactivate")?.addEventListener("click", deactivateTask);
-
       document.getElementById("btnUseCurrentPos")?.addEventListener("click", () => {
         const pos = getCurrentPosition();
         if (!pos) { showSnackbar("Keine aktuelle Position."); return; }
-        const latA = document.getElementById("taskLatA");
-        const lonA = document.getElementById("taskLonA");
-        if (latA) latA.value = pos.lat.toFixed(6);
-        if (lonA) lonA.value = pos.lon.toFixed(6);
+        document.getElementById("taskLatA").value = pos.lat.toFixed(6);
+        document.getElementById("taskLonA").value = pos.lon.toFixed(6);
         showSnackbar("Aktuelle Position übernommen.");
       });
 
@@ -2434,7 +2173,6 @@
 
         const title = (document.getElementById("taskTitle")?.value || "").trim();
         const markerColor = document.getElementById("taskMarkerColor")?.value || "fuchsia";
-
         const pointsCount = Number(document.getElementById("taskPointsCount")?.value || meta.defaultPoints || 1);
 
         const latA = toNumOrNull(document.getElementById("taskLatA")?.value);
@@ -2444,20 +2182,11 @@
         const latC = toNumOrNull(document.getElementById("taskLatC")?.value);
         const lonC = toNumOrNull(document.getElementById("taskLonC")?.value);
 
-        if (!isFiniteNum(latA) || !isFiniteNum(lonA)) {
-          showSnackbar("Bitte Lat/Lon (A) setzen.");
-          return;
-        }
+        if (!isFiniteNum(latA) || !isFiniteNum(lonA)) { showSnackbar("Bitte Lat/Lon (A) setzen."); return; }
 
         const points = [{ label:"A", lat: latA, lon: lonA }];
-        if (pointsCount >= 2) {
-          if (!isFiniteNum(latB) || !isFiniteNum(lonB)) { showSnackbar("Bitte Lat/Lon (B) setzen."); return; }
-          points.push({ label:"B", lat: latB, lon: lonB });
-        }
-        if (pointsCount >= 3) {
-          if (!isFiniteNum(latC) || !isFiniteNum(lonC)) { showSnackbar("Bitte Lat/Lon (C) setzen."); return; }
-          points.push({ label:"C", lat: latC, lon: lonC });
-        }
+        if (pointsCount >= 2) { if (!isFiniteNum(latB) || !isFiniteNum(lonB)) { showSnackbar("Bitte Lat/Lon (B) setzen."); return; } points.push({ label:"B", lat: latB, lon: lonB }); }
+        if (pointsCount >= 3) { if (!isFiniteNum(latC) || !isFiniteNum(lonC)) { showSnackbar("Bitte Lat/Lon (C) setzen."); return; } points.push({ label:"C", lat: latC, lon: lonC }); }
 
         const r1 = toNumOrNull(document.getElementById("taskR1")?.value) || 0;
         const r2 = toNumOrNull(document.getElementById("taskR2")?.value) || 0;
@@ -2489,8 +2218,6 @@
         rebuildTaskOverlays();
         zoomToTask(t.id);
         showSnackbar("Task angelegt.");
-
-        // auto activate newly created
         setActiveTask(t.id);
       });
 
@@ -2499,21 +2226,12 @@
         const alt = toNumOrNull(document.getElementById("windAlt")?.value);
         const dir = toNumOrNull(document.getElementById("windDirFrom")?.value);
         const spd = toNumOrNull(document.getElementById("windSpd")?.value);
-        if (!isFiniteNum(alt) || !isFiniteNum(dir) || !isFiniteNum(spd)) {
-          showSnackbar("Wind: Bitte Höhe/Richtung/Speed eingeben.");
-          return;
-        }
+        if (!isFiniteNum(alt) || !isFiniteNum(dir) || !isFiniteNum(spd)) { showSnackbar("Wind: Bitte Höhe/Richtung/Speed eingeben."); return; }
         addWindEntry({ altM: alt, dirFromDeg: dir, speedKmh: spd, source: "manuell" });
         showSnackbar("Wind-Eintrag hinzugefügt.");
       });
-
       document.getElementById("btnWindFetchOnline2")?.addEventListener("click", fetchWindFromOpenMeteo);
-      document.getElementById("btnWindShowHud")?.addEventListener("click", () => {
-        STATE.ui.windHudOpen = true;
-        document.getElementById("windHud")?.classList.remove("hidden");
-        renderWindHud();
-      });
-
+      document.getElementById("btnWindShowHud")?.addEventListener("click", () => { STATE.ui.windHudOpen = true; document.getElementById("windHud")?.classList.remove("hidden"); renderWindHud(); });
       document.getElementById("btnWindClear")?.addEventListener("click", () => {
         STATE.wind.entries = [];
         persistAll();
@@ -2525,7 +2243,6 @@
 
       // Setup controls
       document.getElementById("btnWakeLock")?.addEventListener("click", toggleWakeLock);
-
       document.getElementById("btnSetupSave")?.addEventListener("click", () => {
         const u = document.getElementById("unitSpeed")?.value || "kmh";
         const traj = document.getElementById("trajMinutes")?.value || "5,10,15";
@@ -2540,13 +2257,6 @@
         persistAll();
         rebuildTrajectory();
         showSnackbar("Setup gespeichert.");
-      });
-
-      document.getElementById("toggleSim")?.addEventListener("change", (e) => {
-        const on = !!e.target.checked;
-        if (on) startSimulation();
-        else stopSimulation();
-        persistAll();
       });
 
       // KML import
@@ -2564,43 +2274,19 @@
         showSnackbar("Archiv geleert.");
       });
 
-      // Finish flight
+      // Finish flight & marker
       document.getElementById("btnFinish")?.addEventListener("click", finishFlight);
-
-      // Marker button
       document.getElementById("btnMarker")?.addEventListener("click", dropMarker);
 
-      // Sim controls - hold to set vertical rate
-      const btnBurner = document.getElementById("btnBurner");
-      const btnVent = document.getElementById("btnVent");
-
-      const bindHold = (el, rate) => {
-        if (!el) return;
-        const down = (ev) => { ev.preventDefault(); if (STATE.sim.enabled) setSimVerticalRate(rate); };
-        const up = (ev) => { ev.preventDefault(); if (STATE.sim.enabled) setSimVerticalRate(0); };
-        el.addEventListener("pointerdown", down);
-        el.addEventListener("pointerup", up);
-        el.addEventListener("pointercancel", up);
-        el.addEventListener("pointerleave", up);
-      };
-      bindHold(btnBurner, +2.0);
-      bindHold(btnVent, -2.0);
-
-      // Keep wake lock on visibility changes (best effort)
+      // Visibility change: re-sync wake lock badge
       document.addEventListener("visibilitychange", async () => {
-        if (document.visibilityState === "visible" && STATE.wake.lock) {
-          try {
-            // Some browsers release wake lock when hidden; re-request
-            STATE.wake.lock = await navigator.wakeLock.request("screen");
-            updateWakeBadge();
-          } catch {}
-        }
+        if (document.visibilityState === "visible") updateWakeBadge();
       });
 
-      // initial nav/strategy render
       updateNavAndStrategy();
       rebuildTrajectory();
     };
   </script>
 </body>
 </html>
+```0
