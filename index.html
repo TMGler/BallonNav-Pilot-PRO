@@ -71,7 +71,8 @@
             <i class="fa-solid fa-flag-checkered mr-2"></i>Fertig
           </button>
 
-          <button id="btnWindHud" class="btn-touch h-10 w-10 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800">
+          <!-- Wind dock toggle -->
+          <button id="btnWindHud" class="btn-touch h-10 w-10 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800" title="Windpanel ein/ausklappen">
             <i class="fa-solid fa-wind text-slate-200"></i>
           </button>
 
@@ -94,40 +95,73 @@
     <main class="relative flex-1 min-h-0">
       <div id="map" class="absolute inset-0 z-0"></div>
 
-      <!-- Wind HUD -->
-      <div id="windHud" class="hidden absolute left-3 top-3 z-50 w-[86vw] max-w-[360px] rounded-2xl bg-slate-950/80 backdrop-blur border border-slate-800 shadow-soft">
-        <div class="px-3 py-2 flex items-center gap-2 border-b border-slate-800">
-          <div class="font-bold"><i class="fa-solid fa-wind mr-2 text-sky-300"></i>Wind HUD</div>
-          <div class="ml-auto flex items-center gap-2">
-            <button id="btnWindFetch" class="btn-touch px-3 h-9 rounded-xl bg-sky-400 text-slate-950 font-extrabold text-sm hover:bg-sky-300 active:bg-sky-500">
-              <i class="fa-solid fa-cloud-arrow-down mr-2"></i>Online
-            </button>
-            <button id="btnWindClose" class="btn-touch h-9 w-9 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800">
-              <i class="fa-solid fa-xmark"></i>
-            </button>
+      <!-- Wind Dock (LEFT, collapsible) -->
+      <div class="absolute left-0 top-3 z-50">
+        <!-- Collapsed -->
+        <div id="windDockCollapsed" class="hidden rounded-r-2xl bg-slate-950/80 backdrop-blur border border-slate-800 shadow-soft px-2 py-2 flex flex-col items-center gap-2">
+          <button id="btnWindDockExpand" class="btn-touch h-10 w-10 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800" title="Windpanel öffnen">
+            <i class="fa-solid fa-chevron-right"></i>
+          </button>
+          <button id="btnWindDockFetchMini" class="btn-touch h-10 w-10 rounded-xl bg-sky-400 hover:bg-sky-300 active:bg-sky-500 text-slate-950 font-extrabold" title="Online-Wind">
+            <i class="fa-solid fa-cloud-arrow-down"></i>
+          </button>
+          <div class="w-10 h-px bg-slate-800 my-1"></div>
+          <div class="text-[10px] text-slate-400 text-center leading-3">
+            <div class="font-bold text-slate-200">NAV</div>
+            <div id="windDockMiniDist" class="mono text-slate-200">–</div>
           </div>
         </div>
-        <div class="px-3 py-2">
-          <div class="text-xs text-slate-400 mb-2">Schichten (Höhe / Richtung / Speed). Tippe im Menü auf „Wind“, um manuell zu editieren.</div>
-          <div id="windHudList" class="space-y-2"></div>
-        </div>
-      </div>
 
-      <!-- Nav Toast -->
-      <div id="navToast" class="hidden absolute left-1/2 top-3 -translate-x-1/2 z-50 rounded-2xl bg-slate-950/80 backdrop-blur border border-slate-800 shadow-soft px-4 py-2 max-w-[92vw]">
-        <div class="text-sm font-bold truncate">
-          <i class="fa-solid fa-route mr-2 text-emerald-300"></i>
-          <span id="navTaskName">–</span>
-        </div>
-        <div class="text-xs text-slate-300 mt-0.5">
-          <span class="mono" id="navDist">–</span>
-          <span class="mx-2 text-slate-600">•</span>
-          <span id="navRec">–</span>
+        <!-- Expanded -->
+        <div id="windDockExpanded" class="rounded-r-2xl bg-slate-950/80 backdrop-blur border border-slate-800 shadow-soft w-[74vw] max-w-[320px]">
+          <div class="px-2 py-2 flex items-center gap-2 border-b border-slate-800">
+            <button id="btnWindDockCollapse" class="btn-touch h-10 w-10 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800" title="Einklappen">
+              <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <div class="font-extrabold text-sm flex items-center gap-2">
+              <i class="fa-solid fa-wind text-sky-300"></i>
+              <span>Wind</span>
+            </div>
+            <div class="ml-auto flex items-center gap-2">
+              <button id="btnWindFetch" class="btn-touch px-3 h-10 rounded-xl bg-sky-400 text-slate-950 font-extrabold text-sm hover:bg-sky-300 active:bg-sky-500" title="Online von Open-Meteo">
+                <i class="fa-solid fa-cloud-arrow-down mr-2"></i>Online
+              </button>
+            </div>
+          </div>
+
+          <div class="px-2 py-2">
+            <div class="text-[11px] text-slate-400 mb-2">
+              Richtungspfeil zeigt <span class="text-slate-200 font-bold">DRIFT (to)</span>, darunter <span class="text-slate-200 font-bold">FROM</span>.
+            </div>
+
+            <div id="windDockLayers" class="space-y-1"></div>
+
+            <div class="mt-2 border-t border-slate-800 pt-2">
+              <div class="flex items-center gap-2 mb-1">
+                <i class="fa-solid fa-route text-emerald-300"></i>
+                <div class="font-extrabold text-sm truncate" id="windDockNavName">Kein Task aktiv</div>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div class="rounded-2xl bg-slate-900/60 border border-slate-800 px-3 py-2">
+                  <div class="text-[11px] text-slate-400">Distanz</div>
+                  <div class="font-extrabold mono text-base" id="windDockNavDist">–</div>
+                </div>
+                <div class="rounded-2xl bg-slate-900/60 border border-slate-800 px-3 py-2">
+                  <div class="text-[11px] text-slate-400">Bearing</div>
+                  <div class="font-extrabold mono text-base" id="windDockNavBrg">–</div>
+                </div>
+              </div>
+              <div class="mt-2 rounded-2xl bg-slate-900/60 border border-slate-800 px-3 py-2">
+                <div class="text-[11px] text-slate-400">Empfehlung</div>
+                <div class="font-extrabold text-sm" id="windDockNavRec">–</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- Simulation Controls -->
-      <div id="simControls" class="hidden absolute left-3 top-24 z-50 flex flex-col gap-2">
+      <div id="simControls" class="hidden absolute left-3 top-28 z-50 flex flex-col gap-2">
         <button id="btnBurner" class="btn-touch select-none no-select w-28 h-16 rounded-2xl bg-orange-400 text-slate-950 font-extrabold shadow-soft active:scale-[0.99]">
           <i class="fa-solid fa-fire-flame-curved mr-2"></i>AUF
         </button>
@@ -246,7 +280,7 @@
 
             <div class="mt-3 rounded-2xl bg-slate-950/60 border border-slate-800 p-3">
               <div class="font-bold text-sm mb-2"><i class="fa-solid fa-bullseye mr-2 text-sky-300"></i>Navigation</div>
-              <div class="text-xs text-slate-400">Aktiver Task wird im Toast angezeigt (Distanz + Layer-Empfehlung). Fahrt startet **nicht** automatisch.</div>
+              <div class="text-xs text-slate-400">Navigation wird im Windpanel (links) angezeigt.</div>
               <div class="mt-2 grid grid-cols-2 gap-2">
                 <button id="btnSetTargetFromMap" class="btn-touch h-11 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 font-bold text-sm">
                   <i class="fa-solid fa-crosshairs mr-2"></i>Ziel picken
@@ -363,14 +397,14 @@
      ********************************************************************/
     const APP = {
       name: "CompNavAir",
-      version: "1.0.0",
+      version: "1.0.1",
       defaultCenter: { lat: 49.317, lon: 8.448 }, // Speyer/EDRY Nähe
       defaultZoom: 13,
       storageKey: "compnavair_v1",
       maxTrackPoints: 20000,
       trackMinDistM: 8,
-      maxGpsJumpM: 160,            // hartes Jump-Limit
-      gpsSmoothingAlpha: 0.25,     // 0..1 (höher = weniger smoothing)
+      maxGpsJumpM: 160,
+      gpsSmoothingAlpha: 0.25,
       followPanMinMs: 800,
       kmlName: "CompNavAir_Export",
     };
@@ -386,7 +420,6 @@
       }
     };
 
-    // CIA Task List (inkl. 15.21 APT) basierend auf AX Model Event Rules (Apr 2025)
     const CIA_TASKS = [
       { num: "15.1",  code: "PDG", title: "SELBST GEWÄHLTES ZIEL" },
       { num: "15.2",  code: "JDG", title: "VORGEGEBENES ZIEL" },
@@ -442,12 +475,12 @@
         drawerTab: "task",
         followGps: true,
         base: "osm",
-        windHudOpen: false,
         mapPickMode: false,
         mapPickWhich: "A",
         snackbarTimer: null,
         wakeLock: null,
         mapUserInteracting: false,
+        windDockCollapsed: false,
       },
       gps: {
         watchId: null,
@@ -463,8 +496,6 @@
         smoothLon: null,
         lastAltM: null,
         lastAltTs: null,
-        lastCourseDeg: null,
-        lastCourseTs: null,
         lastPanTs: 0,
       },
       sim: {
@@ -488,13 +519,13 @@
         archive: [],
       },
       wind: {
-        layers: [], // { altM, fromDeg, speedKmh, ts, source }
+        layers: [],
         lastAuto: { altM: null, courseDeg: null, ts: 0 },
       },
       task: {
-        active: null,      // task object
-        pointsABC: { A:null, B:null, C:null }, // helper for ELB/ANG
-        apt: { startTs: null }, // for APT
+        active: null,
+        pointsABC: { A:null, B:null, C:null },
+        apt: { startTs: null },
       },
       balloon: {
         marker: null,
@@ -506,7 +537,6 @@
      ********************************************************************/
     function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
     function now() { return Date.now(); }
-
     function toRad(deg) { return deg * Math.PI / 180; }
     function toDeg(rad) { return rad * 180 / Math.PI; }
 
@@ -554,7 +584,7 @@
     }
 
     function safeFloat(v, fallback=null) {
-      const n = parseFloat(String(v).replace(",", "."));
+      const n = parseFloat(String(v ?? "").replace(",", "."));
       return Number.isFinite(n) ? n : fallback;
     }
 
@@ -596,6 +626,12 @@
         .replaceAll("'","&apos;");
     }
 
+    function hashStr(s) {
+      let h = 0;
+      for (let i=0;i<s.length;i++) h = ((h<<5)-h) + s.charCodeAt(i) | 0;
+      return h;
+    }
+
     /********************************************************************
      * 4) UI-RENDER-FUNKTIONEN
      ********************************************************************/
@@ -630,9 +666,6 @@
       if (bStart) bStart.classList.toggle("hidden", STATE.flight.active);
       if (bFin) bFin.classList.toggle("hidden", !STATE.flight.active);
 
-      const navToast = document.getElementById("navToast");
-      if (navToast) navToast.classList.toggle("hidden", !isTaskActive());
-
       const simControls = document.getElementById("simControls");
       if (simControls) simControls.classList.toggle("hidden", !STATE.sim.enabled);
 
@@ -640,6 +673,8 @@
       const t = getActiveTask();
       const isAPT = t && t.code === "APT";
       if (aptBtn) aptBtn.classList.toggle("hidden", !(isAPT && STATE.flight.active));
+
+      updateWindDockVisibility();
     }
 
     function updateInstruments() {
@@ -682,162 +717,13 @@
       return da / dt;
     }
 
-    function updateWindHud() {
-      const box = document.getElementById("windHud");
-      const list = document.getElementById("windHudList");
-      if (!box || !list) return;
-
-      box.classList.toggle("hidden", !STATE.ui.windHudOpen);
-
-      const items = [...STATE.wind.layers].sort((a,b)=>a.altM-b.altM).slice(0, 10);
-      if (!items.length) {
-        list.innerHTML = `<div class="text-sm text-slate-400">Keine Winddaten.</div>`;
-        return;
-      }
-
-      list.innerHTML = items.map(w => {
-        const to = windToDegFrom(w.fromDeg);
-        return `
-          <div class="flex items-center justify-between rounded-2xl bg-slate-900/60 border border-slate-800 px-3 py-2">
-            <div class="min-w-0">
-              <div class="font-extrabold mono">${Math.round(w.altM)} m</div>
-              <div class="text-xs text-slate-400 truncate">${w.source || "manual"} • ${new Date(w.ts).toLocaleTimeString()}</div>
-            </div>
-            <div class="text-right">
-              <div class="font-extrabold mono">${Math.round(w.fromDeg)}° <span class="text-xs text-slate-400">FROM</span></div>
-              <div class="text-xs text-slate-300 mono">${fmtNum(w.speedKmh,1)} km/h → ${Math.round(to)}°</div>
-            </div>
-          </div>
-        `;
-      }).join("");
-    }
-
-    function updateWindPanel() {
-      const list = document.getElementById("windList");
-      if (!list) return;
-
-      const items = [...STATE.wind.layers].sort((a,b)=>a.altM-b.altM);
-      if (!items.length) {
-        list.innerHTML = `<div class="text-sm text-slate-400">Keine Schichten vorhanden.</div>`;
-        return;
-      }
-
-      list.innerHTML = items.map((w, idx) => {
-        return `
-          <div class="flex items-center gap-2 rounded-2xl bg-slate-950/60 border border-slate-800 px-3 py-2">
-            <div class="flex-1">
-              <div class="font-extrabold mono">${Math.round(w.altM)} m</div>
-              <div class="text-xs text-slate-400 mono">${Math.round(w.fromDeg)}° FROM • ${fmtNum(w.speedKmh,1)} km/h</div>
-            </div>
-            <button data-widx="${idx}" class="btn-touch btnDelWind h-9 w-9 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800">
-              <i class="fa-solid fa-trash"></i>
-            </button>
-          </div>
-        `;
-      }).join("");
-
-      list.querySelectorAll(".btnDelWind").forEach(btn => {
-        btn.addEventListener("click", (e) => {
-          const idx = parseInt(e.currentTarget.getAttribute("data-widx"), 10);
-          if (!Number.isFinite(idx)) return;
-          STATE.wind.layers.splice(idx, 1);
-          persistAll();
-          updateWindPanel();
-          updateWindHud();
-        });
-      });
-    }
-
-    function updateArchivePanel() {
-      const list = document.getElementById("archiveList");
-      if (!list) return;
-      const items = [...STATE.flight.archive].sort((a,b)=>b.startedTs-a.startedTs);
-
-      if (!items.length) {
-        list.innerHTML = `<div class="text-sm text-slate-400">Noch keine Fahrten im Archiv.</div>`;
-        return;
-      }
-
-      list.innerHTML = items.map((f) => {
-        const dt = new Date(f.startedTs);
-        const durMin = f.endedTs ? Math.round((f.endedTs - f.startedTs)/60000) : 0;
-        const mCount = (f.markers||[]).length;
-        const tCount = (f.track||[]).length;
-        return `
-          <div class="rounded-2xl bg-slate-950/60 border border-slate-800 p-3">
-            <div class="flex items-center gap-2">
-              <div class="flex-1 min-w-0">
-                <div class="font-extrabold truncate">${escapeXml(f.title || "Fahrt")}</div>
-                <div class="text-xs text-slate-400">${dt.toLocaleString()} • ${durMin} min • ${tCount} pts • ${mCount} marks</div>
-              </div>
-              <button data-fid="${f.id}" class="btn-touch btnExport h-10 px-3 rounded-xl bg-emerald-400 hover:bg-emerald-300 active:bg-emerald-500 text-slate-950 font-extrabold text-sm">
-                <i class="fa-solid fa-file-arrow-down mr-2"></i>KML
-              </button>
-            </div>
-          </div>
-        `;
-      }).join("");
-
-      list.querySelectorAll(".btnExport").forEach(btn => {
-        btn.addEventListener("click", (e) => {
-          const fid = e.currentTarget.getAttribute("data-fid");
-          const f = STATE.flight.archive.find(x => x.id === fid);
-          if (!f) return;
-          exportFlightToKml(f);
-        });
-      });
-    }
-
-    function updateNavToast() {
-      const toast = document.getElementById("navToast");
-      const nameEl = document.getElementById("navTaskName");
-      const distEl = document.getElementById("navDist");
-      const recEl  = document.getElementById("navRec");
-      if (!toast || !nameEl || !distEl || !recEl) return;
-
-      const t = getActiveTask();
-      toast.classList.toggle("hidden", !t);
-
-      if (!t) return;
-
-      nameEl.textContent = `${t.code} — ${t.title || t.typeTitle}`;
-
-      const pos = getCurrentPos();
-      if (!pos) {
-        distEl.textContent = "–";
-        recEl.textContent = "Keine Position";
-        return;
-      }
-
-      const target = getPrimaryTarget(t);
-      if (!target) {
-        distEl.textContent = "–";
-        recEl.textContent = "Kein Ziel";
-        return;
-      }
-
-      const d = haversineM(pos, target);
-      distEl.textContent = fmtDist(d);
-
-      const rec = recommendLayerText(t, pos, target);
-      recEl.textContent = rec || "–";
-    }
-
     function setMarkerButtonColor(taskCode) {
       const btn = document.getElementById("btnMarker");
       if (!btn) return;
-
-      // simple mapping: rotate color by task code
       const idx = Math.abs(hashStr(taskCode || "x")) % MARKER_COLORS.length;
       const c = MARKER_COLORS[idx];
       btn.style.background = COLOR_HEX[c];
       btn.style.color = "#0b1220";
-    }
-
-    function hashStr(s) {
-      let h = 0;
-      for (let i=0;i<s.length;i++) h = ((h<<5)-h) + s.charCodeAt(i) | 0;
-      return h;
     }
 
     function renderTaskTypeOptions() {
@@ -912,7 +798,7 @@
       const aptFields = isAPT ? `
         <div class="rounded-2xl bg-slate-950/60 border border-slate-800 p-3">
           <div class="font-bold mb-2"><i class="fa-solid fa-chart-line mr-2 text-amber-300"></i>APT Profil (Zeit → Zielhöhe)</div>
-          <div class="text-xs text-slate-400 mb-2">Interpretation: Profil nach Zeit seit „APT Start“. Inner Band zählt 2x, Outer Band 1x.</div>
+          <div class="text-xs text-slate-400 mb-2">Profil nach Zeit seit „APT Start“. Inner Band zählt 2x, Outer Band 1x.</div>
           <div class="grid grid-cols-2 gap-2">
             <div>
               <div class="text-xs text-slate-400 mb-1">Inner Band ± (m)</div>
@@ -939,9 +825,7 @@
         ${aptFields}
       `;
 
-      if (isAPT) {
-        ensureAptUi();
-      }
+      if (isAPT) ensureAptUi();
     }
 
     function updateDrawerTabUi() {
@@ -974,11 +858,101 @@
       if (tgl && knob) setToggleUI(tgl, knob, STATE.ui.followGps);
     }
 
+    function updateWindDockVisibility() {
+      const collapsed = document.getElementById("windDockCollapsed");
+      const expanded = document.getElementById("windDockExpanded");
+      if (!collapsed || !expanded) return;
+
+      collapsed.classList.toggle("hidden", !STATE.ui.windDockCollapsed);
+      expanded.classList.toggle("hidden", STATE.ui.windDockCollapsed);
+    }
+
+    function toggleWindDock() {
+      STATE.ui.windDockCollapsed = !STATE.ui.windDockCollapsed;
+      updateWindDockVisibility();
+      persistAll();
+    }
+
+    function updateWindDock() {
+      const list = document.getElementById("windDockLayers");
+      const navName = document.getElementById("windDockNavName");
+      const navDist = document.getElementById("windDockNavDist");
+      const navBrg  = document.getElementById("windDockNavBrg");
+      const navRec  = document.getElementById("windDockNavRec");
+      const miniDist = document.getElementById("windDockMiniDist");
+
+      if (!list || !navName || !navDist || !navBrg || !navRec || !miniDist) return;
+
+      // Wind list (compact + pointer)
+      const items = [...STATE.wind.layers].sort((a,b)=>a.altM-b.altM).slice(0, 10);
+      if (!items.length) {
+        list.innerHTML = `
+          <div class="rounded-2xl bg-slate-900/50 border border-slate-800 px-3 py-2 text-sm text-slate-400">
+            Keine Winddaten.
+          </div>
+        `;
+      } else {
+        list.innerHTML = items.map(w => {
+          const driftTo = windToDegFrom(w.fromDeg);
+          const spd = fmtNum(w.speedKmh,1);
+          const alt = Math.round(w.altM);
+          const from = Math.round(w.fromDeg);
+          const to = Math.round(driftTo);
+
+          return `
+            <div class="rounded-2xl bg-slate-900/55 border border-slate-800 px-3 py-2 flex items-center gap-3">
+              <div class="w-9 h-9 rounded-2xl bg-slate-950/70 border border-slate-800 grid place-items-center">
+                <div style="transform: rotate(${to}deg);" class="text-sky-300">
+                  <i class="fa-solid fa-location-arrow"></i>
+                </div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-baseline justify-between gap-2">
+                  <div class="font-extrabold mono">${alt} m</div>
+                  <div class="font-extrabold mono text-slate-200">${spd} <span class="text-[11px] text-slate-400">km/h</span></div>
+                </div>
+                <div class="text-[11px] text-slate-400 mono truncate">to ${to}° • from ${from}°</div>
+              </div>
+            </div>
+          `;
+        }).join("");
+      }
+
+      // Navigation block
+      const t = getActiveTask();
+      const pos = getCurrentPos();
+      if (!t) {
+        navName.textContent = "Kein Task aktiv";
+        navDist.textContent = "–";
+        navBrg.textContent = "–";
+        navRec.textContent = "–";
+        miniDist.textContent = "–";
+        return;
+      }
+
+      navName.textContent = `${t.code} — ${t.title || t.typeTitle}`;
+
+      const target = getPrimaryTarget(t);
+      if (!pos || !target) {
+        navDist.textContent = "–";
+        navBrg.textContent = "–";
+        navRec.textContent = !pos ? "Keine Position" : "Kein Ziel";
+        miniDist.textContent = "–";
+        return;
+      }
+
+      const d = haversineM(pos, target);
+      const brg = bearingDeg(pos, target);
+      navDist.textContent = fmtDist(d);
+      navBrg.textContent = `${Math.round(brg)}°`;
+      navRec.textContent = recommendLayerText(t, pos, target) || "–";
+      miniDist.textContent = fmtDist(d);
+    }
+
     /********************************************************************
      * 5) KERN-LOGIK (GPS, Map, Simulation)
      ********************************************************************/
     function initManifestAndSW() {
-      // Inline manifest via data URL
       try {
         const manifest = {
           name: "CompNavAir",
@@ -996,13 +970,12 @@
         document.head.appendChild(link);
       } catch {}
 
-      // Minimal SW via Blob (best effort)
       try {
         if (!("serviceWorker" in navigator)) return;
         const swCode = `
           self.addEventListener('install', (e)=>self.skipWaiting());
           self.addEventListener('activate', (e)=>self.clients.claim());
-          self.addEventListener('fetch', (e)=>{ /* passthrough */ });
+          self.addEventListener('fetch', (e)=>{});
         `;
         const blob = new Blob([swCode], { type: "text/javascript" });
         const url = URL.createObjectURL(blob);
@@ -1125,6 +1098,7 @@
           console.warn(err);
           STATE.gps.hasFix = false;
           updateGpsBadge();
+          updateWindDock();
         },
         opts
       );
@@ -1148,17 +1122,12 @@
       const head = Number.isFinite(c.heading) ? c.heading : (STATE.gps.headingDeg || 0);
       const acc = Number.isFinite(c.accuracy) ? c.accuracy : null;
 
-      // Jump guard: reject absurd jumps
       if (STATE.gps.smoothLat != null && STATE.gps.smoothLon != null) {
         const d = haversineM({ lat: STATE.gps.smoothLat, lon: STATE.gps.smoothLon }, { lat, lon });
-        const dyn = clamp((spdKmh/3.6) * 3 + 60, 80, 220); // 3s window + margin
-        if (d > Math.max(APP.maxGpsJumpM, dyn)) {
-          // ignore this fix
-          return;
-        }
+        const dyn = clamp((spdKmh/3.6) * 3 + 60, 80, 220);
+        if (d > Math.max(APP.maxGpsJumpM, dyn)) return;
       }
 
-      // smoothing
       STATE.gps.smoothLat = smooth(STATE.gps.smoothLat, lat, APP.gpsSmoothingAlpha);
       STATE.gps.smoothLon = smooth(STATE.gps.smoothLon, lon, APP.gpsSmoothingAlpha);
 
@@ -1172,7 +1141,6 @@
       STATE.gps.hasFix = true;
       STATE.gps.fixTs = now();
 
-      // Update marker & optional follow
       setBalloonPose(STATE.gps.lat, STATE.gps.lon, head);
 
       if (STATE.ui.followGps && !STATE.ui.mapUserInteracting) {
@@ -1183,7 +1151,6 @@
         }
       }
 
-      // Only log track/wind if flight is active (NO AUTO START!)
       if (STATE.flight.active) {
         maybeAddTrackPoint({ lat: STATE.gps.lat, lon: STATE.gps.lon, altM: alt, ts: now() });
         maybeAutoRecordWind({ altM: alt, courseDeg: head, speedKmh: spdKmh, ts: now() });
@@ -1191,8 +1158,7 @@
 
       updateGpsBadge();
       updateInstruments();
-      updateNavToast();
-      updateWindHud();
+      updateWindDock();
       persistAllThrottled();
     }
 
@@ -1218,19 +1184,16 @@
       STATE.flight.track = [];
       STATE.flight.markers = [];
 
-      // Clear map layers for current flight
       try { STATE.layers.trackLine?.setLatLngs([]); } catch {}
       try { STATE.layers.markersLayer?.clearLayers(); } catch {}
 
-      // Reset helpers
       STATE.gps.lastAltM = null;
       STATE.gps.lastAltTs = null;
       STATE.wind.lastAuto = { altM: null, courseDeg: null, ts: 0 };
-
-      // Reset APT timer start (must be started explicitly)
       STATE.task.apt.startTs = null;
 
       updateButtons();
+      updateWindDock();
       showSnackbar("Fahrt gestartet.");
       persistAll();
     }
@@ -1256,6 +1219,7 @@
 
       updateButtons();
       updateArchivePanel();
+      updateWindDock();
       showSnackbar("Fahrt beendet & archiviert.");
       persistAll();
     }
@@ -1302,18 +1266,15 @@
       const spd = Math.max(0, safeFloat(w.speedKmh, 0));
       const ts = w.ts || now();
 
-      // replace if same altitude bucket
       const idx = STATE.wind.layers.findIndex(x => Math.abs(x.altM - alt) <= 15);
       const item = { altM: alt, fromDeg: from, speedKmh: spd, ts, source: w.source || "manual" };
       if (idx >= 0) STATE.wind.layers[idx] = item;
       else STATE.wind.layers.push(item);
 
-      // keep sorted-ish
       STATE.wind.layers.sort((a,b)=>a.altM-b.altM);
       persistAll();
       updateWindPanel();
-      updateWindHud();
-      updateNavToast();
+      updateWindDock();
     }
 
     function windAtAltitude(altM) {
@@ -1327,7 +1288,6 @@
     }
 
     function recommendLayerText(task, pos, target) {
-      // Special 3DT donut strategy if R1/R2 present
       if (task && task.code === "3DT" && task.center && task.r1M && task.r2M) {
         const dC = haversineM(pos, task.center);
         if (dC < task.r1M) return "Ungültig (im inneren Kreis)";
@@ -1335,13 +1295,11 @@
         return "Außerhalb: Ziel = Zentrum";
       }
 
-      // APT scoring indicator (time in bands)
       if (task && task.code === "APT") {
         const scoreTxt = aptScoreText();
         if (scoreTxt) return scoreTxt;
       }
 
-      // Default: best wind layer = drift direction closest to bearing-to-target
       if (!STATE.wind.layers.length) return "Kein Windprofil";
       const brg = bearingDeg(pos, target);
 
@@ -1370,23 +1328,15 @@
       clearTaskOverlays();
       if (!task || !STATE.map) return;
 
-      // Non-interactive overlays are CRITICAL (fix for 3DT covering the map)
       const NI = { interactive: false };
 
-      // Primary points
       if (task.points && task.points.length) {
         task.points.forEach((p, idx) => {
           const color = idx === 0 ? "#60a5fa" : "#93c5fd";
           L.circleMarker([p.lat, p.lon], {
-            radius: 9,
-            color,
-            weight: 3,
-            fillColor: color,
-            fillOpacity: 0.25,
-            ...NI
+            radius: 9, color, weight: 3, fillColor: color, fillOpacity: 0.25, ...NI
           }).addTo(STATE.layers.tasksLayer);
 
-          // tiny label via separate non-interactive marker
           L.marker([p.lat, p.lon], {
             icon: L.divIcon({
               className: "",
@@ -1398,38 +1348,29 @@
         });
       }
 
-      // Donut / radius circles for 3DT or generic
       const center = task.center || (task.points && task.points[0] ? { lat: task.points[0].lat, lon: task.points[0].lon } : null);
       if (center && (task.r2M || task.r1M)) {
         if (task.r2M) {
           L.circle([center.lat, center.lon], {
-            radius: task.r2M,
-            color: "#60a5fa",
-            weight: 3,
-            opacity: 0.9,
-            fillOpacity: 0.05,
-            ...NI
+            radius: task.r2M, color: "#60a5fa", weight: 3, opacity: 0.9, fillOpacity: 0.05, ...NI
           }).addTo(STATE.layers.tasksLayer);
         }
         if (task.r1M) {
           L.circle([center.lat, center.lon], {
-            radius: task.r1M,
-            color: "#93c5fd",
-            weight: 2,
-            opacity: 0.8,
-            dashArray: "6 8",
-            fillOpacity: 0.01,
-            ...NI
+            radius: task.r1M, color: "#93c5fd", weight: 2, opacity: 0.8, dashArray: "6 8", fillOpacity: 0.01, ...NI
           }).addTo(STATE.layers.tasksLayer);
         }
       }
 
-      // Lines for ANG / LRN
       if (task.code === "ANG" && task.points && task.points.length >= 2) {
-        L.polyline(task.points.slice(0,2).map(p => [p.lat,p.lon]), { color:"#38bdf8", weight:3, opacity:0.9, dashArray:"8 8", ...NI }).addTo(STATE.layers.tasksLayer);
+        L.polyline(task.points.slice(0,2).map(p => [p.lat,p.lon]), {
+          color:"#38bdf8", weight:3, opacity:0.9, dashArray:"8 8", ...NI
+        }).addTo(STATE.layers.tasksLayer);
       }
       if (task.code === "LRN" && task.points && task.points.length >= 3) {
-        L.polyline(task.points.slice(0,3).map(p => [p.lat,p.lon]).concat([[task.points[0].lat, task.points[0].lon]]), { color:"#38bdf8", weight:3, opacity:0.9, ...NI }).addTo(STATE.layers.tasksLayer);
+        L.polyline(task.points.slice(0,3).map(p => [p.lat,p.lon]).concat([[task.points[0].lat, task.points[0].lon]]), {
+          color:"#38bdf8", weight:3, opacity:0.9, ...NI
+        }).addTo(STATE.layers.tasksLayer);
       }
     }
 
@@ -1441,10 +1382,7 @@
     }
 
     function dropMarker() {
-      if (!STATE.flight.active) {
-        showSnackbar("Bitte zuerst die Fahrt starten.");
-        return;
-      }
+      if (!STATE.flight.active) { showSnackbar("Bitte zuerst die Fahrt starten."); return; }
       const pos = getCurrentPos();
       if (!pos) { showSnackbar("Keine Position."); return; }
 
@@ -1453,25 +1391,11 @@
       const colorKey = t ? MARKER_COLORS[Math.abs(hashStr(t.code)) % MARKER_COLORS.length] : "pink";
       const color = COLOR_HEX[colorKey];
 
-      const m = {
-        lat: pos.lat,
-        lon: pos.lon,
-        altM: alt,
-        ts: now(),
-        color: colorKey,
-        label: t ? t.code : "MARK",
-      };
+      const m = { lat: pos.lat, lon: pos.lon, altM: alt, ts: now(), color: colorKey, label: t ? t.code : "MARK" };
       STATE.flight.markers.push(m);
 
-      // Draw
-      L.circleMarker([m.lat, m.lon], {
-        radius: 8,
-        color,
-        weight: 3,
-        fillColor: color,
-        fillOpacity: 0.25,
-        interactive: false
-      }).addTo(STATE.layers.markersLayer);
+      L.circleMarker([m.lat, m.lon], { radius: 8, color, weight: 3, fillColor: color, fillOpacity: 0.25, interactive: false })
+        .addTo(STATE.layers.markersLayer);
 
       showSnackbar("Marker gesetzt.");
       persistAll();
@@ -1532,7 +1456,6 @@
       const lat = pos.lat.toFixed(4);
       const lon = pos.lon.toFixed(4);
 
-      // Use multiple "standard" heights where available
       const hourly = [
         "windspeed_10m","winddirection_10m",
         "windspeed_80m","winddirection_80m",
@@ -1551,7 +1474,6 @@
         const h = j.hourly;
         if (!h || !h.time || !h.time.length) throw new Error("no hourly data");
 
-        // Pick closest hour to now
         const tNow = now();
         let bestI = 0, bestD = Infinity;
         for (let i=0;i<h.time.length;i++) {
@@ -1586,7 +1508,6 @@
       updateGpsBadge();
 
       if (STATE.sim.enabled) {
-        // Pause GPS and set sim start at current gps or default
         stopGPS();
         const p = getCurrentPos() || APP.defaultCenter;
         STATE.sim.lat = p.lat;
@@ -1607,6 +1528,7 @@
         showSnackbar("Simulation aus.");
       }
       persistAll();
+      updateWindDock();
     }
 
     function startSimLoop() {
@@ -1631,10 +1553,8 @@
       const dt = Math.min(2.5, Math.max(0.4, (t - STATE.sim.lastTickTs)/1000));
       STATE.sim.lastTickTs = t;
 
-      // Vertical
       STATE.sim.altM = Math.max(0, (STATE.sim.altM || 0) + (STATE.sim.vRateMps || 0) * dt);
 
-      // Horizontal drift from wind at altitude
       const w = windAtAltitude(STATE.sim.altM);
       let driftTo = 0, spd = 0;
       if (w) {
@@ -1658,14 +1578,12 @@
         }
       }
 
-      // Track log if flight active
       if (STATE.flight.active) {
         maybeAddTrackPoint({ lat: STATE.sim.lat, lon: STATE.sim.lon, altM: STATE.sim.altM, ts: now() });
       }
 
       updateInstruments();
-      updateNavToast();
-      updateWindHud();
+      updateWindDock();
       persistAllThrottled();
     }
 
@@ -1728,12 +1646,9 @@
         apt: null,
       };
 
-      // Center definition
       if (task.code === "3DT") {
-        // For donut: use A as center (if exists)
         if (points[0]) task.center = { lat: points[0].lat, lon: points[0].lon };
       }
-
       if (task.code === "APT") {
         task.apt = readAptFromUi();
       }
@@ -1745,7 +1660,6 @@
       const task = buildTaskFromForm();
       if (!task) { showSnackbar("Task unvollständig."); return; }
 
-      // Basic validation: need at least A for most tasks
       if (task.code !== "APT" && (!task.points || !task.points.length)) {
         showSnackbar("Bitte Koordinaten (mind. Punkt A) eingeben.");
         return;
@@ -1754,10 +1668,9 @@
       STATE.task.active = task;
       drawTaskOnMap(task);
       updateButtons();
-      updateNavToast();
+      updateWindDock();
       setMarkerButtonColor(task.code);
 
-      // Zoom to task
       try {
         const latlngs = [];
         if (task.points) task.points.forEach(p => latlngs.push([p.lat,p.lon]));
@@ -1776,7 +1689,7 @@
       STATE.task.active = null;
       clearTaskOverlays();
       updateButtons();
-      updateNavToast();
+      updateWindDock();
       setMarkerButtonColor("x");
       showSnackbar("Task gelöscht.");
       persistAll();
@@ -1807,11 +1720,9 @@
       const C = STATE.task.pointsABC.C;
       if (!A || !B || !C) { out.textContent = "–"; return; }
 
-      // Angle ABC
       const brgBA = bearingDeg(B, A);
       const brgBC = bearingDeg(B, C);
-      let ang = angDiffDeg(brgBA, brgBC); // 0..180
-      // ELB result = 180 - angle ABC
+      let ang = angDiffDeg(brgBA, brgBC);
       const res = 180 - ang;
       out.textContent = fmtNum(res, 1);
     }
@@ -1821,19 +1732,16 @@
       const btn = document.getElementById("btnAddAptPoint");
       if (!wrap || !btn) return;
 
-      // If no points, add default 0 min / 200m
       if (!wrap.childElementCount) {
         addAptRow(0, 200);
         addAptRow(10, 250);
       }
-
       btn.onclick = () => addAptRow(0, 200);
     }
 
     function addAptRow(min, alt) {
       const wrap = document.getElementById("aptPoints");
       if (!wrap) return;
-      const rowId = uid();
       const el = document.createElement("div");
       el.className = "flex items-center gap-2";
       el.innerHTML = `
@@ -1869,7 +1777,7 @@
       STATE.task.apt.startTs = now();
       showSnackbar("APT Start gesetzt.");
       persistAll();
-      updateNavToast();
+      updateWindDock();
     }
 
     function aptTargetAltAt(elapsedMin, task) {
@@ -1922,10 +1830,7 @@
             STATE.layers.kmlLayer = null;
           }
           const layer = omnivore.kml.parse(txt);
-          layer.eachLayer(l => {
-            // Make overlays non-interactive to avoid blocking
-            if (l && typeof l.options === "object") l.options.interactive = false;
-          });
+          layer.eachLayer(l => { if (l && typeof l.options === "object") l.options.interactive = false; });
           layer.addTo(STATE.map);
           STATE.layers.kmlLayer = layer;
           showSnackbar("KML importiert.");
@@ -1949,9 +1854,83 @@
       }
     }
 
-    function releaseWakeLock() {
-      try { STATE.ui.wakeLock?.release(); } catch {}
-      STATE.ui.wakeLock = null;
+    /********************************************************************
+     * Archiv/Wind-Panel (Menü)
+     ********************************************************************/
+    function updateWindPanel() {
+      const list = document.getElementById("windList");
+      if (!list) return;
+
+      const items = [...STATE.wind.layers].sort((a,b)=>a.altM-b.altM);
+      if (!items.length) {
+        list.innerHTML = `<div class="text-sm text-slate-400">Keine Schichten vorhanden.</div>`;
+        return;
+      }
+
+      list.innerHTML = items.map((w, idx) => {
+        return `
+          <div class="flex items-center gap-2 rounded-2xl bg-slate-950/60 border border-slate-800 px-3 py-2">
+            <div class="flex-1">
+              <div class="font-extrabold mono">${Math.round(w.altM)} m</div>
+              <div class="text-xs text-slate-400 mono">${Math.round(w.fromDeg)}° FROM • ${fmtNum(w.speedKmh,1)} km/h</div>
+            </div>
+            <button data-widx="${idx}" class="btn-touch btnDelWind h-9 w-9 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        `;
+      }).join("");
+
+      list.querySelectorAll(".btnDelWind").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+          const idx = parseInt(e.currentTarget.getAttribute("data-widx"), 10);
+          if (!Number.isFinite(idx)) return;
+          STATE.wind.layers.splice(idx, 1);
+          persistAll();
+          updateWindPanel();
+          updateWindDock();
+        });
+      });
+    }
+
+    function updateArchivePanel() {
+      const list = document.getElementById("archiveList");
+      if (!list) return;
+      const items = [...STATE.flight.archive].sort((a,b)=>b.startedTs-a.startedTs);
+
+      if (!items.length) {
+        list.innerHTML = `<div class="text-sm text-slate-400">Noch keine Fahrten im Archiv.</div>`;
+        return;
+      }
+
+      list.innerHTML = items.map((f) => {
+        const dt = new Date(f.startedTs);
+        const durMin = f.endedTs ? Math.round((f.endedTs - f.startedTs)/60000) : 0;
+        const mCount = (f.markers||[]).length;
+        const tCount = (f.track||[]).length;
+        return `
+          <div class="rounded-2xl bg-slate-950/60 border border-slate-800 p-3">
+            <div class="flex items-center gap-2">
+              <div class="flex-1 min-w-0">
+                <div class="font-extrabold truncate">${escapeXml(f.title || "Fahrt")}</div>
+                <div class="text-xs text-slate-400">${dt.toLocaleString()} • ${durMin} min • ${tCount} pts • ${mCount} marks</div>
+              </div>
+              <button data-fid="${f.id}" class="btn-touch btnExport h-10 px-3 rounded-xl bg-emerald-400 hover:bg-emerald-300 active:bg-emerald-500 text-slate-950 font-extrabold text-sm">
+                <i class="fa-solid fa-file-arrow-down mr-2"></i>KML
+              </button>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      list.querySelectorAll(".btnExport").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+          const fid = e.currentTarget.getAttribute("data-fid");
+          const f = STATE.flight.archive.find(x => x.id === fid);
+          if (!f) return;
+          exportFlightToKml(f);
+        });
+      });
     }
 
     /********************************************************************
@@ -1972,14 +1951,10 @@
           ui: {
             followGps: STATE.ui.followGps,
             base: STATE.ui.base,
+            windDockCollapsed: STATE.ui.windDockCollapsed,
           },
-          wind: {
-            layers: STATE.wind.layers,
-          },
-          task: {
-            active: STATE.task.active,
-            aptStartTs: STATE.task.apt.startTs,
-          },
+          wind: { layers: STATE.wind.layers },
+          task: { active: STATE.task.active, aptStartTs: STATE.task.apt.startTs },
           flight: {
             active: STATE.flight.active,
             title: STATE.flight.title,
@@ -1988,9 +1963,7 @@
             markers: STATE.flight.markers,
             archive: STATE.flight.archive,
           },
-          sim: {
-            enabled: STATE.sim.enabled,
-          }
+          sim: { enabled: STATE.sim.enabled }
         };
         localStorage.setItem(APP.storageKey, JSON.stringify(payload));
       } catch {}
@@ -2005,17 +1978,15 @@
         if (j.ui) {
           STATE.ui.followGps = !!j.ui.followGps;
           STATE.ui.base = j.ui.base === "sat" ? "sat" : "osm";
+          STATE.ui.windDockCollapsed = !!j.ui.windDockCollapsed;
         }
-
         if (j.wind && Array.isArray(j.wind.layers)) {
           STATE.wind.layers = j.wind.layers.filter(x => x && isFinite(x.altM));
         }
-
         if (j.task) {
           STATE.task.active = j.task.active || null;
           STATE.task.apt.startTs = j.task.aptStartTs || null;
         }
-
         if (j.flight) {
           STATE.flight.active = !!j.flight.active;
           STATE.flight.title = j.flight.title || "";
@@ -2024,7 +1995,6 @@
           STATE.flight.markers = Array.isArray(j.flight.markers) ? j.flight.markers : [];
           STATE.flight.archive = Array.isArray(j.flight.archive) ? j.flight.archive : [];
         }
-
         if (j.sim) {
           STATE.sim.enabled = !!j.sim.enabled;
         }
@@ -2072,17 +2042,14 @@
      ********************************************************************/
     window.onload = () => {
       initManifestAndSW();
-
       restoreAll();
 
       initMap();
       setBaseLayer(STATE.ui.base);
 
-      // UI init
       renderTaskTypeOptions();
       renderTaskFieldsForCode(document.getElementById("taskType")?.value || "JDG");
 
-      // restore task into form and map
       if (STATE.task.active) {
         restoreFormFromTask(STATE.task.active);
         drawTaskOnMap(STATE.task.active);
@@ -2091,7 +2058,6 @@
         setMarkerButtonColor("x");
       }
 
-      // restore flight visuals if flight active
       if (STATE.flight.active) {
         try {
           const latlngs = (STATE.flight.track||[]).map(p => [p.lat,p.lon]);
@@ -2109,12 +2075,12 @@
       updateGpsBadge();
       updateButtons();
       updateInstruments();
-      updateNavToast();
-      updateWindHud();
       updateWindPanel();
       updateArchivePanel();
       updateElbowResult();
       updateFollowToggleUi();
+      updateWindDockVisibility();
+      updateWindDock();
 
       // Drawer tab buttons
       document.querySelectorAll(".tabBtn").forEach(b => {
@@ -2129,21 +2095,19 @@
       document.getElementById("btnDrawerClose")?.addEventListener("click", () => openDrawer(false));
       document.getElementById("drawerBg")?.addEventListener("click", () => openDrawer(false));
 
-      // Header buttons
-      document.getElementById("btnWindHud")?.addEventListener("click", () => {
-        STATE.ui.windHudOpen = !STATE.ui.windHudOpen;
-        updateWindHud();
-      });
-      document.getElementById("btnWindClose")?.addEventListener("click", () => {
-        STATE.ui.windHudOpen = false;
-        updateWindHud();
-      });
-      document.getElementById("btnWindFetch")?.addEventListener("click", fetchWindFromOpenMeteo);
+      // Wind dock toggle (header)
+      document.getElementById("btnWindHud")?.addEventListener("click", toggleWindDock);
+      document.getElementById("btnWindDockCollapse")?.addEventListener("click", toggleWindDock);
+      document.getElementById("btnWindDockExpand")?.addEventListener("click", toggleWindDock);
 
+      // Wind fetch buttons
+      document.getElementById("btnWindFetch")?.addEventListener("click", fetchWindFromOpenMeteo);
+      document.getElementById("btnWindDockFetchMini")?.addEventListener("click", fetchWindFromOpenMeteo);
+
+      // Map settings
       document.getElementById("btnMapSettings")?.addEventListener("click", () => openMapModal(true));
       document.getElementById("btnMapModalClose")?.addEventListener("click", () => openMapModal(false));
       document.getElementById("mapModalBg")?.addEventListener("click", () => openMapModal(false));
-
       document.getElementById("btnBaseOSM")?.addEventListener("click", () => { setBaseLayer("osm"); persistAll(); });
       document.getElementById("btnBaseSAT")?.addEventListener("click", () => { setBaseLayer("sat"); persistAll(); });
 
@@ -2177,9 +2141,7 @@
 
       document.getElementById("btnApplyTask")?.addEventListener("click", applyTask);
       document.getElementById("btnClearTask")?.addEventListener("click", clearTask);
-
       document.getElementById("btnSetTargetFromMap")?.addEventListener("click", enableMapPick);
-
       document.getElementById("btnAPTStart")?.addEventListener("click", startAPT);
 
       // ELB helper buttons
@@ -2187,7 +2149,7 @@
       document.getElementById("btnSetB")?.addEventListener("click", () => setHelperPoint("B"));
       document.getElementById("btnSetC")?.addEventListener("click", () => setHelperPoint("C"));
 
-      // Wind panel
+      // Wind panel (menu)
       document.getElementById("btnAddWind")?.addEventListener("click", () => {
         const alt = safeFloat(document.getElementById("windAlt")?.value, null);
         const dir = safeFloat(document.getElementById("windDirFrom")?.value, null);
@@ -2199,8 +2161,7 @@
         STATE.wind.layers = [];
         persistAll();
         updateWindPanel();
-        updateWindHud();
-        updateNavToast();
+        updateWindDock();
         showSnackbar("Wind gelöscht.");
       });
 
@@ -2216,11 +2177,10 @@
       document.getElementById("btnWakeLock")?.addEventListener("click", requestWakeLock);
       document.getElementById("btnReset")?.addEventListener("click", () => {
         STATE.ui.followGps = true;
-        STATE.ui.windHudOpen = false;
         updateFollowToggleUi();
-        updateWindHud();
         showSnackbar("UI zurückgesetzt.");
         persistAll();
+        updateWindDock();
       });
 
       document.getElementById("kmlFile")?.addEventListener("change", (e) => {
@@ -2239,7 +2199,6 @@
       // Sim controls (press & hold)
       const burner = document.getElementById("btnBurner");
       const vent = document.getElementById("btnVent");
-
       const press = (el, onDown, onUp) => {
         if (!el) return;
         el.addEventListener("pointerdown", (e)=>{ e.preventDefault(); onDown(true); });
@@ -2264,14 +2223,10 @@
         initGPS();
       }
 
-      // Final UI pass
       updateButtons();
       updateGpsBadge();
-      updateNavToast();
-      updateWindPanel();
-      updateArchivePanel();
+      updateWindDock();
     };
   </script>
 </body>
 </html>
-```0
