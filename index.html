@@ -43,29 +43,61 @@
     .leaflet-control-attribution { display: none; }
     .leaflet-container { background: #0b1220; }
 
-    .glass { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+    /* Less “web-glass”, more “app surfaces” */
+    .surface {
+      background: rgba(2, 6, 23, .78);
+      border: 1px solid rgba(148, 163, 184, .18);
+      box-shadow: 0 16px 40px rgba(0,0,0,.35);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .chip {
+      background: rgba(15, 23, 42, .55);
+      border: 1px solid rgba(148,163,184,.22);
+    }
+    .btn {
+      border: 1px solid rgba(148,163,184,.22);
+      background: rgba(15, 23, 42, .45);
+    }
+    .btn:active { transform: scale(0.98); }
 
-    /* Wind */
+    /* Right Drawer */
+    #drawer {
+      position: absolute;
+      top: calc(env(safe-area-inset-top) + 76px);
+      right: 12px;
+      bottom: calc(env(safe-area-inset-bottom) + 104px);
+      width: 360px;
+      max-width: calc(100vw - 24px);
+      transition: width .18s ease, transform .18s ease;
+      z-index: 50;
+    }
+    #drawer.rail { width: 60px; }
+    #drawer.hidden { transform: translateX(120%); }
+    #drawer.rail .drawerBody { display: none; }
+    #drawer.rail .drawerTabs { flex-direction: column; gap: 8px; }
+    #drawer.rail .tabBtn { width: 44px; height: 44px; padding: 0; justify-content: center; }
+    #drawer.rail .tabBtn span { display: none; }
+
+    /* Wind panel */
+    #windPanel { z-index: 40; }
     .wind-arrow {
       width: 34px; height: 34px;
       border-radius: 9999px;
       display: grid; place-items: center;
-      border: 1px solid rgba(148,163,184,.35);
-      background: rgba(2,6,23,.55);
+      border: 1px solid rgba(148,163,184,.25);
+      background: rgba(2,6,23,.70);
     }
     .wind-arrow i { font-size: 14px; }
 
-    /* Bottom sheet states */
-    #sheet { transition: transform .18s ease, height .18s ease; }
-    .sheet-collapsed { height: 68px !important; }
-    .sheet-expanded { height: min(62vh, 560px) !important; }
-    .sheet-hidden { transform: translateY(120%); }
+    /* Sim controls */
+    #simControls { z-index: 45; }
 
     /* KML popup styling */
     .kml-popup .leaflet-popup-content-wrapper {
       background: rgba(2, 6, 23, .92);
       color: #e5e7eb;
-      border: 1px solid rgba(148,163,184,.25);
+      border: 1px solid rgba(148,163,184,.20);
       border-radius: 14px;
     }
     .kml-popup .leaflet-popup-tip { background: rgba(2, 6, 23, .92); }
@@ -73,175 +105,178 @@
 </head>
 
 <body class="h-full">
-  <div id="app" class="flex flex-col h-full w-full">
+  <div id="app" class="relative h-full w-full overflow-hidden">
 
-    <!-- TOP BAR -->
-    <header class="safe-top z-30 shrink-0">
+    <!-- MAP -->
+    <div id="map" class="absolute inset-0 z-0"></div>
+
+    <!-- TOP APP BAR -->
+    <header class="safe-top absolute left-0 right-0 top-0 z-50">
       <div class="px-3 pt-2">
-        <div class="glass bg-slate-950/60 border border-slate-700/30 rounded-2xl shadow-xl">
+        <div class="surface rounded-2xl">
           <div class="h-14 px-3 flex items-center gap-2">
-            <button id="btnPanel" class="w-10 h-10 rounded-xl bg-slate-900/50 border border-slate-700/30 active:scale-[0.98]" title="Panel">
-              <i class="fa-solid fa-sliders"></i>
+            <button id="btnDrawerToggle" class="w-10 h-10 rounded-xl btn" title="Panel ein/aus">
+              <i class="fa-solid fa-table-columns"></i>
             </button>
 
-            <div class="flex-1 min-w-0">
+            <div class="min-w-0 flex-1">
               <div class="flex items-center gap-2">
                 <div class="font-semibold truncate">CompNavAir</div>
-                <span id="gpsPill" class="text-[11px] px-2 py-0.5 rounded-full border border-slate-700/40 bg-slate-900/40 text-slate-200">
-                  GPS: —
+                <span id="gpsPill" class="chip text-[11px] px-2 py-0.5 rounded-full text-slate-100">GPS: —</span>
+                <span id="pickPill" class="hidden chip text-[11px] px-2 py-0.5 rounded-full text-sky-100 border-sky-400/30">
+                  Punkt setzen…
                 </span>
               </div>
-              <div id="statusLine" class="text-[11px] text-slate-200/80 truncate">
+              <div id="statusLine" class="text-[11px] text-slate-200/75 truncate">
                 Briefing planen → Start drücken, wenn du willst (kein Auto-Start).
               </div>
             </div>
 
-            <button id="btnFollow" class="w-10 h-10 rounded-xl bg-slate-900/50 border border-slate-700/30 active:scale-[0.98]" title="Zentrieren/Folgen">
-              <i class="fa-solid fa-location-crosshairs"></i>
-            </button>
-
-            <button id="btnLayer" class="w-10 h-10 rounded-xl bg-slate-900/50 border border-slate-700/30 active:scale-[0.98]" title="Kartenlayer">
-              <i class="fa-solid fa-layer-group"></i>
-            </button>
-
-            <button id="btnFinish" class="hidden w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/30 text-emerald-100 active:scale-[0.98]" title="Fahrt beenden">
-              <i class="fa-solid fa-flag-checkered"></i>
-            </button>
+            <div class="flex items-center gap-2">
+              <button id="btnFollow" class="w-10 h-10 rounded-xl btn" title="Zentrieren/Folgen">
+                <i class="fa-solid fa-location-crosshairs"></i>
+              </button>
+              <button id="btnLayer" class="w-10 h-10 rounded-xl btn" title="Kartenlayer">
+                <i class="fa-solid fa-layer-group"></i>
+              </button>
+              <button id="btnFinish" class="hidden w-10 h-10 rounded-xl border border-emerald-400/30 bg-emerald-500/15 text-emerald-100" title="Fahrt beenden">
+                <i class="fa-solid fa-flag-checkered"></i>
+              </button>
+            </div>
           </div>
         </div>
       </div>
     </header>
 
-    <!-- MAP -->
-    <main class="relative flex-1 min-h-0">
-      <div id="map" class="absolute inset-0 z-0"></div>
+    <!-- WIND PANEL (left edge, smaller) -->
+    <div id="windPanel" class="absolute left-2 top-20 safe-top">
+      <div id="windPanelExpanded" class="surface rounded-2xl w-[220px]">
+        <div class="px-2 pt-2 pb-2 flex items-center gap-2">
+          <button id="btnWindCollapse" class="w-9 h-9 rounded-xl btn" title="Einklappen">
+            <i class="fa-solid fa-chevron-left"></i>
+          </button>
 
-      <!-- WIND PANEL (left edge, collapsible) -->
-      <div id="windPanel" class="absolute z-20 left-2 top-20 safe-top">
-        <div id="windPanelExpanded" class="glass bg-slate-950/55 border border-slate-700/30 rounded-2xl shadow-xl w-[210px]">
-          <div class="px-2 pt-2 pb-1 flex items-center gap-2">
-            <button id="btnWindCollapse" class="w-9 h-9 rounded-xl bg-slate-900/40 border border-slate-700/30">
-              <i class="fa-solid fa-chevron-left"></i>
-            </button>
-
-            <div class="flex-1 min-w-0">
-              <div class="text-[12px] font-semibold flex items-center gap-2">
-                <span>Wind</span>
-                <span id="windSrc" class="text-[10px] px-2 py-0.5 rounded-full border border-slate-700/30 bg-slate-900/30 text-slate-200/90">—</span>
-              </div>
-              <div class="text-[11px] text-slate-200/80 truncate" id="windMeta">—</div>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+              <div class="text-[12px] font-semibold">Wind</div>
+              <span id="windSrc" class="chip text-[10px] px-2 py-0.5 rounded-full text-slate-100">—</span>
             </div>
-
-            <button id="btnWindFetch" class="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-400/25 text-sky-100" title="Wind online abrufen (Open-Meteo)">
-              <i class="fa-solid fa-cloud-arrow-down"></i>
-            </button>
+            <div id="windMeta" class="text-[11px] text-slate-200/70 truncate">—</div>
           </div>
 
-          <div class="px-2 pb-2">
-            <div class="flex items-center gap-2 p-2 rounded-xl bg-slate-900/25 border border-slate-700/20">
-              <div class="wind-arrow">
-                <i id="windArrowIcon" class="fa-solid fa-location-arrow"></i>
-              </div>
-              <div class="flex-1 min-w-0">
-                <div class="text-[12px] font-semibold" id="windKeyLine">—</div>
-                <div class="text-[11px] text-slate-200/75" id="windRecLine">—</div>
-              </div>
-            </div>
-
-            <div class="mt-2 rounded-xl border border-slate-700/20 overflow-hidden">
-              <div class="px-2 py-1 text-[11px] bg-slate-900/30 text-slate-200/80 flex justify-between">
-                <span>Höhe</span><span>Richtung / Speed</span>
-              </div>
-              <div id="windRows" class="divide-y divide-slate-700/20"></div>
-            </div>
-
-            <div class="mt-2 p-2 rounded-xl bg-slate-900/25 border border-slate-700/20">
-              <div class="text-[11px] text-slate-200/80">Navigation</div>
-              <div class="text-[12px] font-semibold truncate" id="navInsideTitle">—</div>
-              <div class="text-[12px] text-slate-100/90" id="navInsideLine">—</div>
-            </div>
-          </div>
-        </div>
-
-        <div id="windPanelCollapsed" class="hidden">
-          <button id="btnWindExpand" class="glass w-12 h-12 rounded-2xl bg-slate-950/55 border border-slate-700/30 shadow-xl">
-            <i class="fa-solid fa-wind"></i>
+          <button id="btnWindFetch" class="w-9 h-9 rounded-xl border border-sky-400/25 bg-sky-500/12 text-sky-100" title="Online abrufen (Open-Meteo)">
+            <i class="fa-solid fa-cloud-arrow-down"></i>
           </button>
         </div>
-      </div>
 
-      <!-- SIM CONTROLS (left) -->
-      <div id="simControls" class="hidden absolute z-20 left-2 bottom-[118px] safe-bottom">
-        <div class="glass bg-slate-950/55 border border-slate-700/30 rounded-2xl shadow-xl p-2 flex flex-col gap-2">
-          <button id="btnBurn" class="w-24 h-14 rounded-2xl bg-amber-500/15 border border-amber-400/25 text-amber-100 font-semibold active:scale-[0.98]">
-            <div class="text-[12px]"><i class="fa-solid fa-fire-flame-curved mr-2"></i>Burner</div>
-            <div class="text-[11px] text-amber-100/80">Auf</div>
-          </button>
-          <button id="btnVent" class="w-24 h-14 rounded-2xl bg-sky-500/15 border border-sky-400/25 text-sky-100 font-semibold active:scale-[0.98]">
-            <div class="text-[12px]"><i class="fa-solid fa-arrow-down mr-2"></i>Vent</div>
-            <div class="text-[11px] text-sky-100/80">Ab</div>
-          </button>
-        </div>
-      </div>
-
-      <!-- BOTTOM SHEET PANEL (planning + live + setup + archive) -->
-      <div id="sheet" class="absolute z-40 left-3 right-3 bottom-[94px] sheet-expanded">
-        <div class="glass bg-slate-950/65 border border-slate-700/30 rounded-3xl shadow-2xl h-full overflow-hidden flex flex-col">
-          <div class="px-3 pt-2 pb-1">
-            <div class="flex items-center justify-between">
-              <button id="btnSheetToggle" class="w-full flex items-center justify-center gap-2 py-1">
-                <span class="w-10 h-1.5 rounded-full bg-slate-300/30"></span>
-              </button>
+        <div class="px-2 pb-2 space-y-2">
+          <div class="flex items-center gap-2 p-2 rounded-xl bg-slate-900/25 border border-slate-700/15">
+            <div class="wind-arrow">
+              <i id="windArrowIcon" class="fa-solid fa-location-arrow"></i>
             </div>
-
-            <div class="mt-1 flex gap-2">
-              <button class="tabBtn flex-1 h-10 rounded-2xl bg-indigo-500/15 border border-indigo-400/25 text-indigo-100 text-[12px] font-semibold" data-tab="briefing">
-                <i class="fa-solid fa-clipboard-list mr-2"></i>Briefing
-              </button>
-              <button class="tabBtn flex-1 h-10 rounded-2xl bg-slate-900/30 border border-slate-700/25 text-slate-100 text-[12px] font-semibold" data-tab="live">
-                <i class="fa-solid fa-plane-up mr-2"></i>Live
-              </button>
-              <button class="tabBtn flex-1 h-10 rounded-2xl bg-slate-900/30 border border-slate-700/25 text-slate-100 text-[12px] font-semibold" data-tab="setup">
-                <i class="fa-solid fa-gear mr-2"></i>Setup
-              </button>
-              <button class="tabBtn flex-1 h-10 rounded-2xl bg-slate-900/30 border border-slate-700/25 text-slate-100 text-[12px] font-semibold" data-tab="archiv">
-                <i class="fa-solid fa-box-archive mr-2"></i>Archiv
-              </button>
+            <div class="min-w-0 flex-1">
+              <div class="text-[12px] font-semibold truncate" id="windKeyLine">—</div>
+              <div class="text-[11px] text-slate-200/70 truncate" id="windRecLine">—</div>
             </div>
           </div>
 
-          <div class="flex-1 overflow-auto px-3 pb-3">
-            <div id="tab_briefing" class="tabPane"></div>
-            <div id="tab_live" class="tabPane hidden"></div>
-            <div id="tab_setup" class="tabPane hidden"></div>
-            <div id="tab_archiv" class="tabPane hidden"></div>
+          <div class="rounded-xl border border-slate-700/15 overflow-hidden">
+            <div class="px-2 py-1 text-[11px] bg-slate-900/30 text-slate-200/75 flex justify-between">
+              <span>Höhe</span><span>Drift / Speed</span>
+            </div>
+            <div id="windRows" class="divide-y divide-slate-700/15"></div>
+          </div>
+
+          <div class="p-2 rounded-xl bg-slate-900/25 border border-slate-700/15">
+            <div class="text-[11px] text-slate-200/70">Navigation</div>
+            <div class="text-[12px] font-semibold truncate" id="navInsideTitle">—</div>
+            <div class="text-[12px] text-slate-100/90" id="navInsideLine">—</div>
           </div>
         </div>
       </div>
 
-    </main>
+      <div id="windPanelCollapsed" class="hidden">
+        <button id="btnWindExpand" class="surface w-12 h-12 rounded-2xl">
+          <i class="fa-solid fa-wind"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- SIM CONTROLS (only when SIM active) -->
+    <div id="simControls" class="hidden absolute left-2 bottom-[118px] safe-bottom">
+      <div class="surface rounded-2xl p-2 flex flex-col gap-2">
+        <button id="btnBurn" class="w-24 h-14 rounded-2xl border border-amber-400/25 bg-amber-500/12 text-amber-100 font-semibold">
+          <div class="text-[12px]"><i class="fa-solid fa-fire-flame-curved mr-2"></i>Burner</div>
+          <div class="text-[11px] text-amber-100/75">Auf</div>
+        </button>
+        <button id="btnVent" class="w-24 h-14 rounded-2xl border border-sky-400/25 bg-sky-500/12 text-sky-100 font-semibold">
+          <div class="text-[12px]"><i class="fa-solid fa-arrow-down mr-2"></i>Vent</div>
+          <div class="text-[11px] text-sky-100/75">Ab</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- RIGHT DRAWER (Dock Panel) -->
+    <aside id="drawer" class="surface rounded-3xl overflow-hidden">
+      <div class="px-2 pt-2 pb-2 flex items-center gap-2">
+        <button id="btnDrawerRail" class="w-10 h-10 rounded-xl btn" title="Rail / Panel">
+          <i class="fa-solid fa-grip-lines-vertical"></i>
+        </button>
+
+        <div class="min-w-0 flex-1">
+          <div class="text-[12px] font-semibold truncate" id="drawerTitle">Briefing</div>
+          <div class="text-[11px] text-slate-200/70 truncate" id="drawerSub">Plane Aufgaben vor der Fahrt.</div>
+        </div>
+
+        <button id="btnDrawerHide" class="w-10 h-10 rounded-xl btn" title="Ausblenden">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="px-2 pb-2 flex gap-2 drawerTabs" id="drawerTabs">
+        <button class="tabBtn flex-1 h-10 rounded-2xl bg-indigo-500/15 border border-indigo-400/25 text-indigo-100 text-[12px] font-semibold flex items-center justify-center gap-2" data-tab="briefing">
+          <i class="fa-solid fa-clipboard-list"></i><span>Briefing</span>
+        </button>
+        <button class="tabBtn flex-1 h-10 rounded-2xl bg-slate-900/30 border border-slate-700/20 text-slate-100 text-[12px] font-semibold flex items-center justify-center gap-2" data-tab="live">
+          <i class="fa-solid fa-plane-up"></i><span>Live</span>
+        </button>
+        <button class="tabBtn flex-1 h-10 rounded-2xl bg-slate-900/30 border border-slate-700/20 text-slate-100 text-[12px] font-semibold flex items-center justify-center gap-2" data-tab="setup">
+          <i class="fa-solid fa-gear"></i><span>Setup</span>
+        </button>
+        <button class="tabBtn flex-1 h-10 rounded-2xl bg-slate-900/30 border border-slate-700/20 text-slate-100 text-[12px] font-semibold flex items-center justify-center gap-2" data-tab="archiv">
+          <i class="fa-solid fa-box-archive"></i><span>Archiv</span>
+        </button>
+      </div>
+
+      <div class="drawerBody px-2 pb-3 overflow-auto h-[calc(100%-120px)]">
+        <div id="tab_briefing" class="tabPane"></div>
+        <div id="tab_live" class="tabPane hidden"></div>
+        <div id="tab_setup" class="tabPane hidden"></div>
+        <div id="tab_archiv" class="tabPane hidden"></div>
+      </div>
+    </aside>
 
     <!-- COCKPIT -->
-    <footer class="safe-bottom z-30 shrink-0">
+    <footer class="safe-bottom absolute left-0 right-0 bottom-0 z-50">
       <div class="px-3 pb-2">
-        <div class="glass bg-slate-950/60 border border-slate-700/30 rounded-2xl shadow-xl">
+        <div class="surface rounded-2xl">
           <div class="h-20 px-3 flex items-center gap-3">
             <div class="flex-1 grid grid-cols-3 gap-2">
-              <div class="p-2 rounded-xl bg-slate-900/25 border border-slate-700/20">
-                <div class="text-[11px] text-slate-200/75">GS</div>
+              <div class="p-2 rounded-xl bg-slate-900/25 border border-slate-700/15">
+                <div class="text-[11px] text-slate-200/70">GS</div>
                 <div class="text-[18px] font-semibold" id="instGS">—</div>
               </div>
-              <div class="p-2 rounded-xl bg-slate-900/25 border border-slate-700/20">
-                <div class="text-[11px] text-slate-200/75">ALT</div>
+              <div class="p-2 rounded-xl bg-slate-900/25 border border-slate-700/15">
+                <div class="text-[11px] text-slate-200/70">ALT</div>
                 <div class="text-[18px] font-semibold" id="instALT">—</div>
               </div>
-              <div class="p-2 rounded-xl bg-slate-900/25 border border-slate-700/20">
-                <div class="text-[11px] text-slate-200/75">Vario</div>
+              <div class="p-2 rounded-xl bg-slate-900/25 border border-slate-700/15">
+                <div class="text-[11px] text-slate-200/70">Vario</div>
                 <div class="text-[18px] font-semibold" id="instVAR">—</div>
               </div>
             </div>
 
-            <button id="btnMarker" class="w-20 h-20 rounded-2xl border text-white font-extrabold text-[12px] active:scale-[0.98]">
+            <button id="btnMarker" class="w-20 h-20 rounded-2xl border text-white font-extrabold text-[12px]">
               <div><i class="fa-solid fa-location-dot mr-1"></i>MARK</div>
               <div class="text-[10px] opacity-90" id="markerHint">—</div>
             </button>
@@ -258,7 +293,7 @@
   // ============================================================
   const APP = {
     name: "CompNavAir",
-    version: "2.1.0",
+    version: "2.2.0-ui-redesign",
     defaultCenter: { lat: 49.302, lon: 8.451 }, // Speyer/EDRY
     defaultZoom: 12,
     gps: { enableHighAccuracy: true, maximumAge: 800, timeout: 12000 },
@@ -270,9 +305,7 @@
     },
     track: { minDtMs: 900, minDistM: 6 },
     sim: { tickMs: 250, climbRateMps: 2.0, sinkRateMps: 1.4 },
-    ui: {
-      statusAutoClearMs: 4200
-    }
+    ui: { statusAutoClearMs: 4200 }
   };
 
   const STORAGE_KEYS = {
@@ -354,23 +387,13 @@
     ui: {
       activeTab: "briefing",
       follow: true,
-      // picking: { briefingId, taskId, pointKey, label }
       picking: null,
       windCollapsed: false,
-      sheet: "expanded", // expanded | collapsed | hidden
+      drawer: { hidden: false, rail: false },
       statusClearTimer: null
     },
-    settings: {
-      simEnabled: false
-    },
-    gps: {
-      ok: false,
-      lastRaw: null,
-      lastSmooth: null,
-      lastForVario: null,
-      fixCount: 0,
-      err: null
-    },
+    settings: { simEnabled: false },
+    gps: { ok: false, lastRaw: null, lastSmooth: null, lastForVario: null, fixCount: 0, err: null },
     sim: {
       active: false,
       lat: APP.defaultCenter.lat,
@@ -383,27 +406,10 @@
       ventHeld: false,
       lastTickTs: 0
     },
-    wind: {
-      profile: [],
-      lastSource: "—",
-      lastUpdatedTs: null,
-      lastError: null
-    },
-    briefings: {
-      list: [],
-      selectedId: null
-    },
-    flight: {
-      active: false,
-      startedTs: null,
-      endedTs: null,
-      briefingSnapshot: null,
-      track: [],
-      markers: []
-    },
-    kml: {
-      overlays: []
-    },
+    wind: { profile: [], lastSource: "—", lastUpdatedTs: null, lastError: null },
+    briefings: { list: [], selectedId: null },
+    flight: { active: false, startedTs: null, endedTs: null, briefingSnapshot: null, track: [], markers: [] },
+    kml: { overlays: [] },
     archive: []
   };
 
@@ -419,36 +425,33 @@
   // ============================================================
   // 3) Helfer-Funktionen (Math, Formatting)
   // ============================================================
-  function uid(prefix = "id") {
-    return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`;
-  }
+  function uid(prefix = "id") { return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`; }
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
-  function fmtNum(v, d = 0) {
-    if (v === null || v === undefined || Number.isNaN(v) || !isFinite(v)) return "—";
-    return Number(v).toFixed(d);
-  }
-  function fmtLatLon(lat, lon) {
-    if (!isFinite(lat) || !isFinite(lon)) return "—";
-    return `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
-  }
-  function fmtTime(ts) {
-    try {
-      const d = new Date(ts);
-      return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-    } catch { return "—"; }
-  }
-  function degNormalize(d) {
-    let x = d % 360;
-    if (x < 0) x += 360;
-    return x;
-  }
-  function degDiff(a, b) {
-    const d = Math.abs(degNormalize(a) - degNormalize(b));
-    return Math.min(d, 360 - d);
-  }
+  function fmtNum(v, d = 0) { if (v === null || v === undefined || Number.isNaN(v) || !isFinite(v)) return "—"; return Number(v).toFixed(d); }
+  function fmtLatLon(lat, lon) { if (!isFinite(lat) || !isFinite(lon)) return "—"; return `${lat.toFixed(6)}, ${lon.toFixed(6)}`; }
+  function fmtTime(ts) { try { const d = new Date(ts); return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }); } catch { return "—"; } }
+  function degNormalize(d) { let x = d % 360; if (x < 0) x += 360; return x; }
+  function degDiff(a, b) { const d = Math.abs(degNormalize(a) - degNormalize(b)); return Math.min(d, 360 - d); }
   function metersToKm(m) { return m / 1000; }
   function kmhToMps(kmh) { return kmh / 3.6; }
   function mpsToKmh(mps) { return mps * 3.6; }
+  function safeJsonParse(txt, fallback) { try { return JSON.parse(txt); } catch { return fallback; } }
+  function escHtml(str) {
+    return String(str ?? "")
+      .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+  }
+  function structuredCloneSafe(obj) { try { if ("structuredClone" in window) return structuredClone(obj); } catch {} return JSON.parse(JSON.stringify(obj)); }
+  function getTaskDefByShort(short) { return TASK_LIBRARY.find(t => t.short === short) || null; }
+  function getBriefingById(id) { return STATE.briefings.list.find(b => b.id === id) || null; }
+  function getSelectedBriefing() { return getBriefingById(STATE.briefings.selectedId); }
+  function inferMarkerCount(def) {
+    if (!def) return "—";
+    if (["MDD","XDD"].includes(def.short)) return 2;
+    if (["ELB","RTA"].includes(def.short)) return 0;
+    if (["HWZ"].includes(def.short)) return "1+";
+    return 1;
+  }
 
   function distM(a, b) {
     const R = 6371000;
@@ -460,7 +463,6 @@
     const s = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
     return 2 * R * Math.asin(Math.sqrt(s));
   }
-
   function bearingDeg(a, b) {
     const toRad = (x) => x * Math.PI / 180;
     const toDeg = (x) => x * 180 / Math.PI;
@@ -470,97 +472,62 @@
     const x = Math.cos(lat1)*Math.sin(lat2) - Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLon);
     return degNormalize(toDeg(Math.atan2(y, x)));
   }
-
   function projectLatLon(lat, lon, bearing, distanceM) {
     const R = 6371000;
     const toRad = (x) => x * Math.PI/180;
     const toDeg = (x) => x * 180/Math.PI;
-
     const br = toRad(bearing);
     const φ1 = toRad(lat);
     const λ1 = toRad(lon);
     const δ = distanceM / R;
-
     const φ2 = Math.asin(Math.sin(φ1)*Math.cos(δ) + Math.cos(φ1)*Math.sin(δ)*Math.cos(br));
     const λ2 = λ1 + Math.atan2(Math.sin(br)*Math.sin(δ)*Math.cos(φ1), Math.cos(δ)-Math.sin(φ1)*Math.sin(φ2));
     return { lat: toDeg(φ2), lon: toDeg(λ2) };
   }
 
-  function safeJsonParse(txt, fallback) {
-    try { return JSON.parse(txt); } catch { return fallback; }
-  }
-  function escHtml(str) {
-    return String(str ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
-  }
-
-  function getTaskDefByShort(short) {
-    return TASK_LIBRARY.find(t => t.short === short) || null;
-  }
-  function getBriefingById(id) {
-    return STATE.briefings.list.find(b => b.id === id) || null;
-  }
-  function getSelectedBriefing() {
-    return getBriefingById(STATE.briefings.selectedId);
-  }
-
-  function structuredCloneSafe(obj) {
-    try { if ("structuredClone" in window) return structuredClone(obj); } catch {}
-    return JSON.parse(JSON.stringify(obj));
-  }
-
-  function saveToStorage() {
-    try {
-      localStorage.setItem(STORAGE_KEYS.briefings, JSON.stringify(STATE.briefings.list));
-      localStorage.setItem(STORAGE_KEYS.archive, JSON.stringify(STATE.archive));
-      localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(STATE.settings));
-    } catch (e) {
-      console.warn("Storage save failed:", e);
+  const STORAGE = {
+    save() {
+      try {
+        localStorage.setItem(STORAGE_KEYS.briefings, JSON.stringify(STATE.briefings.list));
+        localStorage.setItem(STORAGE_KEYS.archive, JSON.stringify(STATE.archive));
+        localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(STATE.settings));
+      } catch (e) { console.warn("Storage save failed:", e); }
+    },
+    load() {
+      const b = safeJsonParse(localStorage.getItem(STORAGE_KEYS.briefings) || "[]", []);
+      const a = safeJsonParse(localStorage.getItem(STORAGE_KEYS.archive) || "[]", []);
+      const s = safeJsonParse(localStorage.getItem(STORAGE_KEYS.settings) || "{}", {});
+      if (Array.isArray(b)) STATE.briefings.list = b;
+      if (Array.isArray(a)) STATE.archive = a;
+      if (s && typeof s === "object") STATE.settings = { ...STATE.settings, ...s };
+      if (!STATE.briefings.selectedId && STATE.briefings.list.length) STATE.briefings.selectedId = STATE.briefings.list[0].id;
     }
-  }
-  function loadFromStorage() {
-    const b = safeJsonParse(localStorage.getItem(STORAGE_KEYS.briefings) || "[]", []);
-    const a = safeJsonParse(localStorage.getItem(STORAGE_KEYS.archive) || "[]", []);
-    const s = safeJsonParse(localStorage.getItem(STORAGE_KEYS.settings) || "{}", {});
-    if (Array.isArray(b)) STATE.briefings.list = b;
-    if (Array.isArray(a)) STATE.archive = a;
-    if (s && typeof s === "object") STATE.settings = { ...STATE.settings, ...s };
-    if (!STATE.briefings.selectedId && STATE.briefings.list.length) STATE.briefings.selectedId = STATE.briefings.list[0].id;
-  }
+  };
 
   function setGpsPill(text, ok) {
     const pill = document.getElementById("gpsPill");
     pill.textContent = text;
-    pill.classList.toggle("border-emerald-400/40", !!ok);
-    pill.classList.toggle("bg-emerald-500/15", !!ok);
-    pill.classList.toggle("border-rose-400/40", !ok);
+    pill.classList.toggle("border-emerald-400/30", !!ok);
+    pill.classList.toggle("bg-emerald-500/12", !!ok);
+    pill.classList.toggle("border-rose-400/30", !ok);
     pill.classList.toggle("bg-rose-500/10", !ok);
   }
 
-  // Replaces "toast": status messages live in header line (not on the map)
   function setStatus(message, type = "info", autoClear = true) {
     const el = document.getElementById("statusLine");
     if (!el) return;
-
-    const base = "text-[11px] truncate ";
     const cls =
       type === "error" ? "text-rose-200/90" :
       type === "ok" ? "text-emerald-200/90" :
       type === "hint" ? "text-sky-200/85" :
-      "text-slate-200/80";
-
-    el.className = base + cls;
+      "text-slate-200/75";
+    el.className = `text-[11px] ${cls} truncate`;
     el.textContent = message || "";
 
     if (STATE.ui.statusClearTimer) clearTimeout(STATE.ui.statusClearTimer);
     if (autoClear) {
       STATE.ui.statusClearTimer = setTimeout(() => {
-        // keep a sensible default line depending on state
-        el.className = base + "text-slate-200/80";
+        el.className = "text-[11px] text-slate-200/75 truncate";
         el.textContent = STATE.flight.active
           ? `Fahrt aktiv: ${(STATE.flight.briefingSnapshot?.title || "—")} · Marker & Track werden aufgezeichnet.`
           : `Briefing planen → Start drücken, wenn du willst (kein Auto-Start).`;
@@ -591,14 +558,6 @@
     return clamp(v, -8, 8);
   }
 
-  function inferMarkerCount(def) {
-    if (!def) return "—";
-    if (["MDD","XDD"].includes(def.short)) return 2;
-    if (["ELB","RTA"].includes(def.short)) return 0;
-    if (["HWZ"].includes(def.short)) return "1+";
-    return 1;
-  }
-
   function getExpectedMarkerColor() {
     const briefing = STATE.flight.active ? STATE.flight.briefingSnapshot : getSelectedBriefing();
     const t = briefing?.tasks?.[0];
@@ -616,19 +575,38 @@
   // ============================================================
   function renderAll() {
     renderTopbar();
+    renderDrawer();
     renderWindPanel();
     renderCockpit();
-    renderSheet();
     renderMapTasks();
     renderSimControls();
   }
 
-  function renderTopbar() {
-    const btnFinish = document.getElementById("btnFinish");
-    btnFinish.classList.toggle("hidden", !STATE.flight.active);
+  function setWindCollapsed(collapsed) {
+    STATE.ui.windCollapsed = collapsed;
+    document.getElementById("windPanelExpanded").classList.toggle("hidden", collapsed);
+    document.getElementById("windPanelCollapsed").classList.toggle("hidden", !collapsed);
+  }
 
-    if (STATE.ui.picking) {
-      setStatus(`Punkt setzen: ${STATE.ui.picking.label} · Tippe in die Karte (Panel klappt automatisch klein).`, "hint", false);
+  function setDrawerHidden(hidden) {
+    STATE.ui.drawer.hidden = !!hidden;
+    const d = document.getElementById("drawer");
+    d.classList.toggle("hidden", STATE.ui.drawer.hidden);
+  }
+  function setDrawerRail(rail) {
+    STATE.ui.drawer.rail = !!rail;
+    const d = document.getElementById("drawer");
+    d.classList.toggle("rail", STATE.ui.drawer.rail);
+  }
+
+  function renderTopbar() {
+    document.getElementById("btnFinish").classList.toggle("hidden", !STATE.flight.active);
+
+    const pick = !!STATE.ui.picking;
+    document.getElementById("pickPill").classList.toggle("hidden", !pick);
+
+    if (pick) {
+      setStatus(`Punkt setzen: ${STATE.ui.picking.label} · Tippe auf die Karte.`, "hint", false);
     } else if (STATE.flight.active) {
       setStatus(`Fahrt aktiv: ${(STATE.flight.briefingSnapshot?.title || "—")} · Marker & Track werden aufgezeichnet.`, "ok", false);
     } else {
@@ -660,6 +638,37 @@
     btn.style.borderColor = hex + "66";
     btn.style.color = "#ffffff";
     hint.textContent = color ? color.name : "—";
+  }
+
+  function renderDrawer() {
+    // Tabs styling + titles
+    const titles = {
+      briefing: ["Briefing", "Plane Aufgaben vor der Fahrt."],
+      live: ["Live", "Fahrtstatus & Marker."],
+      setup: ["Setup", "Simulation, Wind, KML."],
+      archiv: ["Archiv", "Beendete Fahrten exportieren."]
+    };
+    const [t1, t2] = titles[STATE.ui.activeTab] || ["Panel", ""];
+    document.getElementById("drawerTitle").textContent = t1;
+    document.getElementById("drawerSub").textContent = t2;
+
+    document.querySelectorAll(".tabBtn").forEach(btn => {
+      const is = btn.dataset.tab === STATE.ui.activeTab;
+      btn.classList.toggle("bg-indigo-500/15", is);
+      btn.classList.toggle("border-indigo-400/25", is);
+      btn.classList.toggle("text-indigo-100", is);
+      btn.classList.toggle("bg-slate-900/30", !is);
+      btn.classList.toggle("border-slate-700/20", !is);
+      btn.classList.toggle("text-slate-100", !is);
+    });
+
+    document.querySelectorAll(".tabPane").forEach(p => p.classList.add("hidden"));
+    document.getElementById(`tab_${STATE.ui.activeTab}`).classList.remove("hidden");
+
+    renderTabBriefing();
+    renderTabLive();
+    renderTabSetup();
+    renderTabArchiv();
   }
 
   function renderWindPanel() {
@@ -694,7 +703,7 @@
       for (const w of prof) {
         const drift = degNormalize(w.dirFromDeg + 180);
         const row = document.createElement("div");
-        row.className = "px-2 py-2 text-[12px] flex items-center justify-between bg-slate-950/0";
+        row.className = "px-2 py-2 text-[12px] flex items-center justify-between";
         row.innerHTML = `
           <div class="font-semibold text-slate-100">${escHtml(w.altM)} m</div>
           <div class="text-slate-100/90">${escHtml(fmtNum(drift,0))}° · ${escHtml(fmtNum(w.speedKmh,0))} km/h</div>
@@ -715,42 +724,8 @@
   }
 
   function renderSimControls() {
-    document.getElementById("simControls").classList.toggle("hidden", !(STATE.settings.simEnabled));
-  }
-
-  function setWindCollapsed(collapsed) {
-    STATE.ui.windCollapsed = collapsed;
-    document.getElementById("windPanelExpanded").classList.toggle("hidden", collapsed);
-    document.getElementById("windPanelCollapsed").classList.toggle("hidden", !collapsed);
-  }
-
-  function setSheetState(state) {
-    STATE.ui.sheet = state;
-    const sheet = document.getElementById("sheet");
-    sheet.classList.toggle("sheet-expanded", state === "expanded");
-    sheet.classList.toggle("sheet-collapsed", state === "collapsed");
-    sheet.classList.toggle("sheet-hidden", state === "hidden");
-  }
-
-  function renderSheet() {
-    // Tabs styling
-    document.querySelectorAll(".tabBtn").forEach(btn => {
-      const is = btn.dataset.tab === STATE.ui.activeTab;
-      btn.classList.toggle("bg-indigo-500/15", is);
-      btn.classList.toggle("border-indigo-400/25", is);
-      btn.classList.toggle("text-indigo-100", is);
-      btn.classList.toggle("bg-slate-900/30", !is);
-      btn.classList.toggle("border-slate-700/25", !is);
-      btn.classList.toggle("text-slate-100", !is);
-    });
-
-    document.querySelectorAll(".tabPane").forEach(p => p.classList.add("hidden"));
-    document.getElementById(`tab_${STATE.ui.activeTab}`).classList.remove("hidden");
-
-    renderTabBriefing();
-    renderTabLive();
-    renderTabSetup();
-    renderTabArchiv();
+    const show = !!(STATE.settings.simEnabled && STATE.sim.active);
+    document.getElementById("simControls").classList.toggle("hidden", !show);
   }
 
   function renderTabBriefing() {
@@ -758,62 +733,53 @@
     const bList = STATE.briefings.list;
     const sel = getSelectedBriefing();
 
-    const steps = `
-      <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/20">
-        <div class="text-[12px] font-semibold">Planungs-Flow</div>
-        <div class="mt-1 text-[11px] text-slate-200/75">
-          1) Briefing wählen · 2) Aufgaben hinzufügen · 3) „Setzen“ → Karte tippen (Panel klappt klein) · 4) Start drücken
-        </div>
-      </div>
-    `;
-
     el.innerHTML = `
       <div class="space-y-2">
-        ${steps}
+        <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/15">
+          <div class="text-[12px] font-semibold">Workflow</div>
+          <div class="mt-1 text-[11px] text-slate-200/70">
+            Briefing wählen → Aufgaben hinzufügen → „Setzen“ → auf Karte tippen (Panel kann als Rail bleiben).
+          </div>
+        </div>
 
-        <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/20">
+        <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/15">
           <div class="flex items-center gap-2">
             <div class="text-[12px] font-semibold flex-1">Briefings</div>
-
-            <button id="btnBriefingExport" class="h-9 px-3 rounded-xl bg-sky-500/15 border border-sky-400/25 text-sky-100 text-[12px] font-semibold">
+            <button id="btnBriefingExport" class="h-9 px-3 rounded-xl border border-sky-400/25 bg-sky-500/12 text-sky-100 text-[12px] font-semibold">
               <i class="fa-solid fa-file-export mr-2"></i>Export
             </button>
-            <label class="h-9 px-3 rounded-xl bg-slate-900/35 border border-slate-700/25 text-slate-100 text-[12px] font-semibold flex items-center gap-2 cursor-pointer">
+            <label class="h-9 px-3 rounded-xl btn text-slate-100 text-[12px] font-semibold flex items-center gap-2 cursor-pointer">
               <i class="fa-solid fa-file-import"></i>Import
               <input id="briefingImportFile" type="file" accept="application/json,.json" class="hidden" />
             </label>
           </div>
 
           <div class="mt-2 grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center">
-            <select id="selBriefing" class="h-10 rounded-xl bg-slate-950/40 border border-slate-700/25 px-3 text-[12px]">
+            <select id="selBriefing" class="h-10 rounded-xl bg-slate-950/40 border border-slate-700/20 px-3 text-[12px]">
               ${bList.map(b => `<option value="${escHtml(b.id)}" ${b.id===STATE.briefings.selectedId?"selected":""}>${escHtml(b.title)}</option>`).join("") || `<option value="">(keins)</option>`}
             </select>
-            <button id="btnBriefingNew" class="h-10 w-10 rounded-xl bg-emerald-500/15 border border-emerald-400/25 text-emerald-100" title="Neu">
+            <button id="btnBriefingNew" class="h-10 w-10 rounded-xl border border-emerald-400/25 bg-emerald-500/12 text-emerald-100" title="Neu">
               <i class="fa-solid fa-plus"></i>
             </button>
-            <button id="btnBriefingRename" class="h-10 w-10 rounded-xl bg-slate-900/35 border border-slate-700/25" title="Umbenennen">
+            <button id="btnBriefingRename" class="h-10 w-10 rounded-xl btn" title="Umbenennen">
               <i class="fa-solid fa-pen"></i>
             </button>
-            <button id="btnBriefingDelete" class="h-10 w-10 rounded-xl bg-rose-500/15 border border-rose-400/25 text-rose-100" title="Löschen">
+            <button id="btnBriefingDelete" class="h-10 w-10 rounded-xl border border-rose-400/25 bg-rose-500/12 text-rose-100" title="Löschen">
               <i class="fa-solid fa-trash"></i>
             </button>
           </div>
 
           <div class="mt-2 grid grid-cols-2 gap-2">
-            <button id="btnAddTask" class="h-11 rounded-2xl bg-indigo-500/15 border border-indigo-400/25 text-indigo-100 text-[12px] font-semibold">
+            <button id="btnAddTask" class="h-11 rounded-2xl border border-indigo-400/25 bg-indigo-500/12 text-indigo-100 text-[12px] font-semibold">
               <i class="fa-solid fa-plus mr-2"></i>Aufgabe hinzufügen
             </button>
-            <button id="btnStartFlight" class="h-11 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 text-emerald-100 text-[13px] font-extrabold">
+            <button id="btnStartFlight" class="h-11 rounded-2xl border border-emerald-400/30 bg-emerald-500/15 text-emerald-100 text-[13px] font-extrabold">
               <i class="fa-solid fa-play mr-2"></i>Fahrt starten
             </button>
           </div>
-
-          <div class="mt-2 text-[11px] text-slate-200/70">
-            Tipp: Aufgaben-Marker im Briefing sind drag&drop verschiebbar. „Setzen“ klappt das Panel klein, damit du die Karte frei hast.
-          </div>
         </div>
 
-        ${sel ? renderBriefingTaskList(sel) : `<div class="p-3 rounded-2xl bg-slate-900/25 border border-slate-700/20 text-[12px] text-slate-200/75">Noch kein Briefing. Erstelle eins.</div>`}
+        ${sel ? renderBriefingTaskList(sel) : `<div class="p-3 rounded-2xl bg-slate-900/25 border border-slate-700/15 text-[12px] text-slate-200/70">Noch kein Briefing. Erstelle eins.</div>`}
       </div>
     `;
   }
@@ -822,8 +788,8 @@
     const tasks = briefing.tasks || [];
     const cards = tasks.map((t, idx) => renderTaskCard(briefing, t, idx)).join("");
     return `
-      <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/20">
-        <div class="text-[12px] font-semibold">Aufgaben im Briefing</div>
+      <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/15">
+        <div class="text-[12px] font-semibold">Aufgaben</div>
         <div class="mt-2 space-y-2">
           ${cards || `<div class="text-[12px] text-slate-200/70">Keine Aufgaben. „Aufgabe hinzufügen“.</div>`}
         </div>
@@ -831,7 +797,7 @@
     `;
   }
 
-  function renderTaskCard(briefing, task, idx) {
+  function renderTaskCard(briefing, task) {
     const def = getTaskDefByShort(task.short) || null;
     const title = def ? `${def.cia} ${def.short} – ${def.title}` : (task.short || "Aufgabe");
     const markerCount = inferMarkerCount(def);
@@ -840,26 +806,24 @@
     const fieldRows = renderTaskFieldsCompact(briefing, task, def);
 
     return `
-      <div class="p-2 rounded-2xl bg-slate-950/35 border border-slate-700/25">
+      <div class="p-2 rounded-2xl bg-slate-950/35 border border-slate-700/20">
         <div class="flex items-center gap-2">
           <div class="text-[12px] font-semibold flex-1 truncate">${escHtml(title)}</div>
-          <div class="text-[10px] px-2 py-0.5 rounded-full bg-slate-900/40 border border-slate-700/25 text-slate-200/80">
-            Marker: ${markerCount}
-          </div>
+          <div class="text-[10px] px-2 py-0.5 rounded-full chip text-slate-100/90">Marker: ${markerCount}</div>
           <button data-action="delTask" data-b="${escHtml(briefing.id)}" data-t="${escHtml(task.id)}"
-            class="h-9 w-9 rounded-xl bg-rose-500/15 border border-rose-400/25 text-rose-100" title="Aufgabe löschen">
+            class="h-9 w-9 rounded-xl border border-rose-400/25 bg-rose-500/12 text-rose-100" title="Aufgabe löschen">
             <i class="fa-solid fa-xmark"></i>
           </button>
         </div>
 
         <div class="mt-2 grid grid-cols-2 gap-2">
           <select data-action="taskType" data-b="${escHtml(briefing.id)}" data-t="${escHtml(task.id)}"
-            class="h-10 rounded-xl bg-slate-950/40 border border-slate-700/25 px-3 text-[12px]">
+            class="h-10 rounded-xl bg-slate-950/40 border border-slate-700/20 px-3 text-[12px]">
             ${TASK_LIBRARY.map(d => `<option value="${escHtml(d.short)}" ${d.short===task.short?"selected":""}>${escHtml(d.cia)} ${escHtml(d.short)} – ${escHtml(d.title)}</option>`).join("")}
           </select>
 
           <select data-action="taskMarkerColor" data-b="${escHtml(briefing.id)}" data-t="${escHtml(task.id)}"
-            class="h-10 rounded-xl bg-slate-950/40 border border-slate-700/25 px-3 text-[12px]">
+            class="h-10 rounded-xl bg-slate-950/40 border border-slate-700/20 px-3 text-[12px]">
             <option value="">Markerfarbe (auto)</option>
             ${Object.entries(MARKER_COLORS).map(([k,v]) => `<option value="${escHtml(k)}" ${task.markerColor===k?"selected":""}>${escHtml(v.name)}</option>`).join("")}
           </select>
@@ -873,24 +837,24 @@
 
   function renderTaskPointsCompact(briefing, task, def) {
     if (!def) return "";
-    // HWZ: multiple targets
+
     if (def.short === "HWZ") {
       const targets = Array.isArray(task.targets) ? task.targets : [];
       const rows = targets.map((p, i) => {
         const ll = (p?.lat!=null && p?.lon!=null) ? fmtLatLon(p.lat, p.lon) : "—";
         return `
-          <div class="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-900/15 border border-slate-700/20">
+          <div class="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-900/15 border border-slate-700/15">
             <div class="min-w-0">
               <div class="text-[12px] font-semibold">Ziel ${i+1}</div>
-              <div class="text-[11px] text-slate-200/75 truncate">${escHtml(ll)}</div>
+              <div class="text-[11px] text-slate-200/70 truncate">${escHtml(ll)}</div>
             </div>
             <div class="flex items-center gap-2 shrink-0">
               <button data-action="pickHWZ" data-b="${escHtml(briefing.id)}" data-t="${escHtml(task.id)}" data-i="${i}"
-                class="h-9 px-3 rounded-xl bg-indigo-500/15 border border-indigo-400/25 text-indigo-100 text-[12px] font-semibold">
+                class="h-9 px-3 rounded-xl border border-indigo-400/25 bg-indigo-500/12 text-indigo-100 text-[12px] font-semibold">
                 Setzen
               </button>
               <button data-action="delHWZ" data-b="${escHtml(briefing.id)}" data-t="${escHtml(task.id)}" data-i="${i}"
-                class="h-9 w-9 rounded-xl bg-rose-500/15 border border-rose-400/25 text-rose-100" title="Löschen">
+                class="h-9 w-9 rounded-xl border border-rose-400/25 bg-rose-500/12 text-rose-100" title="Löschen">
                 <i class="fa-solid fa-trash"></i>
               </button>
             </div>
@@ -899,11 +863,11 @@
       }).join("");
 
       return `
-        <div class="mt-2 p-2 rounded-2xl bg-slate-900/10 border border-slate-700/20">
+        <div class="mt-2 p-2 rounded-2xl bg-slate-900/10 border border-slate-700/15">
           <div class="flex items-center gap-2">
             <div class="text-[12px] font-semibold flex-1">Ziele</div>
             <button data-action="addHWZ" data-b="${escHtml(briefing.id)}" data-t="${escHtml(task.id)}"
-              class="h-9 px-3 rounded-xl bg-emerald-500/15 border border-emerald-400/25 text-emerald-100 text-[12px] font-semibold">
+              class="h-9 px-3 rounded-xl border border-emerald-400/25 bg-emerald-500/12 text-emerald-100 text-[12px] font-semibold">
               <i class="fa-solid fa-plus mr-2"></i>Ziel
             </button>
           </div>
@@ -922,13 +886,13 @@
       const cur = taskPoints[p.id] || null;
       const ll = (cur?.lat!=null && cur?.lon!=null) ? fmtLatLon(cur.lat, cur.lon) : "—";
       return `
-        <div class="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-900/15 border border-slate-700/20">
+        <div class="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-900/15 border border-slate-700/15">
           <div class="min-w-0">
             <div class="text-[12px] font-semibold">${escHtml(p.label)}</div>
-            <div class="text-[11px] text-slate-200/75 truncate">${escHtml(ll)}</div>
+            <div class="text-[11px] text-slate-200/70 truncate">${escHtml(ll)}</div>
           </div>
           <button data-action="pickPoint" data-b="${escHtml(briefing.id)}" data-t="${escHtml(task.id)}" data-k="${escHtml(p.id)}" data-l="${escHtml(p.label)}"
-            class="h-9 px-3 rounded-xl bg-indigo-500/15 border border-indigo-400/25 text-indigo-100 text-[12px] font-semibold shrink-0">
+            class="h-9 px-3 rounded-xl border border-indigo-400/25 bg-indigo-500/12 text-indigo-100 text-[12px] font-semibold shrink-0">
             Setzen
           </button>
         </div>
@@ -936,7 +900,7 @@
     }).join("");
 
     return `
-      <div class="mt-2 p-2 rounded-2xl bg-slate-900/10 border border-slate-700/20">
+      <div class="mt-2 p-2 rounded-2xl bg-slate-900/10 border border-slate-700/15">
         <div class="text-[12px] font-semibold">Punkte</div>
         <div class="mt-2 space-y-2">${rows}</div>
       </div>
@@ -954,7 +918,7 @@
       if (f.type === "bool") {
         const checked = fixed ? true : !!val;
         return `
-          <div class="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-900/15 border border-slate-700/20">
+          <div class="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-900/15 border border-slate-700/15">
             <div class="min-w-0">
               <div class="text-[12px] font-semibold">${escHtml(f.label)}</div>
               <div class="text-[11px] text-slate-200/70 truncate">${escHtml(f.hint || "")}</div>
@@ -968,12 +932,12 @@
       if (f.type === "number") {
         const v = (val != null) ? val : (f.default != null ? f.default : "");
         return `
-          <div class="p-2 rounded-xl bg-slate-900/15 border border-slate-700/20">
+          <div class="p-2 rounded-xl bg-slate-900/15 border border-slate-700/15">
             <div class="text-[12px] font-semibold">${escHtml(f.label)}</div>
             <div class="text-[11px] text-slate-200/70">${escHtml(f.hint || "")}</div>
             <input data-action="fieldNum" data-b="${escHtml(briefing.id)}" data-t="${escHtml(task.id)}" data-k="${escHtml(f.key)}"
               value="${escHtml(v)}" inputmode="decimal"
-              class="mt-2 w-full h-10 rounded-xl bg-slate-950/40 border border-slate-700/25 px-3 text-[12px]" />
+              class="mt-2 w-full h-10 rounded-xl bg-slate-950/40 border border-slate-700/20 px-3 text-[12px]" />
           </div>
         `;
       }
@@ -982,29 +946,29 @@
       const isTextArea = f.type === "note";
       if (isTextArea) {
         return `
-          <div class="p-2 rounded-xl bg-slate-900/15 border border-slate-700/20">
+          <div class="p-2 rounded-xl bg-slate-900/15 border border-slate-700/15">
             <div class="text-[12px] font-semibold">${escHtml(f.label)}</div>
             <div class="text-[11px] text-slate-200/70">${escHtml(f.hint || "")}</div>
             <textarea data-action="fieldText" data-b="${escHtml(briefing.id)}" data-t="${escHtml(task.id)}" data-k="${escHtml(f.key)}"
-              class="mt-2 w-full min-h-[72px] rounded-xl bg-slate-950/40 border border-slate-700/25 px-3 py-2 text-[12px]"
+              class="mt-2 w-full min-h-[72px] rounded-xl bg-slate-950/40 border border-slate-700/20 px-3 py-2 text-[12px]"
               placeholder="Optional…">${escHtml(v)}</textarea>
           </div>
         `;
       }
 
       return `
-        <div class="p-2 rounded-xl bg-slate-900/15 border border-slate-700/20">
+        <div class="p-2 rounded-xl bg-slate-900/15 border border-slate-700/15">
           <div class="text-[12px] font-semibold">${escHtml(f.label)}</div>
           <div class="text-[11px] text-slate-200/70">${escHtml(f.hint || "")}</div>
           <input data-action="fieldText" data-b="${escHtml(briefing.id)}" data-t="${escHtml(task.id)}" data-k="${escHtml(f.key)}"
             value="${escHtml(v)}" placeholder="Optional…"
-            class="mt-2 w-full h-10 rounded-xl bg-slate-950/40 border border-slate-700/25 px-3 text-[12px]" />
+            class="mt-2 w-full h-10 rounded-xl bg-slate-950/40 border border-slate-700/20 px-3 text-[12px]" />
         </div>
       `;
     }).join("");
 
     return `
-      <div class="mt-2 p-2 rounded-2xl bg-slate-900/10 border border-slate-700/20 space-y-2">
+      <div class="mt-2 p-2 rounded-2xl bg-slate-900/10 border border-slate-700/15 space-y-2">
         <div class="text-[12px] font-semibold">Parameter</div>
         ${blocks}
       </div>
@@ -1014,7 +978,6 @@
   function renderTabLive() {
     const el = document.getElementById("tab_live");
     const flight = STATE.flight;
-
     const activeBrief = flight.briefingSnapshot;
     const title = activeBrief?.title || "—";
     const nav = computeNav();
@@ -1023,33 +986,33 @@
     const markerList = flight.markers.slice().reverse().slice(0, 10).map(m => {
       const c = MARKER_COLORS[m.color]?.hex || "#22c55e";
       return `
-        <div class="flex items-center justify-between text-[12px] p-2 rounded-xl bg-slate-900/15 border border-slate-700/20">
+        <div class="flex items-center justify-between text-[12px] p-2 rounded-xl bg-slate-900/15 border border-slate-700/15">
           <div class="flex items-center gap-2">
             <span class="inline-block w-3 h-3 rounded-full" style="background:${c}"></span>
             <span class="text-slate-100">${escHtml(fmtTime(m.ts))}</span>
           </div>
-          <span class="text-slate-200/80">${escHtml(fmtLatLon(m.lat, m.lon))}</span>
+          <span class="text-slate-200/75">${escHtml(fmtLatLon(m.lat, m.lon))}</span>
         </div>
       `;
     }).join("");
 
     el.innerHTML = `
       <div class="space-y-2">
-        <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/20">
+        <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/15">
           <div class="text-[12px] font-semibold">Status</div>
           <div class="mt-1 text-[12px] text-slate-100/90">Briefing: <span class="font-semibold">${escHtml(title)}</span></div>
-          <div class="mt-1 text-[12px] text-slate-200/80">Navigation: ${escHtml(navLine)}</div>
+          <div class="mt-1 text-[12px] text-slate-200/75">Navigation: ${escHtml(navLine)}</div>
           <div class="mt-2 grid grid-cols-2 gap-2">
-            <button id="btnLiveCenter" class="h-11 rounded-2xl bg-slate-900/35 border border-slate-700/25 text-[12px] font-semibold">
+            <button id="btnLiveCenter" class="h-11 rounded-2xl btn text-[12px] font-semibold">
               <i class="fa-solid fa-location-crosshairs mr-2"></i>Zentrieren
             </button>
-            <button id="btnLiveToggleFollow" class="h-11 rounded-2xl bg-slate-900/35 border border-slate-700/25 text-[12px] font-semibold">
+            <button id="btnLiveToggleFollow" class="h-11 rounded-2xl btn text-[12px] font-semibold">
               <i class="fa-solid fa-route mr-2"></i>Follow: ${STATE.ui.follow ? "An" : "Aus"}
             </button>
           </div>
         </div>
 
-        <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/20">
+        <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/15">
           <div class="flex items-center gap-2">
             <div class="text-[12px] font-semibold flex-1">Marker (letzte)</div>
             <div class="text-[11px] text-slate-200/70">${flight.markers.length} gesamt</div>
@@ -1059,13 +1022,13 @@
           </div>
         </div>
 
-        <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/20">
+        <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/15">
           <div class="text-[12px] font-semibold">Fahrt</div>
           <div class="mt-2 grid grid-cols-2 gap-2">
-            <button id="btnLiveStop" class="h-11 rounded-2xl bg-rose-500/15 border border-rose-400/25 text-rose-100 text-[12px] font-extrabold" ${!flight.active ? "disabled" : ""}>
+            <button id="btnLiveStop" class="h-11 rounded-2xl border border-rose-400/25 bg-rose-500/12 text-rose-100 text-[12px] font-extrabold" ${!flight.active ? "disabled" : ""}>
               <i class="fa-solid fa-flag-checkered mr-2"></i>Beenden
             </button>
-            <button id="btnLiveKmlNow" class="h-11 rounded-2xl bg-sky-500/15 border border-sky-400/25 text-sky-100 text-[12px] font-extrabold" ${!flight.active ? "disabled" : ""}>
+            <button id="btnLiveKmlNow" class="h-11 rounded-2xl border border-sky-400/25 bg-sky-500/12 text-sky-100 text-[12px] font-extrabold" ${!flight.active ? "disabled" : ""}>
               <i class="fa-solid fa-file-arrow-down mr-2"></i>KML Export
             </button>
           </div>
@@ -1079,15 +1042,15 @@
     const simOn = !!STATE.settings.simEnabled;
 
     const kmlList = STATE.kml.overlays.map(o => `
-      <div class="p-2 rounded-xl bg-slate-900/15 border border-slate-700/20">
+      <div class="p-2 rounded-xl bg-slate-900/15 border border-slate-700/15">
         <div class="flex items-center gap-2">
           <div class="text-[12px] font-semibold flex-1 truncate">${escHtml(o.name || "KML")}</div>
           <button data-action="kmlToggle" data-id="${escHtml(o.id)}"
-            class="h-9 px-3 rounded-xl ${o.visible ? "bg-emerald-500/15 border-emerald-400/25 text-emerald-100" : "bg-slate-900/35 border-slate-700/25 text-slate-100"} border text-[12px] font-semibold">
+            class="h-9 px-3 rounded-xl border ${o.visible ? "border-emerald-400/25 bg-emerald-500/12 text-emerald-100" : "border-slate-700/20 bg-slate-900/30 text-slate-100"} text-[12px] font-semibold">
             ${o.visible ? "An" : "Aus"}
           </button>
           <button data-action="kmlRemove" data-id="${escHtml(o.id)}"
-            class="h-9 w-9 rounded-xl bg-rose-500/15 border border-rose-400/25 text-rose-100" title="Entfernen">
+            class="h-9 w-9 rounded-xl border border-rose-400/25 bg-rose-500/12 text-rose-100" title="Entfernen">
             <i class="fa-solid fa-trash"></i>
           </button>
         </div>
@@ -1097,50 +1060,50 @@
 
     el.innerHTML = `
       <div class="space-y-2">
-        <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/20">
+        <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/15">
           <div class="flex items-center justify-between">
             <div>
               <div class="text-[12px] font-semibold">Simulation</div>
-              <div class="text-[11px] text-slate-200/70">SIM steuert Position (Burner/Vent). Startet niemals automatisch die Fahrt.</div>
+              <div class="text-[11px] text-slate-200/70">SIM steuert Position (Burner/Vent). Startet nie automatisch die Fahrt.</div>
             </div>
             <label class="inline-flex items-center gap-2">
               <input id="tglSim" type="checkbox" class="w-5 h-5" ${simOn ? "checked" : ""} />
             </label>
           </div>
           <div class="mt-2 grid grid-cols-2 gap-2">
-            <button id="btnSimUseGps" class="h-11 rounded-2xl bg-slate-900/35 border border-slate-700/25 text-[12px] font-semibold">
+            <button id="btnSimUseGps" class="h-11 rounded-2xl btn text-[12px] font-semibold">
               <i class="fa-solid fa-map-pin mr-2"></i>SIM auf GPS
             </button>
-            <button id="btnSimToggleActive" class="h-11 rounded-2xl bg-slate-900/35 border border-slate-700/25 text-[12px] font-semibold">
+            <button id="btnSimToggleActive" class="h-11 rounded-2xl btn text-[12px] font-semibold" ${!simOn ? "disabled" : ""}>
               <i class="fa-solid fa-gamepad mr-2"></i>SIM: ${STATE.sim.active ? "Aktiv" : "Inaktiv"}
             </button>
           </div>
         </div>
 
-        <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/20">
+        <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/15">
           <div class="text-[12px] font-semibold">Wind (manuell)</div>
-          <div class="text-[11px] text-slate-200/70">Alt, Richtung FROM, Speed. (Online über Wind-Panel links.)</div>
+          <div class="text-[11px] text-slate-200/70">Alt, Richtung FROM, Speed. (Online über Windpanel links.)</div>
 
           <div class="mt-2 grid grid-cols-3 gap-2">
-            <input id="windAlt" class="h-10 rounded-xl bg-slate-950/40 border border-slate-700/25 px-3 text-[12px]" placeholder="Alt m" inputmode="numeric" />
-            <input id="windDir" class="h-10 rounded-xl bg-slate-950/40 border border-slate-700/25 px-3 text-[12px]" placeholder="Dir FROM °" inputmode="numeric" />
-            <input id="windSpd" class="h-10 rounded-xl bg-slate-950/40 border border-slate-700/25 px-3 text-[12px]" placeholder="km/h" inputmode="numeric" />
+            <input id="windAlt" class="h-10 rounded-xl bg-slate-950/40 border border-slate-700/20 px-3 text-[12px]" placeholder="Alt m" inputmode="numeric" />
+            <input id="windDir" class="h-10 rounded-xl bg-slate-950/40 border border-slate-700/20 px-3 text-[12px]" placeholder="Dir FROM °" inputmode="numeric" />
+            <input id="windSpd" class="h-10 rounded-xl bg-slate-950/40 border border-slate-700/20 px-3 text-[12px]" placeholder="km/h" inputmode="numeric" />
           </div>
           <div class="mt-2 flex gap-2">
-            <button id="btnWindAddManual" class="flex-1 h-11 rounded-2xl bg-indigo-500/15 border border-indigo-400/25 text-indigo-100 text-[12px] font-semibold">
+            <button id="btnWindAddManual" class="flex-1 h-11 rounded-2xl border border-indigo-400/25 bg-indigo-500/12 text-indigo-100 text-[12px] font-semibold">
               <i class="fa-solid fa-plus mr-2"></i>Hinzufügen
             </button>
-            <button id="btnWindClear" class="h-11 px-3 rounded-2xl bg-rose-500/15 border border-rose-400/25 text-rose-100 text-[12px] font-semibold">
+            <button id="btnWindClear" class="h-11 px-3 rounded-2xl border border-rose-400/25 bg-rose-500/12 text-rose-100 text-[12px] font-semibold">
               <i class="fa-solid fa-trash mr-2"></i>Leeren
             </button>
           </div>
         </div>
 
-        <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/20">
+        <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/15">
           <div class="text-[12px] font-semibold">KML Overlays</div>
           <div class="text-[11px] text-slate-200/70">Importiere KML (Lufträume). Klick zeigt Infobox.</div>
           <div class="mt-2">
-            <label class="h-11 px-3 rounded-2xl bg-slate-900/35 border border-slate-700/25 text-slate-100 text-[12px] font-semibold flex items-center justify-center gap-2 cursor-pointer">
+            <label class="h-11 px-3 rounded-2xl btn text-slate-100 text-[12px] font-semibold flex items-center justify-center gap-2 cursor-pointer">
               <i class="fa-solid fa-file-arrow-up"></i>KML Import
               <input id="kmlFile" type="file" accept=".kml,application/vnd.google-earth.kml+xml,application/xml,text/xml" class="hidden" />
             </label>
@@ -1150,10 +1113,10 @@
           </div>
         </div>
 
-        <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/20">
+        <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/15">
           <div class="text-[12px] font-semibold">PWA / „Wie App“</div>
           <div class="text-[11px] text-slate-200/70">
-            Für „ohne Browser-UI“: auf Android über Chrome-Menü → „Zum Startbildschirm hinzufügen“ installieren (dann startet sie als Standalone).
+            Android: Chrome → „Zum Startbildschirm hinzufügen“ / „Installieren“. Dann startet sie als Standalone ohne Browser-UI.
           </div>
         </div>
       </div>
@@ -1163,19 +1126,19 @@
   function renderTabArchiv() {
     const el = document.getElementById("tab_archiv");
     const items = STATE.archive.slice().reverse().slice(0, 20).map(a => `
-      <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/20">
+      <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/15">
         <div class="flex items-center gap-2">
           <div class="text-[12px] font-semibold flex-1 truncate">${escHtml(a.title || "Fahrt")}</div>
-          <button data-action="archShow" data-id="${escHtml(a.id)}" class="h-9 px-3 rounded-xl bg-slate-900/35 border border-slate-700/25 text-[12px] font-semibold">
+          <button data-action="archShow" data-id="${escHtml(a.id)}" class="h-9 px-3 rounded-xl btn text-[12px] font-semibold">
             <i class="fa-solid fa-eye mr-2"></i>Anzeigen
           </button>
         </div>
         <div class="mt-1 text-[11px] text-slate-200/70">${escHtml(fmtTime(a.startedTs))} – ${escHtml(fmtTime(a.endedTs))} · Track: ${a.track?.length||0} · Marker: ${a.markers?.length||0}</div>
         <div class="mt-2 grid grid-cols-2 gap-2">
-          <button data-action="archKml" data-id="${escHtml(a.id)}" class="h-10 rounded-2xl bg-sky-500/15 border border-sky-400/25 text-sky-100 text-[12px] font-semibold">
+          <button data-action="archKml" data-id="${escHtml(a.id)}" class="h-10 rounded-2xl border border-sky-400/25 bg-sky-500/12 text-sky-100 text-[12px] font-semibold">
             <i class="fa-solid fa-file-arrow-down mr-2"></i>KML Export
           </button>
-          <button data-action="archDel" data-id="${escHtml(a.id)}" class="h-10 rounded-2xl bg-rose-500/15 border border-rose-400/25 text-rose-100 text-[12px] font-semibold">
+          <button data-action="archDel" data-id="${escHtml(a.id)}" class="h-10 rounded-2xl border border-rose-400/25 bg-rose-500/12 text-rose-100 text-[12px] font-semibold">
             <i class="fa-solid fa-trash mr-2"></i>Löschen
           </button>
         </div>
@@ -1184,11 +1147,11 @@
 
     el.innerHTML = `
       <div class="space-y-2">
-        <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/20">
+        <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/15">
           <div class="text-[12px] font-semibold">Archiv</div>
           <div class="text-[11px] text-slate-200/70">Beendete Fahrten – Export enthält Track (mit Höhe) + Marker.</div>
         </div>
-        ${items || `<div class="p-3 rounded-2xl bg-slate-900/25 border border-slate-700/20 text-[12px] text-slate-200/70">Noch keine Fahrten im Archiv.</div>`}
+        ${items || `<div class="p-3 rounded-2xl bg-slate-900/25 border border-slate-700/15 text-[12px] text-slate-200/70">Noch keine Fahrten im Archiv.</div>`}
       </div>
     `;
   }
@@ -1335,7 +1298,6 @@
       taskLayerGroup.addLayer(mk);
     }
 
-    // 3DT donut
     if (def.short === "3DT") {
       const c = pts["C"];
       if (c?.lat!=null && c?.lon!=null) {
@@ -1356,7 +1318,6 @@
       }
     }
 
-    // ANG A->B line, LRN polygon
     if (def.short === "ANG") {
       const A = pts["A"], B = pts["B"];
       if (A?.lat!=null && B?.lat!=null) {
@@ -1378,7 +1339,7 @@
         <div class="w-9 h-9 rounded-2xl bg-indigo-500/15 border border-indigo-400/30 grid place-items-center shadow-lg">
           <i class="fa-solid fa-location-dot text-indigo-100"></i>
         </div>
-        <div class="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] px-2 py-0.5 rounded-full bg-slate-950/70 border border-slate-700/30 text-slate-100">
+        <div class="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] px-2 py-0.5 rounded-full bg-slate-950/75 border border-slate-700/25 text-slate-100">
           ${escHtml(label)}
         </div>
       </div>
@@ -1419,14 +1380,16 @@
 
     t.updatedTs = Date.now();
     b.updatedTs = Date.now();
-    saveToStorage();
+    STORAGE.save();
   }
 
   function startPickMode(briefingId, taskId, pointKey, label) {
     STATE.ui.picking = { briefingId, taskId, pointKey, label };
-    // Make planning intuitive: collapse panel so map is free
-    setSheetState("collapsed");
-    setStatus(`Punkt setzen: ${label} · Tippe in die Karte.`, "hint", false);
+    // Make map the focus: switch drawer to rail (still accessible)
+    setDrawerRail(true);
+    setDrawerHidden(false);
+    setStatus(`Punkt setzen: ${label} · Tippe auf die Karte.`, "hint", false);
+    renderAll();
   }
 
   function handlePickedPoint(lat, lon) {
@@ -1437,9 +1400,34 @@
     STATE.ui.picking = null;
 
     setStatus(`Punkt gesetzt: ${pick.label} → ${fmtLatLon(lat, lon)}`, "ok");
-    // Expand back to continue editing
-    setSheetState("expanded");
+    // keep rail, user often wants to place multiple points quickly
     renderAll();
+  }
+
+  function pickBestWindLayer(desiredBearingDeg) {
+    const prof = STATE.wind.profile || [];
+    if (!prof.length) return null;
+
+    let best = null;
+    let bestScore = Infinity;
+
+    for (const w of prof) {
+      if (!isFinite(w.speedKmh) || !isFinite(w.dirFromDeg)) continue;
+      const drift = degNormalize(w.dirFromDeg + 180);
+      const a = degDiff(drift, desiredBearingDeg);
+      const speedPenalty = (w.speedKmh < 6) ? (6 - w.speedKmh) * 2.5 : 0;
+      const score = a + speedPenalty;
+      if (score < bestScore) { bestScore = score; best = w; }
+    }
+    return best;
+  }
+
+  function buildAltRecommendation(targetAltM, currentAltM) {
+    const delta = targetAltM - currentAltM;
+    if (!isFinite(delta)) return "—";
+    if (Math.abs(delta) < 25) return `Layer passt: ~${Math.round(targetAltM)} m halten`;
+    if (delta > 0) return `Steigen auf ~${Math.round(targetAltM)} m (+${Math.round(delta)} m)`;
+    return `Sinken auf ~${Math.round(targetAltM)} m (${Math.round(delta)} m)`;
   }
 
   function computeNav() {
@@ -1497,32 +1485,6 @@
 
     const line = `${fmtNum(metersToKm(dM), 2)} km · Kurs ${fmtNum(brg, 0)}°${extra}`;
     return { title, line, bestLayer, recText };
-  }
-
-  function pickBestWindLayer(desiredBearingDeg) {
-    const prof = STATE.wind.profile || [];
-    if (!prof.length) return null;
-
-    let best = null;
-    let bestScore = Infinity;
-
-    for (const w of prof) {
-      if (!isFinite(w.speedKmh) || !isFinite(w.dirFromDeg)) continue;
-      const drift = degNormalize(w.dirFromDeg + 180);
-      const a = degDiff(drift, desiredBearingDeg);
-      const speedPenalty = (w.speedKmh < 6) ? (6 - w.speedKmh) * 2.5 : 0;
-      const score = a + speedPenalty;
-      if (score < bestScore) { bestScore = score; best = w; }
-    }
-    return best;
-  }
-
-  function buildAltRecommendation(targetAltM, currentAltM) {
-    const delta = targetAltM - currentAltM;
-    if (!isFinite(delta)) return "—";
-    if (Math.abs(delta) < 25) return `Layer passt: ~${Math.round(targetAltM)} m halten`;
-    if (delta > 0) return `Steigen auf ~${Math.round(targetAltM)} m (+${Math.round(delta)} m)`;
-    return `Sinken auf ~${Math.round(targetAltM)} m (${Math.round(delta)} m)`;
   }
 
   // GPS
@@ -1586,9 +1548,7 @@
 
       renderCockpit();
       renderWindPanel();
-    } catch (e) {
-      console.warn("GPS fix error:", e);
-    }
+    } catch (e) { console.warn("GPS fix error:", e); }
   }
 
   function onGpsErr(e) {
@@ -1613,7 +1573,6 @@
       params.set("past_hours", "1");
       params.set("forecast_hours", "6");
 
-      // Try both naming variants used by Open-Meteo over time
       const hourlyVars = [];
       for (const lvl of OPEN_METEO.levels) {
         hourlyVars.push(`wind_speed_${lvl.key}`);
@@ -1621,7 +1580,6 @@
         hourlyVars.push(`windspeed_${lvl.key}`);
         hourlyVars.push(`winddirection_${lvl.key}`);
       }
-      // de-dupe
       params.set("hourly", Array.from(new Set(hourlyVars)).join(","));
 
       const url = `${OPEN_METEO.endpoint}?${params.toString()}`;
@@ -1664,7 +1622,7 @@
       STATE.wind.lastUpdatedTs = Date.now();
       STATE.wind.lastError = null;
 
-      saveToStorage();
+      STORAGE.save();
       renderWindPanel();
       setStatus("Windprofil aktualisiert (Open-Meteo).", "ok");
     } catch (e) {
@@ -1711,7 +1669,7 @@
       briefingSnapshot: STATE.flight.briefingSnapshot
     };
     STATE.archive.push(entry);
-    saveToStorage();
+    STORAGE.save();
 
     STATE.flight.briefingSnapshot = null;
     STATE.flight.track = [];
@@ -1732,7 +1690,6 @@
 
     STATE.flight.markers.push({ lat: pos.lat, lon: pos.lon, ts: Date.now(), color: key });
 
-    // Draw on map as small circle marker
     const c = MARKER_COLORS[key]?.hex || "#22c55e";
     L.circleMarker([pos.lat, pos.lon], { radius: 7, color: c, fillColor: c, fillOpacity: 0.85, weight: 2 })
       .addTo(taskLayerGroup);
@@ -1748,7 +1705,7 @@
     const b = { id: uid("brief"), title, createdTs: Date.now(), updatedTs: Date.now(), tasks: [] };
     STATE.briefings.list.push(b);
     STATE.briefings.selectedId = b.id;
-    saveToStorage();
+    STORAGE.save();
     renderAll();
     setStatus(`Briefing erstellt: ${title}`, "ok");
   }
@@ -1759,7 +1716,7 @@
     if (!title) return;
     b.title = title;
     b.updatedTs = Date.now();
-    saveToStorage();
+    STORAGE.save();
     renderAll();
     setStatus("Briefing umbenannt.", "ok");
   }
@@ -1769,7 +1726,7 @@
     if (!confirm(`Briefing "${b.title}" löschen?`)) return;
     STATE.briefings.list = STATE.briefings.list.filter(x => x.id !== b.id);
     STATE.briefings.selectedId = STATE.briefings.list[0]?.id || null;
-    saveToStorage();
+    STORAGE.save();
     renderAll();
     setStatus("Briefing gelöscht.", "ok");
   }
@@ -1780,7 +1737,7 @@
     const d = TASK_LIBRARY[0];
     b.tasks.push({ id: uid("task"), short: d.short, cia: d.cia, markerColor: "", points: {}, targets: [], fields: {} });
     b.updatedTs = Date.now();
-    saveToStorage();
+    STORAGE.save();
     renderAll();
     setStatus("Aufgabe hinzugefügt. Jetzt Punkte setzen.", "hint");
   }
@@ -1790,7 +1747,7 @@
     if (!b) return;
     b.tasks = (b.tasks || []).filter(t => t.id !== taskId);
     b.updatedTs = Date.now();
-    saveToStorage();
+    STORAGE.save();
     renderAll();
     setStatus("Aufgabe entfernt.", "ok");
   }
@@ -1816,7 +1773,7 @@
 
     t.updatedTs = Date.now();
     b.updatedTs = Date.now();
-    saveToStorage();
+    STORAGE.save();
     renderAll();
     setStatus(`Task geändert: ${def.cia} ${def.short}`, "ok");
   }
@@ -1829,20 +1786,19 @@
     t.markerColor = colorKey || "";
     t.updatedTs = Date.now();
     b.updatedTs = Date.now();
-    saveToStorage();
+    STORAGE.save();
     renderAll();
   }
 
-  // HWZ targets
+  // HWZ
   function addHwzTarget(briefingId, taskId) {
     const b = getBriefingById(briefingId);
     const t = b?.tasks?.find(x => x.id === taskId);
     if (!t) return;
     if (!Array.isArray(t.targets)) t.targets = [];
     t.targets.push({ lat: null, lon: null });
-    t.updatedTs = Date.now();
-    b.updatedTs = Date.now();
-    saveToStorage();
+    t.updatedTs = Date.now(); b.updatedTs = Date.now();
+    STORAGE.save();
     renderAll();
     setStatus("HWZ Ziel hinzugefügt. „Setzen“ drücken.", "hint");
   }
@@ -1851,9 +1807,8 @@
     const t = b?.tasks?.find(x => x.id === taskId);
     if (!t || !Array.isArray(t.targets)) return;
     t.targets.splice(idx, 1);
-    t.updatedTs = Date.now();
-    b.updatedTs = Date.now();
-    saveToStorage();
+    t.updatedTs = Date.now(); b.updatedTs = Date.now();
+    STORAGE.save();
     renderAll();
     setStatus("HWZ Ziel gelöscht.", "ok");
   }
@@ -1904,7 +1859,7 @@
       STATE.briefings.list.push(...merged);
       if (!STATE.briefings.selectedId && STATE.briefings.list.length) STATE.briefings.selectedId = STATE.briefings.list[0].id;
 
-      saveToStorage();
+      STORAGE.save();
       renderAll();
       setStatus(`${merged.length} Briefing(s) importiert.`, "ok");
     } catch (e) {
@@ -2023,7 +1978,7 @@
   function setSimEnabled(on) {
     STATE.settings.simEnabled = !!on;
     if (!STATE.settings.simEnabled) STATE.sim.active = false;
-    saveToStorage();
+    STORAGE.save();
     renderAll();
   }
 
@@ -2093,17 +2048,14 @@
       updateTrajectoryLine();
       renderCockpit();
       renderWindPanel();
+      renderSimControls();
     }
   }
 
   // Wake lock
   async function requestWakeLock() {
-    try {
-      if (!("wakeLock" in navigator)) return;
-      wakeLock = await navigator.wakeLock.request("screen");
-    } catch (e) {
-      console.warn("WakeLock failed:", e);
-    }
+    try { if (!("wakeLock" in navigator)) return; wakeLock = await navigator.wakeLock.request("screen"); }
+    catch (e) { console.warn("WakeLock failed:", e); }
   }
   async function releaseWakeLock() {
     try { if (wakeLock) await wakeLock.release(); } catch {}
@@ -2114,23 +2066,30 @@
   // 6) Event-Listener & Initialisierung (window.onload am Ende)
   // ============================================================
   function bindEvents() {
-    // Panel / sheet
-    document.getElementById("btnPanel").addEventListener("click", () => {
-      // toggle between expanded and collapsed
-      setSheetState(STATE.ui.sheet === "expanded" ? "collapsed" : "expanded");
+    // Drawer buttons
+    document.getElementById("btnDrawerToggle").addEventListener("click", () => {
+      // cycle: shown/open -> rail -> hidden -> shown/open
+      if (STATE.ui.drawer.hidden) { setDrawerHidden(false); setDrawerRail(false); }
+      else if (STATE.ui.drawer.rail) { setDrawerRail(false); }
+      else { setDrawerRail(true); }
+      renderAll();
     });
-
-    document.getElementById("btnSheetToggle").addEventListener("click", () => {
-      setSheetState(STATE.ui.sheet === "expanded" ? "collapsed" : "expanded");
+    document.getElementById("btnDrawerRail").addEventListener("click", () => {
+      setDrawerRail(!STATE.ui.drawer.rail);
+      setDrawerHidden(false);
+      renderAll();
+    });
+    document.getElementById("btnDrawerHide").addEventListener("click", () => {
+      setDrawerHidden(true);
+      renderAll();
     });
 
     // Tabs
     document.querySelectorAll(".tabBtn").forEach(btn => {
       btn.addEventListener("click", () => {
         STATE.ui.activeTab = btn.dataset.tab;
-        // if user is picking, keep collapsed
-        if (!STATE.ui.picking && STATE.ui.sheet === "collapsed") setSheetState("expanded");
-        renderSheet();
+        setDrawerHidden(false);
+        renderAll();
       });
     });
 
@@ -2142,7 +2101,6 @@
       setStatus("Zentriert & Follow aktiv.", "ok");
       renderAll();
     });
-
     document.getElementById("btnLayer").addEventListener("click", switchBaseLayer);
     document.getElementById("btnFinish").addEventListener("click", stopFlight);
 
@@ -2181,24 +2139,11 @@
         t.value = "";
         return;
       }
-      if (t.id === "tglSim") {
-        setSimEnabled(t.checked);
-        return;
-      }
-      if (t.id === "kmlFile" && t.files && t.files[0]) {
-        importKmlFile(t.files[0]);
-        t.value = "";
-        return;
-      }
+      if (t.id === "tglSim") { setSimEnabled(t.checked); return; }
+      if (t.id === "kmlFile" && t.files && t.files[0]) { importKmlFile(t.files[0]); t.value = ""; return; }
 
-      if (t.dataset.action === "taskType") {
-        changeTaskType(t.dataset.b, t.dataset.t, t.value);
-        return;
-      }
-      if (t.dataset.action === "taskMarkerColor") {
-        setTaskMarkerColor(t.dataset.b, t.dataset.t, t.value);
-        return;
-      }
+      if (t.dataset.action === "taskType") { changeTaskType(t.dataset.b, t.dataset.t, t.value); return; }
+      if (t.dataset.action === "taskMarkerColor") { setTaskMarkerColor(t.dataset.b, t.dataset.t, t.value); return; }
       if (t.dataset.action === "fieldBool") {
         const b = getBriefingById(t.dataset.b);
         const task = b?.tasks?.find(x => x.id === t.dataset.t);
@@ -2206,7 +2151,7 @@
           task.fields = task.fields || {};
           task.fields[t.dataset.k] = !!t.checked;
           task.updatedTs = Date.now(); b.updatedTs = Date.now();
-          saveToStorage(); renderAll();
+          STORAGE.save(); renderAll();
         }
         return;
       }
@@ -2224,7 +2169,7 @@
           const v = Number(String(t.value).replace(",", "."));
           task.fields[t.dataset.k] = isFinite(v) ? v : null;
           task.updatedTs = Date.now(); b.updatedTs = Date.now();
-          saveToStorage();
+          STORAGE.save();
           renderMapTasks(); renderWindPanel();
         }
       }
@@ -2236,7 +2181,7 @@
           task.fields = task.fields || {};
           task.fields[t.dataset.k] = t.value;
           task.updatedTs = Date.now(); b.updatedTs = Date.now();
-          saveToStorage();
+          STORAGE.save();
         }
       }
     });
@@ -2245,7 +2190,6 @@
       const btn = e.target?.closest?.("[data-action]") || null;
       const id = e.target?.id;
 
-      // direct buttons by id
       if (id === "btnBriefingNew") { createNewBriefing(); return; }
       if (id === "btnBriefingRename") { renameBriefing(); return; }
       if (id === "btnBriefingDelete") { deleteBriefing(); return; }
@@ -2253,11 +2197,7 @@
       if (id === "btnAddTask") { addTaskToBriefing(); return; }
       if (id === "btnStartFlight") { startFlight(); return; }
 
-      if (id === "btnLiveCenter") {
-        const pos = getCurrentPosition();
-        if (pos) map.panTo([pos.lat, pos.lon], { animate:true, duration:0.25 });
-        return;
-      }
+      if (id === "btnLiveCenter") { const pos = getCurrentPosition(); if (pos) map.panTo([pos.lat, pos.lon], { animate:true, duration:0.25 }); return; }
       if (id === "btnLiveToggleFollow") { STATE.ui.follow = !STATE.ui.follow; renderAll(); return; }
       if (id === "btnLiveStop") { stopFlight(); return; }
       if (id === "btnLiveKmlNow") { if (STATE.flight.active) exportKmlForFlight(STATE.flight, STATE.flight.briefingSnapshot?.title || "flight"); return; }
@@ -2274,7 +2214,7 @@
         STATE.wind.profile.sort((a,b)=>a.altM-b.altM);
         STATE.wind.lastSource = "Manuell";
         STATE.wind.lastUpdatedTs = Date.now();
-        saveToStorage();
+        STORAGE.save();
         document.getElementById("windAlt").value = "";
         document.getElementById("windDir").value = "";
         document.getElementById("windSpd").value = "";
@@ -2287,13 +2227,12 @@
         STATE.wind.lastSource = "—";
         STATE.wind.lastUpdatedTs = null;
         STATE.wind.lastError = null;
-        saveToStorage();
+        STORAGE.save();
         renderAll();
         setStatus("Windprofil geleert.", "ok");
         return;
       }
 
-      // delegated by data-action
       if (!btn) return;
       const action = btn.dataset.action;
 
@@ -2306,64 +2245,42 @@
       if (action === "kmlToggle") { toggleKmlOverlay(btn.dataset.id); return; }
       if (action === "kmlRemove") { removeKmlOverlay(btn.dataset.id); return; }
 
-      if (action === "archKml") {
-        const a = STATE.archive.find(x => x.id === btn.dataset.id);
-        if (a) exportKmlForFlight(a, a.title || "flight");
-        return;
-      }
-      if (action === "archDel") {
-        STATE.archive = STATE.archive.filter(x => x.id !== btn.dataset.id);
-        saveToStorage();
-        renderAll();
-        setStatus("Archiv-Eintrag gelöscht.", "ok");
-        return;
-      }
+      if (action === "archKml") { const a = STATE.archive.find(x => x.id === btn.dataset.id); if (a) exportKmlForFlight(a, a.title || "flight"); return; }
+      if (action === "archDel") { STATE.archive = STATE.archive.filter(x => x.id !== btn.dataset.id); STORAGE.save(); renderAll(); setStatus("Archiv-Eintrag gelöscht.", "ok"); return; }
       if (action === "archShow") {
         const a = STATE.archive.find(x => x.id === btn.dataset.id);
-        if (a && a.track?.length) {
-          const bounds = L.latLngBounds(a.track.map(p => [p.lat, p.lon]));
-          map.fitBounds(bounds.pad(0.2));
-          setStatus("Archiv: Track zentriert.", "ok");
-        }
+        if (a && a.track?.length) { const bounds = L.latLngBounds(a.track.map(p => [p.lat, p.lon])); map.fitBounds(bounds.pad(0.2)); setStatus("Archiv: Track zentriert.", "ok"); }
         return;
       }
     });
   }
 
   window.onload = () => {
-    loadFromStorage();
+    STORAGE.load();
     initMap();
     bindEvents();
 
-    // seed briefing
     if (!STATE.briefings.list.length) {
       STATE.briefings.list.push({
         id: uid("brief"),
         title: "Morgenfahrt",
         createdTs: Date.now(),
         updatedTs: Date.now(),
-        tasks: [{
-          id: uid("task"),
-          short: "JDG",
-          cia: "15.2",
-          markerColor: "",
-          points: {},
-          targets: [],
-          fields: {}
-        }]
+        tasks: [{ id: uid("task"), short: "JDG", cia: "15.2", markerColor: "", points: {}, targets: [], fields: {} }]
       });
       STATE.briefings.selectedId = STATE.briefings.list[0].id;
-      saveToStorage();
+      STORAGE.save();
     }
 
     setWindCollapsed(false);
-    setSheetState("expanded");
+    setDrawerHidden(false);
+    setDrawerRail(false);
 
     startGps();
     startSimLoop();
 
     renderAll();
-    setStatus("Bereit: Plane Briefing im Panel unten. Keine Toasts auf der Karte.", "ok");
+    setStatus("Bereit: Panel rechts (dock) + Wind links. Karte bleibt nutzbar.", "ok");
   };
   </script>
 </body>
