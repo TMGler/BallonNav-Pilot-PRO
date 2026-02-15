@@ -10,7 +10,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <title>CompNavAir</title>
 
-  <!-- Single-file PWA manifest (data URI) -->
+  <!-- Single-file PWA manifest -->
   <link rel="manifest" href='data:application/manifest%2Bjson,%7B%22name%22%3A%22CompNavAir%22%2C%22short_name%22%3A%22CompNavAir%22%2C%22start_url%22%3A%22.%2F%22%2C%22scope%22%3A%22.%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230b1220%22%2C%22theme_color%22%3A%22%230b1220%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%2520xmlns%253D%2527http%253A%252F%252Fwww.w3.org%252F2000%252Fsvg%2527%2520viewBox%253D%25270%25200%2520200%2520200%2527%253E%253Crect%2520width%253D%2527200%2527%2520height%253D%2527200%2527%2520rx%253D%252740%2527%2520fill%253D%2527%230b1220%2527%252F%253E%253Cpath%2520d%253D%2527M100%252020c-28%25200-50%252022-50%252050%25200%252019%252010%252036%252026%252045l-4%252031h56h56l-4-31c16-9%252026-26%252026-45%25200-28-22-50-50-50z%2527%2520fill%253D%2527%2338bdf8%2527%252F%253E%253Crect%2520x%253D%252775%2527%2520y%253D%2527132%2527%2520width%253D%252750%2527%2520height%253D%252740%2527%2520rx%253D%25278%2527%2520fill%253D%2527%23f59e0b%2527%252F%253E%253C%252Fsvg%253E%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D' />
 
   <!-- Tailwind -->
@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
-  <!-- Leaflet Omnivore (KML import) -->
+  <!-- Leaflet Omnivore (KML) -->
   <script src="https://unpkg.com/leaflet-omnivore@0.3.4/leaflet-omnivore.min.js"></script>
 
   <!-- Font Awesome -->
@@ -36,24 +36,16 @@
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
     }
-    /* prevent iOS rubber band scroll */
     #app { height: 100dvh; }
     .safe-top { padding-top: env(safe-area-inset-top); }
     .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 
-    /* Leaflet on dark background */
     .leaflet-control-attribution { display: none; }
     .leaflet-container { background: #0b1220; }
 
-    /* Drawer: map should remain active outside drawer */
-    #drawerWrap { pointer-events: none; }
-    #drawer { pointer-events: auto; }
-
-    /* Small toast */
-    .toast { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
-
-    /* Wind panel */
     .glass { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+
+    /* Wind */
     .wind-arrow {
       width: 34px; height: 34px;
       border-radius: 9999px;
@@ -63,7 +55,13 @@
     }
     .wind-arrow i { font-size: 14px; }
 
-    /* KML popup */
+    /* Bottom sheet states */
+    #sheet { transition: transform .18s ease, height .18s ease; }
+    .sheet-collapsed { height: 68px !important; }
+    .sheet-expanded { height: min(62vh, 560px) !important; }
+    .sheet-hidden { transform: translateY(120%); }
+
+    /* KML popup styling */
     .kml-popup .leaflet-popup-content-wrapper {
       background: rgba(2, 6, 23, .92);
       color: #e5e7eb;
@@ -82,8 +80,8 @@
       <div class="px-3 pt-2">
         <div class="glass bg-slate-950/60 border border-slate-700/30 rounded-2xl shadow-xl">
           <div class="h-14 px-3 flex items-center gap-2">
-            <button id="btnMenu" class="w-10 h-10 rounded-xl bg-slate-900/50 border border-slate-700/30 active:scale-[0.98]">
-              <i class="fa-solid fa-bars"></i>
+            <button id="btnPanel" class="w-10 h-10 rounded-xl bg-slate-900/50 border border-slate-700/30 active:scale-[0.98]" title="Panel">
+              <i class="fa-solid fa-sliders"></i>
             </button>
 
             <div class="flex-1 min-w-0">
@@ -93,10 +91,12 @@
                   GPS: —
                 </span>
               </div>
-              <div id="subLine" class="text-[11px] text-slate-300/80 truncate">Briefing wählen oder erstellen – dann Fahrt starten.</div>
+              <div id="statusLine" class="text-[11px] text-slate-200/80 truncate">
+                Briefing planen → Start drücken, wenn du willst (kein Auto-Start).
+              </div>
             </div>
 
-            <button id="btnFollow" class="w-10 h-10 rounded-xl bg-slate-900/50 border border-slate-700/30 active:scale-[0.98]" title="Follow">
+            <button id="btnFollow" class="w-10 h-10 rounded-xl bg-slate-900/50 border border-slate-700/30 active:scale-[0.98]" title="Zentrieren/Folgen">
               <i class="fa-solid fa-location-crosshairs"></i>
             </button>
 
@@ -115,28 +115,6 @@
     <!-- MAP -->
     <main class="relative flex-1 min-h-0">
       <div id="map" class="absolute inset-0 z-0"></div>
-
-      <!-- Small NAV TOAST (top center) -->
-      <div id="navToast" class="toast hidden absolute z-20 left-1/2 -translate-x-1/2 top-20 safe-top">
-        <div class="glass bg-slate-950/55 border border-slate-700/30 rounded-2xl px-3 py-2 shadow-xl">
-          <div class="text-[12px] font-semibold" id="navToastTitle">—</div>
-          <div class="text-[12px] text-slate-200/90" id="navToastLine">—</div>
-        </div>
-      </div>
-
-      <!-- MAP PICK MODE STRIP -->
-      <div id="pickStrip" class="hidden absolute z-20 left-1/2 -translate-x-1/2 top-36">
-        <div class="glass bg-indigo-500/15 border border-indigo-400/30 rounded-2xl px-3 py-2 shadow-xl flex items-center gap-2">
-          <i class="fa-solid fa-crosshairs text-indigo-200"></i>
-          <div class="text-[12px]">
-            <div class="font-semibold" id="pickLabel">Punkt setzen…</div>
-            <div class="text-slate-200/80" id="pickHint">Tippe in die Karte, um Koordinate zu setzen.</div>
-          </div>
-          <button id="btnPickCancel" class="ml-2 w-9 h-9 rounded-xl bg-slate-900/40 border border-slate-700/30">
-            <i class="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-      </div>
 
       <!-- WIND PANEL (left edge, collapsible) -->
       <div id="windPanel" class="absolute z-20 left-2 top-20 safe-top">
@@ -160,7 +138,6 @@
           </div>
 
           <div class="px-2 pb-2">
-            <!-- Pointer + key layer -->
             <div class="flex items-center gap-2 p-2 rounded-xl bg-slate-900/25 border border-slate-700/20">
               <div class="wind-arrow">
                 <i id="windArrowIcon" class="fa-solid fa-location-arrow"></i>
@@ -171,7 +148,6 @@
               </div>
             </div>
 
-            <!-- Small layer table -->
             <div class="mt-2 rounded-xl border border-slate-700/20 overflow-hidden">
               <div class="px-2 py-1 text-[11px] bg-slate-900/30 text-slate-200/80 flex justify-between">
                 <span>Höhe</span><span>Richtung / Speed</span>
@@ -179,7 +155,6 @@
               <div id="windRows" class="divide-y divide-slate-700/20"></div>
             </div>
 
-            <!-- Nav block inside wind panel (requested) -->
             <div class="mt-2 p-2 rounded-xl bg-slate-900/25 border border-slate-700/20">
               <div class="text-[11px] text-slate-200/80">Navigation</div>
               <div class="text-[12px] font-semibold truncate" id="navInsideTitle">—</div>
@@ -196,7 +171,7 @@
       </div>
 
       <!-- SIM CONTROLS (left) -->
-      <div id="simControls" class="hidden absolute z-20 left-2 bottom-28 safe-bottom">
+      <div id="simControls" class="hidden absolute z-20 left-2 bottom-[118px] safe-bottom">
         <div class="glass bg-slate-950/55 border border-slate-700/30 rounded-2xl shadow-xl p-2 flex flex-col gap-2">
           <button id="btnBurn" class="w-24 h-14 rounded-2xl bg-amber-500/15 border border-amber-400/25 text-amber-100 font-semibold active:scale-[0.98]">
             <div class="text-[12px]"><i class="fa-solid fa-fire-flame-curved mr-2"></i>Burner</div>
@@ -209,38 +184,37 @@
         </div>
       </div>
 
-      <!-- DRAWER (right) - no blocking backdrop -->
-      <div id="drawerWrap" class="fixed inset-0 z-40">
-        <div id="drawer" class="absolute right-2 top-20 bottom-24 safe-top safe-bottom w-[300px] max-w-[84vw] hidden">
-          <div class="glass bg-slate-950/60 border border-slate-700/30 rounded-2xl shadow-2xl h-full flex flex-col overflow-hidden">
-            <div class="px-2 pt-2 pb-1 flex items-center gap-2 border-b border-slate-700/20">
-              <div class="font-semibold text-[13px] flex-1 truncate" id="drawerTitle">Briefing</div>
-              <button id="btnDrawerClose" class="w-9 h-9 rounded-xl bg-slate-900/40 border border-slate-700/30">
-                <i class="fa-solid fa-xmark"></i>
+      <!-- BOTTOM SHEET PANEL (planning + live + setup + archive) -->
+      <div id="sheet" class="absolute z-40 left-3 right-3 bottom-[94px] sheet-expanded">
+        <div class="glass bg-slate-950/65 border border-slate-700/30 rounded-3xl shadow-2xl h-full overflow-hidden flex flex-col">
+          <div class="px-3 pt-2 pb-1">
+            <div class="flex items-center justify-between">
+              <button id="btnSheetToggle" class="w-full flex items-center justify-center gap-2 py-1">
+                <span class="w-10 h-1.5 rounded-full bg-slate-300/30"></span>
               </button>
             </div>
 
-            <div class="px-2 py-2 flex gap-2">
-              <button data-tab="briefing" class="tabBtn flex-1 h-10 rounded-xl bg-indigo-500/15 border border-indigo-400/25 text-indigo-100 text-[12px] font-semibold">
+            <div class="mt-1 flex gap-2">
+              <button class="tabBtn flex-1 h-10 rounded-2xl bg-indigo-500/15 border border-indigo-400/25 text-indigo-100 text-[12px] font-semibold" data-tab="briefing">
                 <i class="fa-solid fa-clipboard-list mr-2"></i>Briefing
               </button>
-              <button data-tab="live" class="tabBtn flex-1 h-10 rounded-xl bg-slate-900/30 border border-slate-700/25 text-slate-100 text-[12px] font-semibold">
+              <button class="tabBtn flex-1 h-10 rounded-2xl bg-slate-900/30 border border-slate-700/25 text-slate-100 text-[12px] font-semibold" data-tab="live">
                 <i class="fa-solid fa-plane-up mr-2"></i>Live
               </button>
-              <button data-tab="setup" class="tabBtn flex-1 h-10 rounded-xl bg-slate-900/30 border border-slate-700/25 text-slate-100 text-[12px] font-semibold">
+              <button class="tabBtn flex-1 h-10 rounded-2xl bg-slate-900/30 border border-slate-700/25 text-slate-100 text-[12px] font-semibold" data-tab="setup">
                 <i class="fa-solid fa-gear mr-2"></i>Setup
               </button>
-              <button data-tab="archiv" class="tabBtn flex-1 h-10 rounded-xl bg-slate-900/30 border border-slate-700/25 text-slate-100 text-[12px] font-semibold">
+              <button class="tabBtn flex-1 h-10 rounded-2xl bg-slate-900/30 border border-slate-700/25 text-slate-100 text-[12px] font-semibold" data-tab="archiv">
                 <i class="fa-solid fa-box-archive mr-2"></i>Archiv
               </button>
             </div>
+          </div>
 
-            <div class="flex-1 overflow-auto px-2 pb-2">
-              <div id="tab_briefing" class="tabPane"></div>
-              <div id="tab_live" class="tabPane hidden"></div>
-              <div id="tab_setup" class="tabPane hidden"></div>
-              <div id="tab_archiv" class="tabPane hidden"></div>
-            </div>
+          <div class="flex-1 overflow-auto px-3 pb-3">
+            <div id="tab_briefing" class="tabPane"></div>
+            <div id="tab_live" class="tabPane hidden"></div>
+            <div id="tab_setup" class="tabPane hidden"></div>
+            <div id="tab_archiv" class="tabPane hidden"></div>
           </div>
         </div>
       </div>
@@ -284,32 +258,20 @@
   // ============================================================
   const APP = {
     name: "CompNavAir",
-    version: "2.0.0",
-    defaultCenter: { lat: 49.302, lon: 8.451 }, // Speyer / EDRY vicinity
+    version: "2.1.0",
+    defaultCenter: { lat: 49.302, lon: 8.451 }, // Speyer/EDRY
     defaultZoom: 12,
-    gps: {
-      enableHighAccuracy: true,
-      maximumAge: 800,
-      timeout: 12000
-    },
+    gps: { enableHighAccuracy: true, maximumAge: 800, timeout: 12000 },
     smoothing: {
-      // smaller alpha => more smoothing
       minAlpha: 0.08,
       maxAlpha: 0.35,
-      maxJumpM: 350,      // ignore insane jumps when not moving
-      maxSpeedKmh: 220    // ignore impossible speed spikes
+      maxJumpM: 350,
+      maxSpeedKmh: 220
     },
-    track: {
-      minDtMs: 900,
-      minDistM: 6
-    },
-    sim: {
-      tickMs: 250,
-      climbRateMps: 2.0,
-      sinkRateMps: 1.4
-    },
+    track: { minDtMs: 900, minDistM: 6 },
+    sim: { tickMs: 250, climbRateMps: 2.0, sinkRateMps: 1.4 },
     ui: {
-      toastAutoHideMs: 3500
+      statusAutoClearMs: 4200
     }
   };
 
@@ -324,7 +286,6 @@
     url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     options: { maxZoom: 19, attribution: "" }
   };
-
   const ESRI = {
     name: "Satellit",
     url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
@@ -333,7 +294,6 @@
 
   const OPEN_METEO = {
     endpoint: "https://api.open-meteo.com/v1/forecast",
-    // pressure-level winds (balloon-friendly approximate MSL altitudes)
     levels: [
       { key: "1000hPa", altM: 110 },
       { key: "975hPa",  altM: 320 },
@@ -346,7 +306,6 @@
     ]
   };
 
-  // CIA Tasks (15.1–15.20) — minimal "required fields" model for UI
   const TASK_LIBRARY = [
     { cia: "15.1", short: "PDG", title: "Selbst gewähltes Ziel", points: [{ id: "T", label: "Ziel" }], fields: [] },
     { cia: "15.2", short: "JDG", title: "Vorgegebenes Ziel", points: [{ id: "T", label: "Ziel" }], fields: [] },
@@ -393,26 +352,27 @@
 
   const STATE = {
     ui: {
-      drawerOpen: false,
       activeTab: "briefing",
       follow: true,
-      picking: null, // { briefingId, taskId, pointKey, label }
-      windCollapsed: false
+      // picking: { briefingId, taskId, pointKey, label }
+      picking: null,
+      windCollapsed: false,
+      sheet: "expanded", // expanded | collapsed | hidden
+      statusClearTimer: null
     },
     settings: {
       simEnabled: false
     },
     gps: {
       ok: false,
-      watching: false,
-      lastRaw: null,       // {lat, lon, altM, spdKmh, hdgDeg, accM, ts}
-      lastSmooth: null,    // {lat, lon}
-      lastForVario: null,  // {altM, ts}
+      lastRaw: null,
+      lastSmooth: null,
+      lastForVario: null,
       fixCount: 0,
       err: null
     },
     sim: {
-      active: false, // sim active is tied to settings.simEnabled, but internal "active" means we are using sim position
+      active: false,
       lat: APP.defaultCenter.lat,
       lon: APP.defaultCenter.lon,
       altM: 180,
@@ -424,44 +384,37 @@
       lastTickTs: 0
     },
     wind: {
-      profile: [], // [{altM, dirFromDeg, speedKmh, ts, source}]
+      profile: [],
       lastSource: "—",
       lastUpdatedTs: null,
       lastError: null
     },
     briefings: {
-      list: [], // [{id,title,createdTs,updatedTs,tasks:[...]}]
-      selectedId: null,
-      activeId: null // snapshot used during flight
+      list: [],
+      selectedId: null
     },
     flight: {
       active: false,
       startedTs: null,
       endedTs: null,
       briefingSnapshot: null,
-      track: [],   // [{lat,lon,altM,ts}]
-      markers: []  // [{lat,lon,ts,color}]
+      track: [],
+      markers: []
     },
     kml: {
-      overlays: [] // [{id,name,layer,visible,source}]
+      overlays: []
     },
-    archive: [] // [{id,title,startedTs,endedTs,track,markers,briefingSnapshot}]
+    archive: []
   };
 
-  // Map layers
   let balloonMarker = null;
-  let balloonArrow = null;
   let trackLine = null;
-  let taskLayerGroup = null;
   let trajLine = null;
+  let taskLayerGroup = null;
   let kmlLayerGroup = null;
 
-  // Wake lock
   let wakeLock = null;
-
-  // Timers
   let simTimer = null;
-  let toastTimer = null;
 
   // ============================================================
   // 3) Helfer-Funktionen (Math, Formatting)
@@ -469,38 +422,34 @@
   function uid(prefix = "id") {
     return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`;
   }
-
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
-
   function fmtNum(v, d = 0) {
-    if (v === null || v === undefined || Number.isNaN(v)) return "—";
+    if (v === null || v === undefined || Number.isNaN(v) || !isFinite(v)) return "—";
     return Number(v).toFixed(d);
   }
-
   function fmtLatLon(lat, lon) {
     if (!isFinite(lat) || !isFinite(lon)) return "—";
     return `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
   }
-
   function fmtTime(ts) {
     try {
       const d = new Date(ts);
       return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
     } catch { return "—"; }
   }
-
   function degNormalize(d) {
     let x = d % 360;
     if (x < 0) x += 360;
     return x;
   }
-
   function degDiff(a, b) {
     const d = Math.abs(degNormalize(a) - degNormalize(b));
     return Math.min(d, 360 - d);
   }
+  function metersToKm(m) { return m / 1000; }
+  function kmhToMps(kmh) { return kmh / 3.6; }
+  function mpsToKmh(mps) { return mps * 3.6; }
 
-  // Haversine distance meters
   function distM(a, b) {
     const R = 6371000;
     const toRad = (x) => x * Math.PI / 180;
@@ -512,7 +461,6 @@
     return 2 * R * Math.asin(Math.sqrt(s));
   }
 
-  // Bearing degrees from a->b (0..360, 0=N)
   function bearingDeg(a, b) {
     const toRad = (x) => x * Math.PI / 180;
     const toDeg = (x) => x * 180 / Math.PI;
@@ -523,12 +471,46 @@
     return degNormalize(toDeg(Math.atan2(y, x)));
   }
 
-  function metersToKm(m) { return m / 1000; }
-  function mpsToKmh(mps) { return mps * 3.6; }
-  function kmhToMps(kmh) { return kmh / 3.6; }
+  function projectLatLon(lat, lon, bearing, distanceM) {
+    const R = 6371000;
+    const toRad = (x) => x * Math.PI/180;
+    const toDeg = (x) => x * 180/Math.PI;
+
+    const br = toRad(bearing);
+    const φ1 = toRad(lat);
+    const λ1 = toRad(lon);
+    const δ = distanceM / R;
+
+    const φ2 = Math.asin(Math.sin(φ1)*Math.cos(δ) + Math.cos(φ1)*Math.sin(δ)*Math.cos(br));
+    const λ2 = λ1 + Math.atan2(Math.sin(br)*Math.sin(δ)*Math.cos(φ1), Math.cos(δ)-Math.sin(φ1)*Math.sin(φ2));
+    return { lat: toDeg(φ2), lon: toDeg(λ2) };
+  }
 
   function safeJsonParse(txt, fallback) {
     try { return JSON.parse(txt); } catch { return fallback; }
+  }
+  function escHtml(str) {
+    return String(str ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function getTaskDefByShort(short) {
+    return TASK_LIBRARY.find(t => t.short === short) || null;
+  }
+  function getBriefingById(id) {
+    return STATE.briefings.list.find(b => b.id === id) || null;
+  }
+  function getSelectedBriefing() {
+    return getBriefingById(STATE.briefings.selectedId);
+  }
+
+  function structuredCloneSafe(obj) {
+    try { if ("structuredClone" in window) return structuredClone(obj); } catch {}
+    return JSON.parse(JSON.stringify(obj));
   }
 
   function saveToStorage() {
@@ -540,7 +522,6 @@
       console.warn("Storage save failed:", e);
     }
   }
-
   function loadFromStorage() {
     const b = safeJsonParse(localStorage.getItem(STORAGE_KEYS.briefings) || "[]", []);
     const a = safeJsonParse(localStorage.getItem(STORAGE_KEYS.archive) || "[]", []);
@@ -549,60 +530,6 @@
     if (Array.isArray(a)) STATE.archive = a;
     if (s && typeof s === "object") STATE.settings = { ...STATE.settings, ...s };
     if (!STATE.briefings.selectedId && STATE.briefings.list.length) STATE.briefings.selectedId = STATE.briefings.list[0].id;
-  }
-
-  function getTaskDefByShort(short) {
-    return TASK_LIBRARY.find(t => t.short === short) || null;
-  }
-
-  function getTaskDefByCIA(cia) {
-    return TASK_LIBRARY.find(t => t.cia === cia) || null;
-  }
-
-  function getBriefingById(id) {
-    return STATE.briefings.list.find(b => b.id === id) || null;
-  }
-
-  function getSelectedBriefing() {
-    return getBriefingById(STATE.briefings.selectedId);
-  }
-
-  function getCurrentPosition() {
-    if (STATE.settings.simEnabled && STATE.sim.active) {
-      return {
-        lat: STATE.sim.lat,
-        lon: STATE.sim.lon,
-        altM: STATE.sim.altM,
-        spdKmh: STATE.sim.spdKmh,
-        hdgDeg: STATE.sim.hdgDeg,
-        accM: 0,
-        ts: Date.now(),
-        source: "SIM"
-      };
-    }
-    return STATE.gps.lastRaw ? { ...STATE.gps.lastRaw, source: "GPS" } : null;
-  }
-
-  function mapToLeaf(lat, lon) { return L.latLng(lat, lon); }
-
-  function escHtml(str) {
-    return String(str ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
-  }
-
-  function showToast(title, line) {
-    const toast = document.getElementById("navToast");
-    const t = document.getElementById("navToastTitle");
-    const l = document.getElementById("navToastLine");
-    t.textContent = title || "—";
-    l.textContent = line || "";
-    toast.classList.remove("hidden");
-    if (toastTimer) clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.add("hidden"), APP.ui.toastAutoHideMs);
   }
 
   function setGpsPill(text, ok) {
@@ -614,10 +541,74 @@
     pill.classList.toggle("bg-rose-500/10", !ok);
   }
 
+  // Replaces "toast": status messages live in header line (not on the map)
+  function setStatus(message, type = "info", autoClear = true) {
+    const el = document.getElementById("statusLine");
+    if (!el) return;
+
+    const base = "text-[11px] truncate ";
+    const cls =
+      type === "error" ? "text-rose-200/90" :
+      type === "ok" ? "text-emerald-200/90" :
+      type === "hint" ? "text-sky-200/85" :
+      "text-slate-200/80";
+
+    el.className = base + cls;
+    el.textContent = message || "";
+
+    if (STATE.ui.statusClearTimer) clearTimeout(STATE.ui.statusClearTimer);
+    if (autoClear) {
+      STATE.ui.statusClearTimer = setTimeout(() => {
+        // keep a sensible default line depending on state
+        el.className = base + "text-slate-200/80";
+        el.textContent = STATE.flight.active
+          ? `Fahrt aktiv: ${(STATE.flight.briefingSnapshot?.title || "—")} · Marker & Track werden aufgezeichnet.`
+          : `Briefing planen → Start drücken, wenn du willst (kein Auto-Start).`;
+      }, APP.ui.statusAutoClearMs);
+    }
+  }
+
   function isRestrictedAirspaceName(name) {
     const s = (name || "").toUpperCase().replace(/\s+/g, "");
-    // strict tokens or embedded
     return /^EDR\d+$/.test(s) || /^ED-R\d+$/.test(s) || /EDR\d+/.test(s) || /ED-R\d+/.test(s);
+  }
+
+  function getCurrentPosition() {
+    if (STATE.settings.simEnabled && STATE.sim.active) {
+      return { lat: STATE.sim.lat, lon: STATE.sim.lon, altM: STATE.sim.altM, spdKmh: STATE.sim.spdKmh, hdgDeg: STATE.sim.hdgDeg, accM: 0, ts: Date.now(), source: "SIM" };
+    }
+    return STATE.gps.lastRaw ? { ...STATE.gps.lastRaw, source: "GPS" } : null;
+  }
+
+  function computeVarioMps(pos) {
+    if (!pos || !isFinite(pos.altM)) return 0;
+    const prev = STATE.gps.lastForVario;
+    const now = { altM: pos.altM, ts: pos.ts || Date.now() };
+    if (!prev) { STATE.gps.lastForVario = now; return 0; }
+    const dt = Math.max(1, (now.ts - prev.ts) / 1000);
+    const v = (now.altM - prev.altM) / dt;
+    STATE.gps.lastForVario = now;
+    return clamp(v, -8, 8);
+  }
+
+  function inferMarkerCount(def) {
+    if (!def) return "—";
+    if (["MDD","XDD"].includes(def.short)) return 2;
+    if (["ELB","RTA"].includes(def.short)) return 0;
+    if (["HWZ"].includes(def.short)) return "1+";
+    return 1;
+  }
+
+  function getExpectedMarkerColor() {
+    const briefing = STATE.flight.active ? STATE.flight.briefingSnapshot : getSelectedBriefing();
+    const t = briefing?.tasks?.[0];
+    if (t?.markerColor && MARKER_COLORS[t.markerColor]) return MARKER_COLORS[t.markerColor];
+    const def = getTaskDefByShort(t?.short);
+    if (!def) return MARKER_COLORS.green;
+    if (def.short === "JDG") return MARKER_COLORS.yellow;
+    if (def.short === "FIN") return MARKER_COLORS.red;
+    if (def.short === "3DT") return MARKER_COLORS.blue;
+    return MARKER_COLORS.green;
   }
 
   // ============================================================
@@ -627,7 +618,7 @@
     renderTopbar();
     renderWindPanel();
     renderCockpit();
-    renderDrawer();
+    renderSheet();
     renderMapTasks();
     renderSimControls();
   }
@@ -636,13 +627,12 @@
     const btnFinish = document.getElementById("btnFinish");
     btnFinish.classList.toggle("hidden", !STATE.flight.active);
 
-    const sub = document.getElementById("subLine");
-    if (STATE.flight.active) {
-      const b = STATE.flight.briefingSnapshot?.title || "—";
-      sub.textContent = `Fahrt aktiv: ${b} — Track & Marker werden aufgezeichnet.`;
+    if (STATE.ui.picking) {
+      setStatus(`Punkt setzen: ${STATE.ui.picking.label} · Tippe in die Karte (Panel klappt automatisch klein).`, "hint", false);
+    } else if (STATE.flight.active) {
+      setStatus(`Fahrt aktiv: ${(STATE.flight.briefingSnapshot?.title || "—")} · Marker & Track werden aufgezeichnet.`, "ok", false);
     } else {
-      const sel = getSelectedBriefing();
-      sub.textContent = sel ? `Briefing bereit: ${sel.title} — Starten, wenn du willst.` : "Erstelle ein Briefing – keine automatische Fahrt.";
+      setStatus(`Briefing planen → Start drücken, wenn du willst (kein Auto-Start).`, "info", false);
     }
   }
 
@@ -659,11 +649,9 @@
     } else {
       gsEl.textContent = `${fmtNum(pos.spdKmh, 0)} km/h`;
       altEl.textContent = `${fmtNum(pos.altM, 0)} m`;
-      const vario = computeVarioMps(pos);
-      varEl.textContent = `${fmtNum(vario, 1)} m/s`;
+      varEl.textContent = `${fmtNum(computeVarioMps(pos), 1)} m/s`;
     }
 
-    // Marker button style based on active task (simple heuristic)
     const btn = document.getElementById("btnMarker");
     const hint = document.getElementById("markerHint");
     const color = getExpectedMarkerColor();
@@ -678,34 +666,28 @@
     const windRows = document.getElementById("windRows");
     windRows.innerHTML = "";
 
-    const src = document.getElementById("windSrc");
-    const meta = document.getElementById("windMeta");
-    const keyLine = document.getElementById("windKeyLine");
-    const recLine = document.getElementById("windRecLine");
-
-    src.textContent = STATE.wind.lastSource || "—";
-    meta.textContent = STATE.wind.lastUpdatedTs ? `Update ${fmtTime(STATE.wind.lastUpdatedTs)}` : (STATE.wind.lastError ? `Fehler: ${STATE.wind.lastError}` : "—");
+    document.getElementById("windSrc").textContent = STATE.wind.lastSource || "—";
+    document.getElementById("windMeta").textContent =
+      STATE.wind.lastUpdatedTs ? `Update ${fmtTime(STATE.wind.lastUpdatedTs)}` :
+      (STATE.wind.lastError ? `Fehler: ${STATE.wind.lastError}` : "—");
 
     const prof = [...STATE.wind.profile].sort((a,b)=>a.altM-b.altM).slice(0, 6);
 
-    // Arrow: show best layer drift direction or first layer
     const nav = computeNav();
     const best = nav?.bestLayer || null;
     const shown = best || (prof.length ? prof[0] : null);
 
     if (!shown) {
-      keyLine.textContent = "Kein Windprofil";
-      recLine.textContent = "Online abrufen oder manuell im Setup ergänzen.";
+      document.getElementById("windKeyLine").textContent = "Kein Windprofil";
+      document.getElementById("windRecLine").textContent = "Online abrufen oder manuell ergänzen.";
       document.getElementById("windArrowIcon").style.transform = "rotate(0deg)";
     } else {
       const drift = degNormalize((shown.dirFromDeg ?? 0) + 180);
-      keyLine.textContent = `${shown.altM} m · ${fmtNum(shown.speedKmh,0)} km/h · Drift ${fmtNum(drift,0)}°`;
-      if (nav?.recText) recLine.textContent = nav.recText;
-      else recLine.textContent = "—";
+      document.getElementById("windKeyLine").textContent = `${shown.altM} m · ${fmtNum(shown.speedKmh,0)} km/h · Drift ${fmtNum(drift,0)}°`;
+      document.getElementById("windRecLine").textContent = nav?.recText || "—";
       document.getElementById("windArrowIcon").style.transform = `rotate(${drift}deg)`;
     }
 
-    // Table rows
     if (!prof.length) {
       windRows.innerHTML = `<div class="px-2 py-2 text-[12px] text-slate-200/70">Keine Winddaten.</div>`;
     } else {
@@ -721,45 +703,42 @@
       }
     }
 
-    // Nav inside wind panel
     const navTitle = document.getElementById("navInsideTitle");
     const navLine = document.getElementById("navInsideLine");
     if (!nav) {
       navTitle.textContent = "—";
       navLine.textContent = "—";
-      document.getElementById("navToast").classList.add("hidden");
     } else {
       navTitle.textContent = nav.title;
       navLine.textContent = nav.line;
-      // also toast (small, top center)
-      document.getElementById("navToastTitle").textContent = nav.title;
-      document.getElementById("navToastLine").textContent = nav.line;
-      document.getElementById("navToast").classList.toggle("hidden", !STATE.flight.active);
     }
   }
 
   function renderSimControls() {
-    const simControls = document.getElementById("simControls");
-    simControls.classList.toggle("hidden", !(STATE.settings.simEnabled));
+    document.getElementById("simControls").classList.toggle("hidden", !(STATE.settings.simEnabled));
   }
 
-  function renderDrawer() {
-    const wrap = document.getElementById("drawerWrap");
-    const drawer = document.getElementById("drawer");
-    drawer.classList.toggle("hidden", !STATE.ui.drawerOpen);
+  function setWindCollapsed(collapsed) {
+    STATE.ui.windCollapsed = collapsed;
+    document.getElementById("windPanelExpanded").classList.toggle("hidden", collapsed);
+    document.getElementById("windPanelCollapsed").classList.toggle("hidden", !collapsed);
+  }
 
-    document.getElementById("drawerTitle").textContent =
-      STATE.ui.activeTab === "briefing" ? "Briefing" :
-      STATE.ui.activeTab === "live" ? "Live" :
-      STATE.ui.activeTab === "setup" ? "Setup" : "Archiv";
+  function setSheetState(state) {
+    STATE.ui.sheet = state;
+    const sheet = document.getElementById("sheet");
+    sheet.classList.toggle("sheet-expanded", state === "expanded");
+    sheet.classList.toggle("sheet-collapsed", state === "collapsed");
+    sheet.classList.toggle("sheet-hidden", state === "hidden");
+  }
 
-    // tab button active styling
+  function renderSheet() {
+    // Tabs styling
     document.querySelectorAll(".tabBtn").forEach(btn => {
       const is = btn.dataset.tab === STATE.ui.activeTab;
       btn.classList.toggle("bg-indigo-500/15", is);
       btn.classList.toggle("border-indigo-400/25", is);
       btn.classList.toggle("text-indigo-100", is);
-
       btn.classList.toggle("bg-slate-900/30", !is);
       btn.classList.toggle("border-slate-700/25", !is);
       btn.classList.toggle("text-slate-100", !is);
@@ -779,11 +758,23 @@
     const bList = STATE.briefings.list;
     const sel = getSelectedBriefing();
 
+    const steps = `
+      <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/20">
+        <div class="text-[12px] font-semibold">Planungs-Flow</div>
+        <div class="mt-1 text-[11px] text-slate-200/75">
+          1) Briefing wählen · 2) Aufgaben hinzufügen · 3) „Setzen“ → Karte tippen (Panel klappt klein) · 4) Start drücken
+        </div>
+      </div>
+    `;
+
     el.innerHTML = `
       <div class="space-y-2">
+        ${steps}
+
         <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/20">
           <div class="flex items-center gap-2">
             <div class="text-[12px] font-semibold flex-1">Briefings</div>
+
             <button id="btnBriefingExport" class="h-9 px-3 rounded-xl bg-sky-500/15 border border-sky-400/25 text-sky-100 text-[12px] font-semibold">
               <i class="fa-solid fa-file-export mr-2"></i>Export
             </button>
@@ -793,8 +784,8 @@
             </label>
           </div>
 
-          <div class="mt-2 flex gap-2">
-            <select id="selBriefing" class="flex-1 h-10 rounded-xl bg-slate-950/40 border border-slate-700/25 px-3 text-[12px]">
+          <div class="mt-2 grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center">
+            <select id="selBriefing" class="h-10 rounded-xl bg-slate-950/40 border border-slate-700/25 px-3 text-[12px]">
               ${bList.map(b => `<option value="${escHtml(b.id)}" ${b.id===STATE.briefings.selectedId?"selected":""}>${escHtml(b.title)}</option>`).join("") || `<option value="">(keins)</option>`}
             </select>
             <button id="btnBriefingNew" class="h-10 w-10 rounded-xl bg-emerald-500/15 border border-emerald-400/25 text-emerald-100" title="Neu">
@@ -808,161 +799,151 @@
             </button>
           </div>
 
-          <div class="mt-2 flex gap-2">
-            <button id="btnStartFlight" class="flex-1 h-11 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 text-emerald-100 text-[13px] font-extrabold">
+          <div class="mt-2 grid grid-cols-2 gap-2">
+            <button id="btnAddTask" class="h-11 rounded-2xl bg-indigo-500/15 border border-indigo-400/25 text-indigo-100 text-[12px] font-semibold">
+              <i class="fa-solid fa-plus mr-2"></i>Aufgabe hinzufügen
+            </button>
+            <button id="btnStartFlight" class="h-11 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 text-emerald-100 text-[13px] font-extrabold">
               <i class="fa-solid fa-play mr-2"></i>Fahrt starten
             </button>
           </div>
 
           <div class="mt-2 text-[11px] text-slate-200/70">
-            Tipp: Menü bleibt offen – Karte ist weiterhin klickbar, um Punkte zu setzen oder Marker zu verschieben (drag&drop).
+            Tipp: Aufgaben-Marker im Briefing sind drag&drop verschiebbar. „Setzen“ klappt das Panel klein, damit du die Karte frei hast.
           </div>
         </div>
 
-        ${sel ? renderBriefingEditor(sel) : `<div class="p-3 rounded-2xl bg-slate-900/25 border border-slate-700/20 text-[12px] text-slate-200/75">Noch kein Briefing. Erstelle eins.</div>`}
+        ${sel ? renderBriefingTaskList(sel) : `<div class="p-3 rounded-2xl bg-slate-900/25 border border-slate-700/20 text-[12px] text-slate-200/75">Noch kein Briefing. Erstelle eins.</div>`}
       </div>
     `;
   }
 
-  function renderBriefingEditor(briefing) {
-    const taskCards = (briefing.tasks || []).map((t, idx) => renderTaskCard(briefing, t, idx)).join("");
+  function renderBriefingTaskList(briefing) {
+    const tasks = briefing.tasks || [];
+    const cards = tasks.map((t, idx) => renderTaskCard(briefing, t, idx)).join("");
     return `
       <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/20">
-        <div class="flex items-center gap-2">
-          <div class="text-[12px] font-semibold flex-1 truncate">
-            Titel: <span class="text-slate-100">${escHtml(briefing.title)}</span>
-          </div>
-          <button id="btnAddTask" class="h-9 px-3 rounded-xl bg-indigo-500/15 border border-indigo-400/25 text-indigo-100 text-[12px] font-semibold">
-            <i class="fa-solid fa-plus mr-2"></i>Aufgabe
-          </button>
-        </div>
+        <div class="text-[12px] font-semibold">Aufgaben im Briefing</div>
         <div class="mt-2 space-y-2">
-          ${taskCards || `<div class="text-[12px] text-slate-200/70">Keine Aufgaben. „Aufgabe“ hinzufügen.</div>`}
+          ${cards || `<div class="text-[12px] text-slate-200/70">Keine Aufgaben. „Aufgabe hinzufügen“.</div>`}
         </div>
       </div>
     `;
   }
 
   function renderTaskCard(briefing, task, idx) {
-    const def = getTaskDefByShort(task.short) || getTaskDefByCIA(task.cia) || null;
+    const def = getTaskDefByShort(task.short) || null;
     const title = def ? `${def.cia} ${def.short} – ${def.title}` : (task.short || "Aufgabe");
-    const markersNeeded = inferMarkerCount(def);
+    const markerCount = inferMarkerCount(def);
 
-    const pointRows = renderTaskPoints(briefing, task, def);
-    const fieldRows = renderTaskFields(briefing, task, def);
+    const pointRows = renderTaskPointsCompact(briefing, task, def);
+    const fieldRows = renderTaskFieldsCompact(briefing, task, def);
 
     return `
       <div class="p-2 rounded-2xl bg-slate-950/35 border border-slate-700/25">
         <div class="flex items-center gap-2">
           <div class="text-[12px] font-semibold flex-1 truncate">${escHtml(title)}</div>
           <div class="text-[10px] px-2 py-0.5 rounded-full bg-slate-900/40 border border-slate-700/25 text-slate-200/80">
-            Marker: ${markersNeeded}
+            Marker: ${markerCount}
           </div>
           <button data-action="delTask" data-b="${escHtml(briefing.id)}" data-t="${escHtml(task.id)}"
-            class="h-9 w-9 rounded-xl bg-rose-500/15 border border-rose-400/25 text-rose-100">
+            class="h-9 w-9 rounded-xl bg-rose-500/15 border border-rose-400/25 text-rose-100" title="Aufgabe löschen">
             <i class="fa-solid fa-xmark"></i>
           </button>
         </div>
 
-        <div class="mt-2 grid grid-cols-1 gap-2">
-          <div class="grid grid-cols-2 gap-2">
-            <label class="text-[11px] text-slate-200/75">CIA Task</label>
-            <label class="text-[11px] text-slate-200/75">Marker-Farbe (optional)</label>
+        <div class="mt-2 grid grid-cols-2 gap-2">
+          <select data-action="taskType" data-b="${escHtml(briefing.id)}" data-t="${escHtml(task.id)}"
+            class="h-10 rounded-xl bg-slate-950/40 border border-slate-700/25 px-3 text-[12px]">
+            ${TASK_LIBRARY.map(d => `<option value="${escHtml(d.short)}" ${d.short===task.short?"selected":""}>${escHtml(d.cia)} ${escHtml(d.short)} – ${escHtml(d.title)}</option>`).join("")}
+          </select>
 
-            <select data-action="taskType" data-b="${escHtml(briefing.id)}" data-t="${escHtml(task.id)}"
-              class="h-10 rounded-xl bg-slate-950/40 border border-slate-700/25 px-3 text-[12px]">
-              ${TASK_LIBRARY.map(d => `<option value="${escHtml(d.short)}" ${d.short===task.short?"selected":""}>${escHtml(d.cia)} ${escHtml(d.short)} – ${escHtml(d.title)}</option>`).join("")}
-            </select>
-
-            <select data-action="taskMarkerColor" data-b="${escHtml(briefing.id)}" data-t="${escHtml(task.id)}"
-              class="h-10 rounded-xl bg-slate-950/40 border border-slate-700/25 px-3 text-[12px]">
-              <option value="">(auto)</option>
-              ${Object.entries(MARKER_COLORS).map(([k,v]) => `<option value="${escHtml(k)}" ${task.markerColor===k?"selected":""}>${escHtml(v.name)}</option>`).join("")}
-            </select>
-          </div>
-
-          ${pointRows}
-          ${fieldRows}
+          <select data-action="taskMarkerColor" data-b="${escHtml(briefing.id)}" data-t="${escHtml(task.id)}"
+            class="h-10 rounded-xl bg-slate-950/40 border border-slate-700/25 px-3 text-[12px]">
+            <option value="">Markerfarbe (auto)</option>
+            ${Object.entries(MARKER_COLORS).map(([k,v]) => `<option value="${escHtml(k)}" ${task.markerColor===k?"selected":""}>${escHtml(v.name)}</option>`).join("")}
+          </select>
         </div>
 
-        <div class="mt-2 text-[11px] text-slate-200/70">
-          Punkte: Tippe „Setzen“ und dann in die Karte. Marker sind im Briefing per Drag verschiebbar.
-        </div>
+        ${pointRows}
+        ${fieldRows}
       </div>
     `;
   }
 
-  function renderTaskPoints(briefing, task, def) {
-    const points = (def?.points || []);
-    const taskPoints = task.points || {};
-    let rows = "";
-
-    // HWZ has dynamic targets list
-    if (def?.short === "HWZ") {
+  function renderTaskPointsCompact(briefing, task, def) {
+    if (!def) return "";
+    // HWZ: multiple targets
+    if (def.short === "HWZ") {
       const targets = Array.isArray(task.targets) ? task.targets : [];
-      const list = targets.map((p, i) => {
+      const rows = targets.map((p, i) => {
         const ll = (p?.lat!=null && p?.lon!=null) ? fmtLatLon(p.lat, p.lon) : "—";
         return `
-          <div class="p-2 rounded-xl bg-slate-900/20 border border-slate-700/20">
-            <div class="flex items-center gap-2">
-              <div class="text-[12px] font-semibold flex-1">Ziel ${i+1}</div>
+          <div class="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-900/15 border border-slate-700/20">
+            <div class="min-w-0">
+              <div class="text-[12px] font-semibold">Ziel ${i+1}</div>
+              <div class="text-[11px] text-slate-200/75 truncate">${escHtml(ll)}</div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
               <button data-action="pickHWZ" data-b="${escHtml(briefing.id)}" data-t="${escHtml(task.id)}" data-i="${i}"
                 class="h-9 px-3 rounded-xl bg-indigo-500/15 border border-indigo-400/25 text-indigo-100 text-[12px] font-semibold">
                 Setzen
               </button>
               <button data-action="delHWZ" data-b="${escHtml(briefing.id)}" data-t="${escHtml(task.id)}" data-i="${i}"
-                class="h-9 w-9 rounded-xl bg-rose-500/15 border border-rose-400/25 text-rose-100">
+                class="h-9 w-9 rounded-xl bg-rose-500/15 border border-rose-400/25 text-rose-100" title="Löschen">
                 <i class="fa-solid fa-trash"></i>
               </button>
             </div>
-            <div class="text-[12px] text-slate-200/80 mt-1">${escHtml(ll)}</div>
           </div>
         `;
       }).join("");
 
-      rows += `
-        <div class="p-2 rounded-2xl bg-slate-900/15 border border-slate-700/20">
+      return `
+        <div class="mt-2 p-2 rounded-2xl bg-slate-900/10 border border-slate-700/20">
           <div class="flex items-center gap-2">
-            <div class="text-[12px] font-semibold flex-1">Vorgegebene Ziele</div>
+            <div class="text-[12px] font-semibold flex-1">Ziele</div>
             <button data-action="addHWZ" data-b="${escHtml(briefing.id)}" data-t="${escHtml(task.id)}"
               class="h-9 px-3 rounded-xl bg-emerald-500/15 border border-emerald-400/25 text-emerald-100 text-[12px] font-semibold">
               <i class="fa-solid fa-plus mr-2"></i>Ziel
             </button>
           </div>
           <div class="mt-2 space-y-2">
-            ${list || `<div class="text-[12px] text-slate-200/70">Noch keine Ziele. „Ziel“ hinzufügen.</div>`}
+            ${rows || `<div class="text-[12px] text-slate-200/70">Noch keine Ziele. „Ziel“ hinzufügen.</div>`}
           </div>
         </div>
       `;
-      return rows;
     }
+
+    const pts = def.points || [];
+    if (!pts.length) return "";
 
-    // Standard point list
-    if (!points.length) return "";
-    rows += `<div class="p-2 rounded-2xl bg-slate-900/15 border border-slate-700/20 space-y-2">`;
-    rows += `<div class="text-[12px] font-semibold">Punkte</div>`;
-    for (const p of points) {
-      const key = p.id;
-      const cur = taskPoints[key] || null;
+    const taskPoints = task.points || {};
+    const rows = pts.map(p => {
+      const cur = taskPoints[p.id] || null;
       const ll = (cur?.lat!=null && cur?.lon!=null) ? fmtLatLon(cur.lat, cur.lon) : "—";
-      rows += `
-        <div class="p-2 rounded-xl bg-slate-950/25 border border-slate-700/20">
-          <div class="flex items-center gap-2">
-            <div class="text-[12px] font-semibold flex-1">${escHtml(p.label)}</div>
-            <button data-action="pickPoint" data-b="${escHtml(briefing.id)}" data-t="${escHtml(task.id)}" data-k="${escHtml(key)}" data-l="${escHtml(p.label)}"
-              class="h-9 px-3 rounded-xl bg-indigo-500/15 border border-indigo-400/25 text-indigo-100 text-[12px] font-semibold">
-              Setzen
-            </button>
+      return `
+        <div class="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-900/15 border border-slate-700/20">
+          <div class="min-w-0">
+            <div class="text-[12px] font-semibold">${escHtml(p.label)}</div>
+            <div class="text-[11px] text-slate-200/75 truncate">${escHtml(ll)}</div>
           </div>
-          <div class="text-[12px] text-slate-200/80 mt-1">${escHtml(ll)}</div>
+          <button data-action="pickPoint" data-b="${escHtml(briefing.id)}" data-t="${escHtml(task.id)}" data-k="${escHtml(p.id)}" data-l="${escHtml(p.label)}"
+            class="h-9 px-3 rounded-xl bg-indigo-500/15 border border-indigo-400/25 text-indigo-100 text-[12px] font-semibold shrink-0">
+            Setzen
+          </button>
         </div>
       `;
-    }
-    rows += `</div>`;
-    return rows;
+    }).join("");
+
+    return `
+      <div class="mt-2 p-2 rounded-2xl bg-slate-900/10 border border-slate-700/20">
+        <div class="text-[12px] font-semibold">Punkte</div>
+        <div class="mt-2 space-y-2">${rows}</div>
+      </div>
+    `;
   }
 
-  function renderTaskFields(briefing, task, def) {
+  function renderTaskFieldsCompact(briefing, task, def) {
     const fields = def?.fields || [];
     if (!fields.length) return "";
 
@@ -973,10 +954,10 @@
       if (f.type === "bool") {
         const checked = fixed ? true : !!val;
         return `
-          <div class="p-2 rounded-xl bg-slate-950/25 border border-slate-700/20 flex items-center justify-between">
-            <div>
+          <div class="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-900/15 border border-slate-700/20">
+            <div class="min-w-0">
               <div class="text-[12px] font-semibold">${escHtml(f.label)}</div>
-              <div class="text-[11px] text-slate-200/70">${escHtml(f.hint || "")}</div>
+              <div class="text-[11px] text-slate-200/70 truncate">${escHtml(f.hint || "")}</div>
             </div>
             <input data-action="fieldBool" data-b="${escHtml(briefing.id)}" data-t="${escHtml(task.id)}" data-k="${escHtml(f.key)}"
               type="checkbox" class="w-5 h-5" ${checked ? "checked" : ""} ${fixed ? "disabled" : ""} />
@@ -987,7 +968,7 @@
       if (f.type === "number") {
         const v = (val != null) ? val : (f.default != null ? f.default : "");
         return `
-          <div class="p-2 rounded-xl bg-slate-950/25 border border-slate-700/20">
+          <div class="p-2 rounded-xl bg-slate-900/15 border border-slate-700/20">
             <div class="text-[12px] font-semibold">${escHtml(f.label)}</div>
             <div class="text-[11px] text-slate-200/70">${escHtml(f.hint || "")}</div>
             <input data-action="fieldNum" data-b="${escHtml(briefing.id)}" data-t="${escHtml(task.id)}" data-k="${escHtml(f.key)}"
@@ -997,36 +978,37 @@
         `;
       }
 
-      if (f.type === "time") {
-        const v = (val != null) ? val : "";
+      const v = (val != null) ? val : "";
+      const isTextArea = f.type === "note";
+      if (isTextArea) {
         return `
-          <div class="p-2 rounded-xl bg-slate-950/25 border border-slate-700/20">
+          <div class="p-2 rounded-xl bg-slate-900/15 border border-slate-700/20">
             <div class="text-[12px] font-semibold">${escHtml(f.label)}</div>
             <div class="text-[11px] text-slate-200/70">${escHtml(f.hint || "")}</div>
-            <input data-action="fieldText" data-b="${escHtml(briefing.id)}" data-t="${escHtml(task.id)}" data-k="${escHtml(f.key)}"
-              value="${escHtml(v)}" placeholder="HH:MM"
-              class="mt-2 w-full h-10 rounded-xl bg-slate-950/40 border border-slate-700/25 px-3 text-[12px]" />
+            <textarea data-action="fieldText" data-b="${escHtml(briefing.id)}" data-t="${escHtml(task.id)}" data-k="${escHtml(f.key)}"
+              class="mt-2 w-full min-h-[72px] rounded-xl bg-slate-950/40 border border-slate-700/25 px-3 py-2 text-[12px]"
+              placeholder="Optional…">${escHtml(v)}</textarea>
           </div>
         `;
       }
 
-      // note/text
-      const v = (val != null) ? val : "";
       return `
-        <div class="p-2 rounded-xl bg-slate-950/25 border border-slate-700/20">
+        <div class="p-2 rounded-xl bg-slate-900/15 border border-slate-700/20">
           <div class="text-[12px] font-semibold">${escHtml(f.label)}</div>
           <div class="text-[11px] text-slate-200/70">${escHtml(f.hint || "")}</div>
-          <textarea data-action="fieldText" data-b="${escHtml(briefing.id)}" data-t="${escHtml(task.id)}" data-k="${escHtml(f.key)}"
-            class="mt-2 w-full min-h-[72px] rounded-xl bg-slate-950/40 border border-slate-700/25 px-3 py-2 text-[12px]"
-            placeholder="Optional…">${escHtml(v)}</textarea>
+          <input data-action="fieldText" data-b="${escHtml(briefing.id)}" data-t="${escHtml(task.id)}" data-k="${escHtml(f.key)}"
+            value="${escHtml(v)}" placeholder="Optional…"
+            class="mt-2 w-full h-10 rounded-xl bg-slate-950/40 border border-slate-700/25 px-3 text-[12px]" />
         </div>
       `;
     }).join("");
 
-    return `<div class="p-2 rounded-2xl bg-slate-900/15 border border-slate-700/20 space-y-2">
-      <div class="text-[12px] font-semibold">Parameter</div>
-      ${blocks}
-    </div>`;
+    return `
+      <div class="mt-2 p-2 rounded-2xl bg-slate-900/10 border border-slate-700/20 space-y-2">
+        <div class="text-[12px] font-semibold">Parameter</div>
+        ${blocks}
+      </div>
+    `;
   }
 
   function renderTabLive() {
@@ -1035,14 +1017,13 @@
 
     const activeBrief = flight.briefingSnapshot;
     const title = activeBrief?.title || "—";
-
     const nav = computeNav();
     const navLine = nav ? `${nav.title} · ${nav.line}` : "—";
 
-    const markerList = flight.markers.slice().reverse().slice(0, 12).map(m => {
+    const markerList = flight.markers.slice().reverse().slice(0, 10).map(m => {
       const c = MARKER_COLORS[m.color]?.hex || "#22c55e";
       return `
-        <div class="flex items-center justify-between text-[12px] p-2 rounded-xl bg-slate-950/25 border border-slate-700/20">
+        <div class="flex items-center justify-between text-[12px] p-2 rounded-xl bg-slate-900/15 border border-slate-700/20">
           <div class="flex items-center gap-2">
             <span class="inline-block w-3 h-3 rounded-full" style="background:${c}"></span>
             <span class="text-slate-100">${escHtml(fmtTime(m.ts))}</span>
@@ -1095,27 +1076,24 @@
 
   function renderTabSetup() {
     const el = document.getElementById("tab_setup");
-
     const simOn = !!STATE.settings.simEnabled;
-    const kmlList = STATE.kml.overlays.map(o => {
-      return `
-        <div class="p-2 rounded-xl bg-slate-950/25 border border-slate-700/20">
-          <div class="flex items-center gap-2">
-            <div class="text-[12px] font-semibold flex-1 truncate">${escHtml(o.name || "KML")}</div>
-            <button data-action="kmlToggle" data-id="${escHtml(o.id)}"
-              class="h-9 px-3 rounded-xl ${o.visible ? "bg-emerald-500/15 border-emerald-400/25 text-emerald-100" : "bg-slate-900/35 border-slate-700/25 text-slate-100"} border text-[12px] font-semibold">
-              ${o.visible ? "An" : "Aus"}
-            </button>
-            <button data-action="kmlRemove" data-id="${escHtml(o.id)}"
-              class="h-9 w-9 rounded-xl bg-rose-500/15 border border-rose-400/25 text-rose-100">
-              <i class="fa-solid fa-trash"></i>
-            </button>
-          </div>
-          <div class="mt-1 text-[11px] text-slate-200/70">${escHtml(o.source || "")}</div>
-          <div class="mt-1 text-[11px] text-slate-200/70">Hinweis: EDRxxx / ED-Rxxx wird rot dargestellt.</div>
+
+    const kmlList = STATE.kml.overlays.map(o => `
+      <div class="p-2 rounded-xl bg-slate-900/15 border border-slate-700/20">
+        <div class="flex items-center gap-2">
+          <div class="text-[12px] font-semibold flex-1 truncate">${escHtml(o.name || "KML")}</div>
+          <button data-action="kmlToggle" data-id="${escHtml(o.id)}"
+            class="h-9 px-3 rounded-xl ${o.visible ? "bg-emerald-500/15 border-emerald-400/25 text-emerald-100" : "bg-slate-900/35 border-slate-700/25 text-slate-100"} border text-[12px] font-semibold">
+            ${o.visible ? "An" : "Aus"}
+          </button>
+          <button data-action="kmlRemove" data-id="${escHtml(o.id)}"
+            class="h-9 w-9 rounded-xl bg-rose-500/15 border border-rose-400/25 text-rose-100" title="Entfernen">
+            <i class="fa-solid fa-trash"></i>
+          </button>
         </div>
-      `;
-    }).join("");
+        <div class="mt-1 text-[11px] text-slate-200/70">Klick auf Luftraum → Info. EDRxxx/ED-Rxxx wird rot.</div>
+      </div>
+    `).join("");
 
     el.innerHTML = `
       <div class="space-y-2">
@@ -1123,14 +1101,14 @@
           <div class="flex items-center justify-between">
             <div>
               <div class="text-[12px] font-semibold">Simulation</div>
-              <div class="text-[11px] text-slate-200/70">Schaltet SIM-Position (Burner/Vent) frei. Startet keine Fahrt automatisch.</div>
+              <div class="text-[11px] text-slate-200/70">SIM steuert Position (Burner/Vent). Startet niemals automatisch die Fahrt.</div>
             </div>
             <label class="inline-flex items-center gap-2">
               <input id="tglSim" type="checkbox" class="w-5 h-5" ${simOn ? "checked" : ""} />
             </label>
           </div>
           <div class="mt-2 grid grid-cols-2 gap-2">
-            <button id="btnSimUseHere" class="h-11 rounded-2xl bg-slate-900/35 border border-slate-700/25 text-[12px] font-semibold">
+            <button id="btnSimUseGps" class="h-11 rounded-2xl bg-slate-900/35 border border-slate-700/25 text-[12px] font-semibold">
               <i class="fa-solid fa-map-pin mr-2"></i>SIM auf GPS
             </button>
             <button id="btnSimToggleActive" class="h-11 rounded-2xl bg-slate-900/35 border border-slate-700/25 text-[12px] font-semibold">
@@ -1141,7 +1119,7 @@
 
         <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/20">
           <div class="text-[12px] font-semibold">Wind (manuell)</div>
-          <div class="text-[11px] text-slate-200/70">Du kannst Wind-Ebenen auch manuell ergänzen (Alt, Richtung FROM, Speed).</div>
+          <div class="text-[11px] text-slate-200/70">Alt, Richtung FROM, Speed. (Online über Wind-Panel links.)</div>
 
           <div class="mt-2 grid grid-cols-3 gap-2">
             <input id="windAlt" class="h-10 rounded-xl bg-slate-950/40 border border-slate-700/25 px-3 text-[12px]" placeholder="Alt m" inputmode="numeric" />
@@ -1150,17 +1128,17 @@
           </div>
           <div class="mt-2 flex gap-2">
             <button id="btnWindAddManual" class="flex-1 h-11 rounded-2xl bg-indigo-500/15 border border-indigo-400/25 text-indigo-100 text-[12px] font-semibold">
-              <i class="fa-solid fa-plus mr-2"></i>Eintrag hinzufügen
+              <i class="fa-solid fa-plus mr-2"></i>Hinzufügen
             </button>
             <button id="btnWindClear" class="h-11 px-3 rounded-2xl bg-rose-500/15 border border-rose-400/25 text-rose-100 text-[12px] font-semibold">
-              <i class="fa-solid fa-trash mr-2"></i>Wind leeren
+              <i class="fa-solid fa-trash mr-2"></i>Leeren
             </button>
           </div>
         </div>
 
         <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/20">
-          <div class="text-[12px] font-semibold">KML Overlays (Lufträume etc.)</div>
-          <div class="text-[11px] text-slate-200/70">KML importieren. Klick auf Luftraum zeigt Infobox (Name/Details).</div>
+          <div class="text-[12px] font-semibold">KML Overlays</div>
+          <div class="text-[11px] text-slate-200/70">Importiere KML (Lufträume). Klick zeigt Infobox.</div>
           <div class="mt-2">
             <label class="h-11 px-3 rounded-2xl bg-slate-900/35 border border-slate-700/25 text-slate-100 text-[12px] font-semibold flex items-center justify-center gap-2 cursor-pointer">
               <i class="fa-solid fa-file-arrow-up"></i>KML Import
@@ -1171,81 +1149,66 @@
             ${kmlList || `<div class="text-[12px] text-slate-200/70">Keine KML geladen.</div>`}
           </div>
         </div>
+
+        <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/20">
+          <div class="text-[12px] font-semibold">PWA / „Wie App“</div>
+          <div class="text-[11px] text-slate-200/70">
+            Für „ohne Browser-UI“: auf Android über Chrome-Menü → „Zum Startbildschirm hinzufügen“ installieren (dann startet sie als Standalone).
+          </div>
+        </div>
       </div>
     `;
   }
 
   function renderTabArchiv() {
     const el = document.getElementById("tab_archiv");
-    const items = STATE.archive.slice().reverse().slice(0, 20).map(a => {
-      const t = a.title || "Fahrt";
-      const s = a.startedTs ? fmtTime(a.startedTs) : "—";
-      const e = a.endedTs ? fmtTime(a.endedTs) : "—";
-      const id = a.id;
-      return `
-        <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/20">
-          <div class="flex items-center gap-2">
-            <div class="text-[12px] font-semibold flex-1 truncate">${escHtml(t)}</div>
-            <button data-action="archShow" data-id="${escHtml(id)}" class="h-9 px-3 rounded-xl bg-slate-900/35 border border-slate-700/25 text-[12px] font-semibold">
-              <i class="fa-solid fa-eye mr-2"></i>Anzeigen
-            </button>
-          </div>
-          <div class="mt-1 text-[11px] text-slate-200/70">${escHtml(s)} – ${escHtml(e)} · Track: ${a.track?.length||0} · Marker: ${a.markers?.length||0}</div>
-          <div class="mt-2 grid grid-cols-2 gap-2">
-            <button data-action="archKml" data-id="${escHtml(id)}" class="h-10 rounded-2xl bg-sky-500/15 border border-sky-400/25 text-sky-100 text-[12px] font-semibold">
-              <i class="fa-solid fa-file-arrow-down mr-2"></i>KML Export
-            </button>
-            <button data-action="archDel" data-id="${escHtml(id)}" class="h-10 rounded-2xl bg-rose-500/15 border border-rose-400/25 text-rose-100 text-[12px] font-semibold">
-              <i class="fa-solid fa-trash mr-2"></i>Löschen
-            </button>
-          </div>
+    const items = STATE.archive.slice().reverse().slice(0, 20).map(a => `
+      <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/20">
+        <div class="flex items-center gap-2">
+          <div class="text-[12px] font-semibold flex-1 truncate">${escHtml(a.title || "Fahrt")}</div>
+          <button data-action="archShow" data-id="${escHtml(a.id)}" class="h-9 px-3 rounded-xl bg-slate-900/35 border border-slate-700/25 text-[12px] font-semibold">
+            <i class="fa-solid fa-eye mr-2"></i>Anzeigen
+          </button>
         </div>
-      `;
-    }).join("");
+        <div class="mt-1 text-[11px] text-slate-200/70">${escHtml(fmtTime(a.startedTs))} – ${escHtml(fmtTime(a.endedTs))} · Track: ${a.track?.length||0} · Marker: ${a.markers?.length||0}</div>
+        <div class="mt-2 grid grid-cols-2 gap-2">
+          <button data-action="archKml" data-id="${escHtml(a.id)}" class="h-10 rounded-2xl bg-sky-500/15 border border-sky-400/25 text-sky-100 text-[12px] font-semibold">
+            <i class="fa-solid fa-file-arrow-down mr-2"></i>KML Export
+          </button>
+          <button data-action="archDel" data-id="${escHtml(a.id)}" class="h-10 rounded-2xl bg-rose-500/15 border border-rose-400/25 text-rose-100 text-[12px] font-semibold">
+            <i class="fa-solid fa-trash mr-2"></i>Löschen
+          </button>
+        </div>
+      </div>
+    `).join("");
 
     el.innerHTML = `
       <div class="space-y-2">
         <div class="p-2 rounded-2xl bg-slate-900/25 border border-slate-700/20">
           <div class="text-[12px] font-semibold">Archiv</div>
-          <div class="text-[11px] text-slate-200/70">Beendete Fahrten – KML Export (Track + Marker).</div>
+          <div class="text-[11px] text-slate-200/70">Beendete Fahrten – Export enthält Track (mit Höhe) + Marker.</div>
         </div>
         ${items || `<div class="p-3 rounded-2xl bg-slate-900/25 border border-slate-700/20 text-[12px] text-slate-200/70">Noch keine Fahrten im Archiv.</div>`}
       </div>
     `;
   }
 
-  function setWindCollapsed(collapsed) {
-    STATE.ui.windCollapsed = collapsed;
-    document.getElementById("windPanelExpanded").classList.toggle("hidden", collapsed);
-    document.getElementById("windPanelCollapsed").classList.toggle("hidden", !collapsed);
-  }
-
   // ============================================================
   // 5) Kern-Logik (GPS, Map, Wind, Tasks, Simulation, Export)
   // ============================================================
   function initMap() {
-    map = L.map("map", {
-      zoomControl: false,
-      preferCanvas: true
-    });
-
-    baseLayers = {
-      OSM: L.tileLayer(OSM.url, OSM.options),
-      ESRI: L.tileLayer(ESRI.url, ESRI.options)
-    };
+    map = L.map("map", { zoomControl: false, preferCanvas: true });
+    baseLayers = { OSM: L.tileLayer(OSM.url, OSM.options), ESRI: L.tileLayer(ESRI.url, ESRI.options) };
     activeBase = "OSM";
     baseLayers[activeBase].addTo(map);
-
     map.setView([APP.defaultCenter.lat, APP.defaultCenter.lon], APP.defaultZoom);
 
-    // groups
     taskLayerGroup = L.layerGroup().addTo(map);
     kmlLayerGroup = L.layerGroup().addTo(map);
 
     trackLine = L.polyline([], { color: "#ef4444", weight: 3, opacity: 0.9 }).addTo(map);
     trajLine = L.polyline([], { color: "#22c55e", weight: 3, opacity: 0.8, dashArray: "6 8" }).addTo(map);
 
-    // balloon marker (arrow)
     const balloonHtml = `
       <div class="relative">
         <div class="w-8 h-8 rounded-full bg-rose-500/25 border border-rose-400/50 grid place-items-center">
@@ -1258,10 +1221,8 @@
       interactive: false
     }).addTo(map);
 
-    // map interactions for follow
     map.on("dragstart", () => { STATE.ui.follow = false; renderAll(); });
 
-    // pick mode click
     map.on("click", (e) => {
       if (!STATE.ui.picking) return;
       handlePickedPoint(e.latlng.lat, e.latlng.lng);
@@ -1274,31 +1235,17 @@
       map.removeLayer(baseLayers[activeBase]);
       activeBase = next;
       baseLayers[activeBase].addTo(map);
-      showToast("Karte", `Layer: ${baseLayers[activeBase] === baseLayers.OSM ? "OSM" : "Satellit"}`);
+      setStatus(`Layer: ${activeBase === "OSM" ? "OSM" : "Satellit"}`, "ok");
     } catch (e) {
       console.warn(e);
+      setStatus("Layerwechsel fehlgeschlagen.", "error");
     }
   }
 
   function updateBalloonOnMap(pos) {
     if (!pos || !balloonMarker) return;
     balloonMarker.setLatLng([pos.lat, pos.lon]);
-
-    if (STATE.ui.follow) {
-      map.panTo([pos.lat, pos.lon], { animate: true, duration: 0.25 });
-    }
-  }
-
-  function computeVarioMps(pos) {
-    if (!pos || !isFinite(pos.altM)) return 0;
-    const prev = STATE.gps.lastForVario;
-    const now = { altM: pos.altM, ts: pos.ts || Date.now() };
-    if (!prev) { STATE.gps.lastForVario = now; return 0; }
-    const dt = Math.max(1, (now.ts - prev.ts) / 1000);
-    const v = (now.altM - prev.altM) / dt;
-    // low-pass update
-    STATE.gps.lastForVario = now;
-    return clamp(v, -8, 8);
+    if (STATE.ui.follow) map.panTo([pos.lat, pos.lon], { animate: true, duration: 0.25 });
   }
 
   function maybeAddTrackPoint(pos) {
@@ -1306,25 +1253,30 @@
     const now = pos.ts || Date.now();
     const tr = STATE.flight.track;
     const last = tr.length ? tr[tr.length - 1] : null;
-    if (!last) {
-      tr.push({ lat: pos.lat, lon: pos.lon, altM: pos.altM || 0, ts: now });
-      return;
-    }
+    if (!last) { tr.push({ lat: pos.lat, lon: pos.lon, altM: pos.altM || 0, ts: now }); return; }
     const dt = now - last.ts;
     if (dt < APP.track.minDtMs) return;
     const d = distM({ lat: last.lat, lon: last.lon }, { lat: pos.lat, lon: pos.lon });
     if (d < APP.track.minDistM) return;
-
     tr.push({ lat: pos.lat, lon: pos.lon, altM: pos.altM || 0, ts: now });
   }
 
   function updateTrackLine() {
-    const pts = STATE.flight.track.map(p => [p.lat, p.lon]);
-    trackLine.setLatLngs(pts);
+    trackLine.setLatLngs(STATE.flight.track.map(p => [p.lat, p.lon]));
+  }
+
+  function windAtAlt(altM) {
+    const prof = STATE.wind.profile || [];
+    if (!prof.length) return null;
+    let best = prof[0], bestD = Math.abs(prof[0].altM - altM);
+    for (const w of prof) {
+      const d = Math.abs(w.altM - altM);
+      if (d < bestD) { bestD = d; best = w; }
+    }
+    return best;
   }
 
   function computeTrajectory(pos) {
-    // 5/10/15 min projection using best layer (simple)
     if (!pos) return [];
     const nav = computeNav();
     const best = nav?.bestLayer;
@@ -1333,39 +1285,19 @@
     const speedMps = kmhToMps(best.speedKmh || 0);
     if (speedMps <= 0.1) return [];
     const minutes = [5, 10, 15];
-    const out = [];
+    const out = [[pos.lat, pos.lon]];
     const start = { lat: pos.lat, lon: pos.lon };
-    out.push([start.lat, start.lon]);
-
     for (const m of minutes) {
-      const dt = m * 60;
-      const d = speedMps * dt;
+      const d = speedMps * (m * 60);
       const dest = projectLatLon(start.lat, start.lon, driftDeg, d);
       out.push([dest.lat, dest.lon]);
     }
     return out;
   }
 
-  // simple spherical projection
-  function projectLatLon(lat, lon, bearing, distanceM) {
-    const R = 6371000;
-    const toRad = (x) => x * Math.PI/180;
-    const toDeg = (x) => x * 180/Math.PI;
-
-    const br = toRad(bearing);
-    const φ1 = toRad(lat);
-    const λ1 = toRad(lon);
-    const δ = distanceM / R;
-
-    const φ2 = Math.asin(Math.sin(φ1)*Math.cos(δ) + Math.cos(φ1)*Math.sin(δ)*Math.cos(br));
-    const λ2 = λ1 + Math.atan2(Math.sin(br)*Math.sin(δ)*Math.cos(φ1), Math.cos(δ)-Math.sin(φ1)*Math.sin(φ2));
-    return { lat: toDeg(φ2), lon: toDeg(λ2) };
-  }
-
   function updateTrajectoryLine() {
     const pos = getCurrentPosition();
-    const pts = computeTrajectory(pos);
-    trajLine.setLatLngs(pts);
+    trajLine.setLatLngs(computeTrajectory(pos));
   }
 
   function renderMapTasks() {
@@ -1375,20 +1307,16 @@
     const briefing = STATE.flight.active ? STATE.flight.briefingSnapshot : getSelectedBriefing();
     if (!briefing) return;
 
-    for (const task of (briefing.tasks || [])) {
-      drawTask(task, briefing.id);
-    }
+    for (const task of (briefing.tasks || [])) drawTask(task, briefing.id);
 
-    // Refresh track & traj
     updateTrackLine();
     updateTrajectoryLine();
   }
 
   function drawTask(task, briefingId) {
-    const def = getTaskDefByShort(task.short) || null;
+    const def = getTaskDefByShort(task.short);
     if (!def) return;
 
-    // HWZ dynamic
     if (def.short === "HWZ") {
       const targets = Array.isArray(task.targets) ? task.targets : [];
       targets.forEach((p, i) => {
@@ -1399,16 +1327,15 @@
       return;
     }
 
-    // point markers
     const pts = task.points || {};
-    for (const pd of def.points || []) {
+    for (const pd of (def.points || [])) {
       const p = pts[pd.id];
       if (!p || p.lat==null || p.lon==null) continue;
       const mk = createDraggableTaskMarker([p.lat, p.lon], `${def.short} ${pd.label}`, briefingId, task.id, pd.id);
       taskLayerGroup.addLayer(mk);
     }
 
-    // shapes: 3DT donut
+    // 3DT donut
     if (def.short === "3DT") {
       const c = pts["C"];
       if (c?.lat!=null && c?.lon!=null) {
@@ -1416,28 +1343,20 @@
         const outer = Number(task.fields?.outerRadiusM ?? 0);
         if (outer > 0) {
           if (inner > 0) {
-            const innerCircle = L.circle([c.lat, c.lon], {
-              radius: inner,
-              color: "#f97316",
-              weight: 2,
-              fillColor: "#f97316",
-              fillOpacity: 0.08
-            });
-            taskLayerGroup.addLayer(innerCircle);
+            taskLayerGroup.addLayer(L.circle([c.lat, c.lon], {
+              radius: inner, color: "#f97316", weight: 2,
+              fillColor: "#f97316", fillOpacity: 0.08
+            }));
           }
-          const outerCircle = L.circle([c.lat, c.lon], {
-            radius: outer,
-            color: "#38bdf8",
-            weight: 2,
-            fillColor: "#38bdf8",
-            fillOpacity: 0.08
-          });
-          taskLayerGroup.addLayer(outerCircle);
+          taskLayerGroup.addLayer(L.circle([c.lat, c.lon], {
+            radius: outer, color: "#38bdf8", weight: 2,
+            fillColor: "#38bdf8", fillOpacity: 0.08
+          }));
         }
       }
     }
 
-    // line for ANG A->B, LRN triangle
+    // ANG A->B line, LRN polygon
     if (def.short === "ANG") {
       const A = pts["A"], B = pts["B"];
       if (A?.lat!=null && B?.lat!=null) {
@@ -1453,7 +1372,7 @@
   }
 
   function createDraggableTaskMarker(latlng, label, briefingId, taskId, pointKey) {
-    const isEditable = !STATE.flight.active; // allow drag only in briefing mode
+    const isEditable = !STATE.flight.active;
     const html = `
       <div class="relative">
         <div class="w-9 h-9 rounded-2xl bg-indigo-500/15 border border-indigo-400/30 grid place-items-center shadow-lg">
@@ -1472,53 +1391,11 @@
     mk.on("dragend", (e) => {
       const ll = e.target.getLatLng();
       applyPointToTask(briefingId, taskId, pointKey, ll.lat, ll.lng);
-      showToast("Punkt verschoben", `${label}: ${fmtLatLon(ll.lat, ll.lng)}`);
-      renderAll();
-    });
-
-    mk.on("click", () => {
-      // quick "re-pick" without going back into menu (requested)
-      if (STATE.flight.active) return;
-      STATE.ui.picking = { briefingId, taskId, pointKey, label };
-      showPickStrip(true, label);
+      setStatus(`Punkt verschoben: ${label} → ${fmtLatLon(ll.lat, ll.lng)}`, "ok");
       renderAll();
     });
 
     return mk;
-  }
-
-  function showPickStrip(on, label) {
-    const strip = document.getElementById("pickStrip");
-    strip.classList.toggle("hidden", !on);
-    document.getElementById("pickLabel").textContent = label ? `Setze: ${label}` : "Punkt setzen…";
-  }
-
-  function handlePickedPoint(lat, lon) {
-    const pick = STATE.ui.picking;
-    if (!pick) return;
-
-    // HWZ special
-    if (String(pick.pointKey).startsWith("HWZ_")) {
-      const idx = Number(pick.pointKey.split("_")[1]);
-      const b = getBriefingById(pick.briefingId);
-      const t = b?.tasks?.find(x => x.id === pick.taskId);
-      if (t) {
-        if (!Array.isArray(t.targets)) t.targets = [];
-        if (!t.targets[idx]) t.targets[idx] = {};
-        t.targets[idx].lat = lat;
-        t.targets[idx].lon = lon;
-        t.updatedTs = Date.now();
-        b.updatedTs = Date.now();
-        saveToStorage();
-      }
-    } else {
-      applyPointToTask(pick.briefingId, pick.taskId, pick.pointKey, lat, lon);
-    }
-
-    showToast("Punkt gesetzt", `${pick.label}: ${fmtLatLon(lat, lon)}`);
-    STATE.ui.picking = null;
-    showPickStrip(false);
-    renderAll();
   }
 
   function applyPointToTask(briefingId, taskId, pointKey, lat, lon) {
@@ -1527,38 +1404,42 @@
     const t = (b.tasks || []).find(x => x.id === taskId);
     if (!t) return;
 
-    if (!t.points) t.points = {};
-    if (!t.points[pointKey]) t.points[pointKey] = {};
-    t.points[pointKey].lat = lat;
-    t.points[pointKey].lon = lon;
+    if (String(pointKey).startsWith("HWZ_")) {
+      const idx = Number(String(pointKey).split("_")[1]);
+      if (!Array.isArray(t.targets)) t.targets = [];
+      if (!t.targets[idx]) t.targets[idx] = {};
+      t.targets[idx].lat = lat;
+      t.targets[idx].lon = lon;
+    } else {
+      t.points = t.points || {};
+      t.points[pointKey] = t.points[pointKey] || {};
+      t.points[pointKey].lat = lat;
+      t.points[pointKey].lon = lon;
+    }
+
     t.updatedTs = Date.now();
     b.updatedTs = Date.now();
     saveToStorage();
   }
 
-  function inferMarkerCount(def) {
-    if (!def) return "—";
-    // crude defaults based on task nature
-    if (["MDD","XDD"].includes(def.short)) return 2;
-    if (["ELB"].includes(def.short)) return 0;
-    if (["RTA"].includes(def.short)) return 0;
-    if (["HWZ"].includes(def.short)) return "1+";
-    return 1;
+  function startPickMode(briefingId, taskId, pointKey, label) {
+    STATE.ui.picking = { briefingId, taskId, pointKey, label };
+    // Make planning intuitive: collapse panel so map is free
+    setSheetState("collapsed");
+    setStatus(`Punkt setzen: ${label} · Tippe in die Karte.`, "hint", false);
   }
 
-  function getExpectedMarkerColor() {
-    // 1) explicit from first task of active briefing, else selected briefing
-    const briefing = STATE.flight.active ? STATE.flight.briefingSnapshot : getSelectedBriefing();
-    const t = briefing?.tasks?.[0];
-    if (t?.markerColor && MARKER_COLORS[t.markerColor]) return MARKER_COLORS[t.markerColor];
+  function handlePickedPoint(lat, lon) {
+    const pick = STATE.ui.picking;
+    if (!pick) return;
 
-    // 2) heuristic by task short
-    const def = getTaskDefByShort(t?.short);
-    if (!def) return MARKER_COLORS.green;
-    if (def.short === "JDG") return MARKER_COLORS.yellow;
-    if (def.short === "FIN") return MARKER_COLORS.red;
-    if (def.short === "3DT") return MARKER_COLORS.blue;
-    return MARKER_COLORS.green;
+    applyPointToTask(pick.briefingId, pick.taskId, pick.pointKey, lat, lon);
+    STATE.ui.picking = null;
+
+    setStatus(`Punkt gesetzt: ${pick.label} → ${fmtLatLon(lat, lon)}`, "ok");
+    // Expand back to continue editing
+    setSheetState("expanded");
+    renderAll();
   }
 
   function computeNav() {
@@ -1568,7 +1449,6 @@
     const briefing = STATE.flight.active ? STATE.flight.briefingSnapshot : getSelectedBriefing();
     if (!briefing || !briefing.tasks?.length) return null;
 
-    // Choose first task as "active" for nav (simple). You can expand later.
     const task = briefing.tasks[0];
     const def = getTaskDefByShort(task.short);
     if (!def) return null;
@@ -1580,7 +1460,6 @@
       const targets = Array.isArray(task.targets) ? task.targets : [];
       const valid = targets.filter(p => p?.lat!=null && p?.lon!=null).map(p => ({ lat:p.lat, lon:p.lon }));
       if (!valid.length) return { title, line: "Keine Ziele gesetzt.", bestLayer: null, recText: "—" };
-      // nearest
       let best = valid[0], bestD = Infinity;
       for (const t of valid) {
         const d = distM({lat:pos.lat,lon:pos.lon}, t);
@@ -1589,7 +1468,6 @@
       target = best;
       title += " (nächstes Ziel)";
     } else if (def.points?.length) {
-      // take first point
       const key = def.points[0].id;
       const p = task.points?.[key];
       if (p?.lat!=null && p?.lon!=null) target = { lat:p.lat, lon:p.lon };
@@ -1601,11 +1479,9 @@
     const dM = distM({lat:pos.lat,lon:pos.lon}, target);
     const brg = bearingDeg({lat:pos.lat,lon:pos.lon}, target);
 
-    // best layer recommendation
     const bestLayer = pickBestWindLayer(brg);
     const recText = bestLayer ? buildAltRecommendation(bestLayer.altM, pos.altM || 0) : "Windprofil fehlt.";
 
-    // 3DT special status if chosen and has donut radii
     let extra = "";
     if (def.short === "3DT") {
       const c = task.points?.C;
@@ -1627,7 +1503,6 @@
     const prof = STATE.wind.profile || [];
     if (!prof.length) return null;
 
-    // choose layer whose DRIFT direction matches desired bearing best
     let best = null;
     let bestScore = Infinity;
 
@@ -1650,17 +1525,15 @@
     return `Sinken auf ~${Math.round(targetAltM)} m (${Math.round(delta)} m)`;
   }
 
-  // GPS: smoothing + outlier rejection
+  // GPS
   function startGps() {
     if (!("geolocation" in navigator)) {
       STATE.gps.err = "Geolocation nicht verfügbar";
       setGpsPill("GPS: nicht verfügbar", false);
+      setStatus("GPS nicht verfügbar.", "error");
       return;
     }
-
-    STATE.gps.watching = true;
     setGpsPill("GPS: Suche…", false);
-
     navigator.geolocation.watchPosition(onGpsFix, onGpsErr, APP.gps);
   }
 
@@ -1668,7 +1541,6 @@
     try {
       const c = p.coords;
       const ts = p.timestamp || Date.now();
-
       const raw = {
         lat: c.latitude,
         lon: c.longitude,
@@ -1679,21 +1551,13 @@
         ts
       };
 
-      // Outlier rejection
       const last = STATE.gps.lastRaw;
       if (last) {
         const dtS = Math.max(0.2, (raw.ts - last.ts) / 1000);
         const d = distM({lat:last.lat,lon:last.lon}, {lat:raw.lat,lon:raw.lon});
         const spdKmhEst = mpsToKmh(d / dtS);
-
-        if (spdKmhEst > APP.smoothing.maxSpeedKmh) {
-          // ignore
-          return;
-        }
-        // if "jump" with low speed / high accuracy mismatch
-        if ((raw.spdKmh < 4) && (d > APP.smoothing.maxJumpM) && (raw.accM > 20)) {
-          return;
-        }
+        if (spdKmhEst > APP.smoothing.maxSpeedKmh) return;
+        if ((raw.spdKmh < 4) && (d > APP.smoothing.maxJumpM) && (raw.accM > 20)) return;
       }
 
       STATE.gps.ok = true;
@@ -1701,7 +1565,6 @@
       STATE.gps.fixCount++;
       STATE.gps.lastRaw = raw;
 
-      // smoothing based on accuracy
       const acc = clamp(raw.accM || 50, 5, 100);
       const alpha = clamp(0.5 * (1 / (acc / 10)), APP.smoothing.minAlpha, APP.smoothing.maxAlpha);
 
@@ -1712,27 +1575,17 @@
         STATE.gps.lastSmooth.lon = STATE.gps.lastSmooth.lon + alpha * (raw.lon - STATE.gps.lastSmooth.lon);
       }
 
-      // Replace displayed position with smoothed (but keep raw for data)
       const disp = { ...raw, lat: STATE.gps.lastSmooth.lat, lon: STATE.gps.lastSmooth.lon };
-
       setGpsPill(`GPS: ${fmtNum(raw.accM,0)}m`, true);
 
-      // Update instruments
-      if (!STATE.settings.simEnabled || !STATE.sim.active) {
-        updateBalloonOnMap(disp);
-      }
+      if (!STATE.settings.simEnabled || !STATE.sim.active) updateBalloonOnMap(disp);
 
-      // Track point if flight active
       maybeAddTrackPoint(disp);
       updateTrackLine();
       updateTrajectoryLine();
 
-      // Wind auto-record trigger (optional: conservative)
-      maybeAutoWindSample(disp);
-
       renderCockpit();
       renderWindPanel();
-      renderTopbar();
     } catch (e) {
       console.warn("GPS fix error:", e);
     }
@@ -1741,25 +1594,14 @@
   function onGpsErr(e) {
     STATE.gps.ok = false;
     STATE.gps.err = e?.message || "GPS Fehler";
-    setGpsPill(`GPS: Fehler`, false);
-    renderTopbar();
+    setGpsPill("GPS: Fehler", false);
+    setStatus(`GPS Fehler: ${STATE.gps.err}`, "error");
   }
 
-  function maybeAutoWindSample(pos) {
-    // requested: when GS > 10 km/h and height delta >50m OR course change >5° => record wind entry
-    // We cannot infer wind directly without track drift computation; we add a "derived" sample placeholder:
-    // Here we do a simple course-based placeholder: do nothing unless user wants later. Keep off by default.
-    // (We keep the hook to avoid surprises.)
-    return;
-  }
-
+  // Wind online
   async function fetchWindOnline() {
     const pos = getCurrentPosition();
-    if (!pos) {
-      STATE.wind.lastError = "Keine Position";
-      renderWindPanel();
-      return;
-    }
+    if (!pos) { STATE.wind.lastError = "Keine Position"; renderWindPanel(); setStatus("Wind: keine Position.", "error"); return; }
 
     try {
       STATE.wind.lastError = null;
@@ -1771,26 +1613,28 @@
       params.set("past_hours", "1");
       params.set("forecast_hours", "6");
 
+      // Try both naming variants used by Open-Meteo over time
       const hourlyVars = [];
       for (const lvl of OPEN_METEO.levels) {
         hourlyVars.push(`wind_speed_${lvl.key}`);
         hourlyVars.push(`wind_direction_${lvl.key}`);
+        hourlyVars.push(`windspeed_${lvl.key}`);
+        hourlyVars.push(`winddirection_${lvl.key}`);
       }
-      params.set("hourly", hourlyVars.join(","));
+      // de-dupe
+      params.set("hourly", Array.from(new Set(hourlyVars)).join(","));
 
       const url = `${OPEN_METEO.endpoint}?${params.toString()}`;
-
       const res = await fetch(url, { method: "GET" });
       if (!res.ok) {
         const txt = await res.text().catch(()=> "");
-        throw new Error(`HTTP ${res.status} ${res.statusText} ${txt ? "· " + txt.slice(0,120) : ""}`);
+        throw new Error(`HTTP ${res.status} ${res.statusText}${txt ? " · " + txt.slice(0,120) : ""}`);
       }
       const data = await res.json();
 
       const times = data?.hourly?.time;
       if (!Array.isArray(times) || !times.length) throw new Error("Antwort ohne hourly.time");
 
-      // pick index closest to now
       const now = Date.now();
       let bestI = 0, bestDt = Infinity;
       for (let i=0;i<times.length;i++) {
@@ -1801,15 +1645,19 @@
 
       const prof = [];
       for (const lvl of OPEN_METEO.levels) {
-        const spdArr = data?.hourly?.[`wind_speed_${lvl.key}`];
-        const dirArr = data?.hourly?.[`wind_direction_${lvl.key}`];
-        const spd = Array.isArray(spdArr) ? spdArr[bestI] : null;
-        const dir = Array.isArray(dirArr) ? dirArr[bestI] : null;
+        const spdArrA = data?.hourly?.[`wind_speed_${lvl.key}`];
+        const dirArrA = data?.hourly?.[`wind_direction_${lvl.key}`];
+        const spdArrB = data?.hourly?.[`windspeed_${lvl.key}`];
+        const dirArrB = data?.hourly?.[`winddirection_${lvl.key}`];
+
+        const spd = Array.isArray(spdArrA) ? spdArrA[bestI] : (Array.isArray(spdArrB) ? spdArrB[bestI] : null);
+        const dir = Array.isArray(dirArrA) ? dirArrA[bestI] : (Array.isArray(dirArrB) ? dirArrB[bestI] : null);
+
         if (!isFinite(spd) || !isFinite(dir)) continue;
         prof.push({ altM: lvl.altM, speedKmh: Number(spd), dirFromDeg: degNormalize(Number(dir)), ts: Date.now(), source: "Open-Meteo" });
       }
 
-      if (!prof.length) throw new Error("Keine Windwerte gefunden (Parameter evtl. nicht verfügbar).");
+      if (!prof.length) throw new Error("Keine Windwerte gefunden (API/Variablen evtl. geändert).");
 
       STATE.wind.profile = prof.sort((a,b)=>a.altM-b.altM);
       STATE.wind.lastSource = "Open-Meteo";
@@ -1818,34 +1666,31 @@
 
       saveToStorage();
       renderWindPanel();
-      showToast("Wind", "Online Windprofil aktualisiert.");
+      setStatus("Windprofil aktualisiert (Open-Meteo).", "ok");
     } catch (e) {
       STATE.wind.lastError = e?.message || String(e);
       renderWindPanel();
-      showToast("Wind Fehler", STATE.wind.lastError);
+      setStatus(`Wind Fehler: ${STATE.wind.lastError}`, "error");
     }
   }
 
+  // Flight
   function startFlight() {
     if (STATE.flight.active) return;
     const sel = getSelectedBriefing();
-    if (!sel) { showToast("Start", "Kein Briefing gewählt."); return; }
-
-    // Snapshot to avoid accidental edits mid-flight
-    const snap = structuredCloneSafe(sel);
+    if (!sel) { setStatus("Start: Kein Briefing gewählt.", "error"); return; }
 
     STATE.flight.active = true;
     STATE.flight.startedTs = Date.now();
     STATE.flight.endedTs = null;
-    STATE.flight.briefingSnapshot = snap;
+    STATE.flight.briefingSnapshot = structuredCloneSafe(sel);
     STATE.flight.track = [];
     STATE.flight.markers = [];
-
     STATE.ui.follow = true;
 
     requestWakeLock();
+    setStatus(`Fahrt gestartet: ${sel.title}`, "ok");
     renderAll();
-    showToast("Fahrt gestartet", sel.title);
   }
 
   function stopFlight() {
@@ -1855,7 +1700,6 @@
     STATE.flight.endedTs = Date.now();
     releaseWakeLock();
 
-    // archive entry
     const title = STATE.flight.briefingSnapshot?.title || "Fahrt";
     const entry = {
       id: uid("arch"),
@@ -1869,156 +1713,35 @@
     STATE.archive.push(entry);
     saveToStorage();
 
-    // clear live state
     STATE.flight.briefingSnapshot = null;
     STATE.flight.track = [];
     STATE.flight.markers = [];
     STATE.flight.startedTs = null;
 
+    setStatus("Fahrt beendet und im Archiv gespeichert.", "ok");
     renderAll();
-    showToast("Fahrt beendet", "Im Archiv gespeichert.");
   }
 
   function dropMarker() {
     const pos = getCurrentPosition();
-    if (!pos) return;
-
-    if (!STATE.flight.active) {
-      showToast("Marker", "Fahrt ist nicht aktiv (kein Auto-Start).");
-      return;
-    }
+    if (!pos) { setStatus("Marker: Keine Position.", "error"); return; }
+    if (!STATE.flight.active) { setStatus("Marker: Fahrt ist nicht aktiv (kein Auto-Start).", "hint"); return; }
 
     const expected = getExpectedMarkerColor();
     const key = Object.entries(MARKER_COLORS).find(([k,v]) => v.hex === expected.hex)?.[0] || "green";
 
-    STATE.flight.markers.push({
-      lat: pos.lat,
-      lon: pos.lon,
-      ts: Date.now(),
-      color: key
-    });
+    STATE.flight.markers.push({ lat: pos.lat, lon: pos.lon, ts: Date.now(), color: key });
 
-    // draw marker on map too
+    // Draw on map as small circle marker
     const c = MARKER_COLORS[key]?.hex || "#22c55e";
-    const mk = L.circleMarker([pos.lat, pos.lon], {
-      radius: 7,
-      color: c,
-      fillColor: c,
-      fillOpacity: 0.85,
-      weight: 2
-    }).addTo(taskLayerGroup);
+    L.circleMarker([pos.lat, pos.lon], { radius: 7, color: c, fillColor: c, fillOpacity: 0.85, weight: 2 })
+      .addTo(taskLayerGroup);
 
-    showToast("Marker gesetzt", `${MARKER_COLORS[key]?.name || key} · ${fmtLatLon(pos.lat, pos.lon)}`);
-    renderDrawer();
+    setStatus(`Marker gesetzt: ${MARKER_COLORS[key]?.name || key} · ${fmtLatLon(pos.lat, pos.lon)}`, "ok");
+    renderTabLive();
   }
 
-  function structuredCloneSafe(obj) {
-    try {
-      if ("structuredClone" in window) return structuredClone(obj);
-    } catch {}
-    return JSON.parse(JSON.stringify(obj));
-  }
-
-  function exportKmlForFlight(flightObj, filenameBase) {
-    const track = flightObj.track || [];
-    const markers = flightObj.markers || [];
-
-    const kmlTrackCoords = track.map(p => `${p.lon},${p.lat},${Math.round(p.altM||0)}`).join(" ");
-    const markerPlacemarks = markers.map(m => {
-      const name = `Marker ${fmtTime(m.ts)}`;
-      return `
-        <Placemark>
-          <name>${escHtml(name)}</name>
-          <TimeStamp><when>${new Date(m.ts).toISOString()}</when></TimeStamp>
-          <Point><coordinates>${m.lon},${m.lat},0</coordinates></Point>
-        </Placemark>
-      `.trim();
-    }).join("\n");
-
-    const docName = escHtml(filenameBase || "CompNavAir");
-    const kml = `<?xml version="1.0" encoding="UTF-8"?>
-<kml xmlns="http://www.opengis.net/kml/2.2">
-  <Document>
-    <name>${docName}</name>
-    <Placemark>
-      <name>Track</name>
-      <Style>
-        <LineStyle><color>ff4444ef</color><width>3</width></LineStyle>
-      </Style>
-      <LineString>
-        <tessellate>1</tessellate>
-        <altitudeMode>absolute</altitudeMode>
-        <coordinates>
-          ${kmlTrackCoords}
-        </coordinates>
-      </LineString>
-    </Placemark>
-    ${markerPlacemarks}
-  </Document>
-</kml>`;
-
-    downloadTextFile(kml, `${filenameBase || "compnavair"}_${Date.now()}.kml`, "application/vnd.google-earth.kml+xml");
-  }
-
-  function downloadTextFile(text, filename, mime) {
-    const blob = new Blob([text], { type: mime || "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-  }
-
-  function exportBriefings() {
-    const payload = {
-      app: APP.name,
-      version: APP.version,
-      exportedAt: new Date().toISOString(),
-      briefings: STATE.briefings.list
-    };
-    downloadTextFile(JSON.stringify(payload, null, 2), `compnavair_briefings_${Date.now()}.json`, "application/json");
-    showToast("Export", "Briefings exportiert.");
-  }
-
-  async function importBriefingsFromFile(file) {
-    try {
-      const txt = await file.text();
-      const obj = safeJsonParse(txt, null);
-      const list = obj?.briefings;
-      if (!Array.isArray(list)) throw new Error("Ungültige Datei: briefings[] fehlt.");
-
-      // merge by new ids if conflict
-      const existingIds = new Set(STATE.briefings.list.map(b => b.id));
-      const merged = [];
-
-      for (const b of list) {
-        if (!b || typeof b !== "object") continue;
-        const nb = structuredCloneSafe(b);
-        if (!nb.id || existingIds.has(nb.id)) nb.id = uid("brief");
-        // also ensure task ids unique
-        if (Array.isArray(nb.tasks)) {
-          const seen = new Set();
-          for (const t of nb.tasks) {
-            if (!t.id || seen.has(t.id)) t.id = uid("task");
-            seen.add(t.id);
-          }
-        }
-        merged.push(nb);
-      }
-
-      STATE.briefings.list.push(...merged);
-      if (!STATE.briefings.selectedId && STATE.briefings.list.length) STATE.briefings.selectedId = STATE.briefings.list[0].id;
-      saveToStorage();
-      renderAll();
-      showToast("Import", `${merged.length} Briefing(s) importiert.`);
-    } catch (e) {
-      showToast("Import Fehler", e?.message || String(e));
-    }
-  }
-
+  // Briefings CRUD
   function createNewBriefing() {
     const title = prompt("Titel für neues Briefing:", "Morgenfahrt");
     if (!title) return;
@@ -2027,8 +1750,8 @@
     STATE.briefings.selectedId = b.id;
     saveToStorage();
     renderAll();
+    setStatus(`Briefing erstellt: ${title}`, "ok");
   }
-
   function renameBriefing() {
     const b = getSelectedBriefing();
     if (!b) return;
@@ -2038,8 +1761,8 @@
     b.updatedTs = Date.now();
     saveToStorage();
     renderAll();
+    setStatus("Briefing umbenannt.", "ok");
   }
-
   function deleteBriefing() {
     const b = getSelectedBriefing();
     if (!b) return;
@@ -2048,24 +1771,18 @@
     STATE.briefings.selectedId = STATE.briefings.list[0]?.id || null;
     saveToStorage();
     renderAll();
+    setStatus("Briefing gelöscht.", "ok");
   }
 
   function addTaskToBriefing() {
     const b = getSelectedBriefing();
     if (!b) return;
     const d = TASK_LIBRARY[0];
-    b.tasks.push({
-      id: uid("task"),
-      short: d.short,
-      cia: d.cia,
-      markerColor: "",
-      points: {},
-      targets: [],
-      fields: {}
-    });
+    b.tasks.push({ id: uid("task"), short: d.short, cia: d.cia, markerColor: "", points: {}, targets: [], fields: {} });
     b.updatedTs = Date.now();
     saveToStorage();
     renderAll();
+    setStatus("Aufgabe hinzugefügt. Jetzt Punkte setzen.", "hint");
   }
 
   function removeTask(briefingId, taskId) {
@@ -2075,6 +1792,7 @@
     b.updatedTs = Date.now();
     saveToStorage();
     renderAll();
+    setStatus("Aufgabe entfernt.", "ok");
   }
 
   function changeTaskType(briefingId, taskId, newShort) {
@@ -2084,20 +1802,23 @@
     if (!t) return;
     const def = getTaskDefByShort(newShort);
     if (!def) return;
+
     t.short = def.short;
     t.cia = def.cia;
     t.points = {};
     t.targets = [];
     t.fields = t.fields || {};
-    // default field values
+
     for (const f of (def.fields || [])) {
       if (f.default != null && t.fields[f.key] == null) t.fields[f.key] = f.default;
       if (f.fixed) t.fields[f.key] = true;
     }
+
     t.updatedTs = Date.now();
     b.updatedTs = Date.now();
     saveToStorage();
     renderAll();
+    setStatus(`Task geändert: ${def.cia} ${def.short}`, "ok");
   }
 
   function setTaskMarkerColor(briefingId, taskId, colorKey) {
@@ -2112,6 +1833,7 @@
     renderAll();
   }
 
+  // HWZ targets
   function addHwzTarget(briefingId, taskId) {
     const b = getBriefingById(briefingId);
     const t = b?.tasks?.find(x => x.id === taskId);
@@ -2122,8 +1844,8 @@
     b.updatedTs = Date.now();
     saveToStorage();
     renderAll();
+    setStatus("HWZ Ziel hinzugefügt. „Setzen“ drücken.", "hint");
   }
-
   function delHwzTarget(briefingId, taskId, idx) {
     const b = getBriefingById(briefingId);
     const t = b?.tasks?.find(x => x.id === taskId);
@@ -2133,23 +1855,64 @@
     b.updatedTs = Date.now();
     saveToStorage();
     renderAll();
+    setStatus("HWZ Ziel gelöscht.", "ok");
   }
 
-  function pickPoint(briefingId, taskId, pointKey, label) {
-    STATE.ui.picking = { briefingId, taskId, pointKey, label };
-    showPickStrip(true, label);
-    showToast("Punkt setzen", "Tippe in die Karte…");
-    renderAll();
+  // Export/Import briefings
+  function downloadTextFile(text, filename, mime) {
+    const blob = new Blob([text], { type: mime || "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
 
-  function pickHwz(briefingId, taskId, idx) {
-    STATE.ui.picking = { briefingId, taskId, pointKey: `HWZ_${idx}`, label: `HWZ Ziel ${idx+1}` };
-    showPickStrip(true, `HWZ Ziel ${idx+1}`);
-    showToast("Punkt setzen", "Tippe in die Karte…");
-    renderAll();
+  function exportBriefings() {
+    const payload = { app: APP.name, version: APP.version, exportedAt: new Date().toISOString(), briefings: STATE.briefings.list };
+    downloadTextFile(JSON.stringify(payload, null, 2), `compnavair_briefings_${Date.now()}.json`, "application/json");
+    setStatus("Briefings exportiert.", "ok");
   }
 
-  // KML handling
+  async function importBriefingsFromFile(file) {
+    try {
+      const txt = await file.text();
+      const obj = safeJsonParse(txt, null);
+      const list = obj?.briefings;
+      if (!Array.isArray(list)) throw new Error("Ungültige Datei: briefings[] fehlt.");
+
+      const existingIds = new Set(STATE.briefings.list.map(b => b.id));
+      const merged = [];
+
+      for (const b of list) {
+        if (!b || typeof b !== "object") continue;
+        const nb = structuredCloneSafe(b);
+        if (!nb.id || existingIds.has(nb.id)) nb.id = uid("brief");
+        if (Array.isArray(nb.tasks)) {
+          const seen = new Set();
+          for (const t of nb.tasks) {
+            if (!t.id || seen.has(t.id)) t.id = uid("task");
+            seen.add(t.id);
+          }
+        }
+        merged.push(nb);
+      }
+
+      STATE.briefings.list.push(...merged);
+      if (!STATE.briefings.selectedId && STATE.briefings.list.length) STATE.briefings.selectedId = STATE.briefings.list[0].id;
+
+      saveToStorage();
+      renderAll();
+      setStatus(`${merged.length} Briefing(s) importiert.`, "ok");
+    } catch (e) {
+      setStatus(`Import Fehler: ${e?.message || String(e)}`, "error");
+    }
+  }
+
+  // KML
   async function importKmlFile(file) {
     try {
       const text = await file.text();
@@ -2159,7 +1922,6 @@
       const name = file.name || "KML";
       const meta = { id: overlayId, name, layer, visible: true, source: "Datei" };
 
-      // style each feature, bind click popup
       layer.eachLayer((l) => {
         const props = (l.feature && l.feature.properties) ? l.feature.properties : {};
         const nm = props.name || props.Name || props.NAME || name || "KML";
@@ -2184,7 +1946,6 @@
             <div class="text-[12px]">
               <div class="font-semibold">${escHtml(nm || "Luftraum")}</div>
               ${desc ? `<div class="mt-1 text-slate-200/90">${escHtml(desc).slice(0, 900)}</div>` : `<div class="mt-1 text-slate-200/70">Keine Details.</div>`}
-              <div class="mt-2 text-slate-200/70">Tipp: EDRxxx / ED-Rxxx wird rot markiert.</div>
             </div>
           `;
           L.popup({ className: "kml-popup", closeButton: true, autoPan: true })
@@ -2197,11 +1958,10 @@
       STATE.kml.overlays.push(meta);
       kmlLayerGroup.addLayer(layer);
 
-      saveToStorage();
+      setStatus(`KML geladen: ${name}`, "ok");
       renderAll();
-      showToast("KML", `${name} geladen.`);
     } catch (e) {
-      showToast("KML Fehler", e?.message || String(e));
+      setStatus(`KML Fehler: ${e?.message || String(e)}`, "error");
     }
   }
 
@@ -2221,27 +1981,61 @@
     try { kmlLayerGroup.removeLayer(o.layer); } catch {}
     STATE.kml.overlays.splice(idx, 1);
     renderAll();
+    setStatus("KML entfernt.", "ok");
+  }
+
+  // KML export
+  function exportKmlForFlight(flightObj, filenameBase) {
+    const track = flightObj.track || [];
+    const markers = flightObj.markers || [];
+    const kmlTrackCoords = track.map(p => `${p.lon},${p.lat},${Math.round(p.altM||0)}`).join(" ");
+
+    const markerPlacemarks = markers.map(m => `
+      <Placemark>
+        <name>${escHtml(`Marker ${fmtTime(m.ts)}`)}</name>
+        <TimeStamp><when>${new Date(m.ts).toISOString()}</when></TimeStamp>
+        <Point><coordinates>${m.lon},${m.lat},0</coordinates></Point>
+      </Placemark>
+    `.trim()).join("\n");
+
+    const docName = escHtml(filenameBase || "CompNavAir");
+    const kml = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>${docName}</name>
+    <Placemark>
+      <name>Track</name>
+      <Style><LineStyle><color>ff4444ef</color><width>3</width></LineStyle></Style>
+      <LineString>
+        <tessellate>1</tessellate>
+        <altitudeMode>absolute</altitudeMode>
+        <coordinates>${kmlTrackCoords}</coordinates>
+      </LineString>
+    </Placemark>
+    ${markerPlacemarks}
+  </Document>
+</kml>`;
+    downloadTextFile(kml, `${filenameBase || "compnavair"}_${Date.now()}.kml`, "application/vnd.google-earth.kml+xml");
+    setStatus("KML exportiert.", "ok");
   }
 
   // Simulation
   function setSimEnabled(on) {
     STATE.settings.simEnabled = !!on;
-    if (!STATE.settings.simEnabled) {
-      STATE.sim.active = false;
-    }
+    if (!STATE.settings.simEnabled) STATE.sim.active = false;
     saveToStorage();
     renderAll();
   }
 
   function simUseGpsPosition() {
     const g = STATE.gps.lastRaw;
-    if (!g) { showToast("SIM", "Keine GPS Position."); return; }
+    if (!g) { setStatus("SIM: Keine GPS Position.", "error"); return; }
     STATE.sim.lat = g.lat;
     STATE.sim.lon = g.lon;
     STATE.sim.altM = g.altM || STATE.sim.altM;
     STATE.sim.hdgDeg = g.hdgDeg || 0;
     STATE.sim.active = true;
-    showToast("SIM", "SIM auf GPS gesetzt.");
+    setStatus("SIM auf GPS gesetzt.", "ok");
     renderAll();
   }
 
@@ -2251,8 +2045,10 @@
     if (STATE.sim.active) {
       const g = STATE.gps.lastRaw;
       if (g) { STATE.sim.lat = g.lat; STATE.sim.lon = g.lon; STATE.sim.altM = g.altM || STATE.sim.altM; }
+      setStatus("SIM aktiv.", "ok");
+    } else {
+      setStatus("SIM inaktiv.", "hint");
     }
-    showToast("SIM", STATE.sim.active ? "SIM aktiv." : "SIM inaktiv.");
     renderAll();
   }
 
@@ -2268,14 +2064,13 @@
     const dt = STATE.sim.lastTickTs ? (now - STATE.sim.lastTickTs) / 1000 : (APP.sim.tickMs / 1000);
     STATE.sim.lastTickTs = now;
 
-    // vertical
     let vario = 0;
     if (STATE.sim.burnerHeld) vario += APP.sim.climbRateMps;
     if (STATE.sim.ventHeld) vario -= APP.sim.sinkRateMps;
+
     STATE.sim.altM = clamp(STATE.sim.altM + vario * dt, 0, 9999);
     STATE.sim.varioMps = vario;
 
-    // horizontal drift from wind profile at current altitude
     const w = windAtAlt(STATE.sim.altM);
     const speedMps = w ? kmhToMps(w.speedKmh) : 0;
     const driftDeg = w ? degNormalize(w.dirFromDeg + 180) : 0;
@@ -2290,7 +2085,6 @@
       STATE.sim.hdgDeg = driftDeg;
     }
 
-    // update map and track if flight active
     const pos = getCurrentPosition();
     if (pos) {
       updateBalloonOnMap(pos);
@@ -2302,24 +2096,11 @@
     }
   }
 
-  function windAtAlt(altM) {
-    const prof = STATE.wind.profile || [];
-    if (!prof.length) return null;
-    // nearest neighbor by altitude
-    let best = prof[0], bestD = Math.abs(prof[0].altM - altM);
-    for (const w of prof) {
-      const d = Math.abs(w.altM - altM);
-      if (d < bestD) { bestD = d; best = w; }
-    }
-    return best;
-  }
-
   // Wake lock
   async function requestWakeLock() {
     try {
       if (!("wakeLock" in navigator)) return;
       wakeLock = await navigator.wakeLock.request("screen");
-      wakeLock.addEventListener("release", () => {});
     } catch (e) {
       console.warn("WakeLock failed:", e);
     }
@@ -2333,27 +2114,36 @@
   // 6) Event-Listener & Initialisierung (window.onload am Ende)
   // ============================================================
   function bindEvents() {
+    // Panel / sheet
+    document.getElementById("btnPanel").addEventListener("click", () => {
+      // toggle between expanded and collapsed
+      setSheetState(STATE.ui.sheet === "expanded" ? "collapsed" : "expanded");
+    });
+
+    document.getElementById("btnSheetToggle").addEventListener("click", () => {
+      setSheetState(STATE.ui.sheet === "expanded" ? "collapsed" : "expanded");
+    });
+
+    // Tabs
+    document.querySelectorAll(".tabBtn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        STATE.ui.activeTab = btn.dataset.tab;
+        // if user is picking, keep collapsed
+        if (!STATE.ui.picking && STATE.ui.sheet === "collapsed") setSheetState("expanded");
+        renderSheet();
+      });
+    });
+
     // Header buttons
-    document.getElementById("btnMenu").addEventListener("click", () => {
-      STATE.ui.drawerOpen = !STATE.ui.drawerOpen;
-      renderDrawer();
-    });
-
-    document.getElementById("btnDrawerClose").addEventListener("click", () => {
-      STATE.ui.drawerOpen = false;
-      renderDrawer();
-    });
-
     document.getElementById("btnFollow").addEventListener("click", () => {
       STATE.ui.follow = true;
       const pos = getCurrentPosition();
       if (pos) map.panTo([pos.lat, pos.lon], { animate:true, duration:0.25 });
-      showToast("Follow", "Zentrieren & folgen aktiv.");
+      setStatus("Zentriert & Follow aktiv.", "ok");
       renderAll();
     });
 
     document.getElementById("btnLayer").addEventListener("click", switchBaseLayer);
-
     document.getElementById("btnFinish").addEventListener("click", stopFlight);
 
     // Wind panel
@@ -2361,16 +2151,7 @@
     document.getElementById("btnWindExpand").addEventListener("click", () => setWindCollapsed(false));
     document.getElementById("btnWindFetch").addEventListener("click", fetchWindOnline);
 
-    // Pick strip
-    document.getElementById("btnPickCancel").addEventListener("click", () => {
-      STATE.ui.picking = null;
-      showPickStrip(false);
-      renderAll();
-    });
-
-    // Sim controls
-    const burn = document.getElementById("btnBurn");
-    const vent = document.getElementById("btnVent");
+    // SIM controls (hold)
     const hold = (btn, onDown, onUp) => {
       const down = (e) => { e.preventDefault(); onDown(); };
       const up = (e) => { e.preventDefault(); onUp(); };
@@ -2379,21 +2160,13 @@
       btn.addEventListener("pointercancel", up);
       btn.addEventListener("pointerleave", up);
     };
-    hold(burn, () => STATE.sim.burnerHeld = true, () => STATE.sim.burnerHeld = false);
-    hold(vent, () => STATE.sim.ventHeld = true, () => STATE.sim.ventHeld = false);
+    hold(document.getElementById("btnBurn"), () => STATE.sim.burnerHeld = true, () => STATE.sim.burnerHeld = false);
+    hold(document.getElementById("btnVent"), () => STATE.sim.ventHeld = true, () => STATE.sim.ventHeld = false);
 
     // Marker
     document.getElementById("btnMarker").addEventListener("click", dropMarker);
 
-    // Drawer tabs
-    document.querySelectorAll(".tabBtn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        STATE.ui.activeTab = btn.dataset.tab;
-        renderDrawer();
-      });
-    });
-
-    // Delegated events inside drawer
+    // Delegated events
     document.addEventListener("change", (e) => {
       const t = e.target;
       if (!t) return;
@@ -2401,6 +2174,11 @@
       if (t.id === "selBriefing") {
         STATE.briefings.selectedId = t.value || null;
         renderAll();
+        return;
+      }
+      if (t.id === "briefingImportFile" && t.files && t.files[0]) {
+        importBriefingsFromFile(t.files[0]);
+        t.value = "";
         return;
       }
       if (t.id === "tglSim") {
@@ -2412,13 +2190,7 @@
         t.value = "";
         return;
       }
-      if (t.id === "briefingImportFile" && t.files && t.files[0]) {
-        importBriefingsFromFile(t.files[0]);
-        t.value = "";
-        return;
-      }
 
-      // task type
       if (t.dataset.action === "taskType") {
         changeTaskType(t.dataset.b, t.dataset.t, t.value);
         return;
@@ -2443,6 +2215,7 @@
     document.addEventListener("input", (e) => {
       const t = e.target;
       if (!t) return;
+
       if (t.dataset.action === "fieldNum") {
         const b = getBriefingById(t.dataset.b);
         const task = b?.tasks?.find(x => x.id === t.dataset.t);
@@ -2451,9 +2224,11 @@
           const v = Number(String(t.value).replace(",", "."));
           task.fields[t.dataset.k] = isFinite(v) ? v : null;
           task.updatedTs = Date.now(); b.updatedTs = Date.now();
-          saveToStorage(); renderMapTasks(); renderWindPanel(); renderCockpit();
+          saveToStorage();
+          renderMapTasks(); renderWindPanel();
         }
       }
+
       if (t.dataset.action === "fieldText") {
         const b = getBriefingById(t.dataset.b);
         const task = b?.tasks?.find(x => x.id === t.dataset.t);
@@ -2467,95 +2242,34 @@
     });
 
     document.addEventListener("click", (e) => {
-      const t = e.target?.closest?.("[data-action]") || null;
-      if (!t) return;
-
-      const action = t.dataset.action;
-
-      if (action === "delTask") {
-        removeTask(t.dataset.b, t.dataset.t);
-        return;
-      }
-      if (action === "pickPoint") {
-        pickPoint(t.dataset.b, t.dataset.t, t.dataset.k, t.dataset.l);
-        return;
-      }
-      if (action === "addHWZ") {
-        addHwzTarget(t.dataset.b, t.dataset.t);
-        return;
-      }
-      if (action === "delHWZ") {
-        delHwzTarget(t.dataset.b, t.dataset.t, Number(t.dataset.i));
-        return;
-      }
-      if (action === "pickHWZ") {
-        pickHwz(t.dataset.b, t.dataset.t, Number(t.dataset.i));
-        return;
-      }
-
-      if (action === "kmlToggle") { toggleKmlOverlay(t.dataset.id); return; }
-      if (action === "kmlRemove") { removeKmlOverlay(t.dataset.id); return; }
-
-      if (action === "archKml") {
-        const a = STATE.archive.find(x => x.id === t.dataset.id);
-        if (a) exportKmlForFlight(a, a.title || "flight");
-        return;
-      }
-      if (action === "archDel") {
-        STATE.archive = STATE.archive.filter(x => x.id !== t.dataset.id);
-        saveToStorage();
-        renderAll();
-        return;
-      }
-      if (action === "archShow") {
-        const a = STATE.archive.find(x => x.id === t.dataset.id);
-        if (a && a.track?.length) {
-          const bounds = L.latLngBounds(a.track.map(p => [p.lat, p.lon]));
-          map.fitBounds(bounds.pad(0.2));
-          showToast("Archiv", "Track in Karte zentriert.");
-        }
-        return;
-      }
-    });
-
-    // Buttons inside briefing/setup/live tabs (non-delegated by id)
-    document.addEventListener("click", (e) => {
+      const btn = e.target?.closest?.("[data-action]") || null;
       const id = e.target?.id;
 
+      // direct buttons by id
       if (id === "btnBriefingNew") { createNewBriefing(); return; }
       if (id === "btnBriefingRename") { renameBriefing(); return; }
       if (id === "btnBriefingDelete") { deleteBriefing(); return; }
+      if (id === "btnBriefingExport") { exportBriefings(); return; }
       if (id === "btnAddTask") { addTaskToBriefing(); return; }
       if (id === "btnStartFlight") { startFlight(); return; }
-      if (id === "btnBriefingExport") { exportBriefings(); return; }
 
       if (id === "btnLiveCenter") {
         const pos = getCurrentPosition();
         if (pos) map.panTo([pos.lat, pos.lon], { animate:true, duration:0.25 });
         return;
       }
-      if (id === "btnLiveToggleFollow") {
-        STATE.ui.follow = !STATE.ui.follow;
-        renderAll();
-        return;
-      }
+      if (id === "btnLiveToggleFollow") { STATE.ui.follow = !STATE.ui.follow; renderAll(); return; }
       if (id === "btnLiveStop") { stopFlight(); return; }
-      if (id === "btnLiveKmlNow") {
-        if (STATE.flight.active) exportKmlForFlight(STATE.flight, STATE.flight.briefingSnapshot?.title || "flight");
-        return;
-      }
+      if (id === "btnLiveKmlNow") { if (STATE.flight.active) exportKmlForFlight(STATE.flight, STATE.flight.briefingSnapshot?.title || "flight"); return; }
 
-      if (id === "btnSimUseHere") { simUseGpsPosition(); return; }
+      if (id === "btnSimUseGps") { simUseGpsPosition(); return; }
       if (id === "btnSimToggleActive") { toggleSimActive(); return; }
 
       if (id === "btnWindAddManual") {
         const alt = Number(String(document.getElementById("windAlt").value).replace(",", "."));
         const dir = Number(String(document.getElementById("windDir").value).replace(",", "."));
         const spd = Number(String(document.getElementById("windSpd").value).replace(",", "."));
-        if (!isFinite(alt) || !isFinite(dir) || !isFinite(spd)) {
-          showToast("Wind", "Bitte Alt/Dir/Speed korrekt eingeben.");
-          return;
-        }
+        if (!isFinite(alt) || !isFinite(dir) || !isFinite(spd)) { setStatus("Wind: bitte Alt/Dir/Speed korrekt.", "error"); return; }
         STATE.wind.profile.push({ altM: Math.round(alt), dirFromDeg: degNormalize(dir), speedKmh: spd, ts: Date.now(), source: "Manuell" });
         STATE.wind.profile.sort((a,b)=>a.altM-b.altM);
         STATE.wind.lastSource = "Manuell";
@@ -2565,7 +2279,7 @@
         document.getElementById("windDir").value = "";
         document.getElementById("windSpd").value = "";
         renderAll();
-        showToast("Wind", "Eintrag hinzugefügt.");
+        setStatus("Wind: Eintrag hinzugefügt.", "ok");
         return;
       }
       if (id === "btnWindClear") {
@@ -2575,7 +2289,42 @@
         STATE.wind.lastError = null;
         saveToStorage();
         renderAll();
-        showToast("Wind", "Windprofil geleert.");
+        setStatus("Windprofil geleert.", "ok");
+        return;
+      }
+
+      // delegated by data-action
+      if (!btn) return;
+      const action = btn.dataset.action;
+
+      if (action === "delTask") { removeTask(btn.dataset.b, btn.dataset.t); return; }
+      if (action === "pickPoint") { startPickMode(btn.dataset.b, btn.dataset.t, btn.dataset.k, btn.dataset.l); return; }
+      if (action === "addHWZ") { addHwzTarget(btn.dataset.b, btn.dataset.t); return; }
+      if (action === "delHWZ") { delHwzTarget(btn.dataset.b, btn.dataset.t, Number(btn.dataset.i)); return; }
+      if (action === "pickHWZ") { startPickMode(btn.dataset.b, btn.dataset.t, `HWZ_${Number(btn.dataset.i)}`, `HWZ Ziel ${Number(btn.dataset.i)+1}`); return; }
+
+      if (action === "kmlToggle") { toggleKmlOverlay(btn.dataset.id); return; }
+      if (action === "kmlRemove") { removeKmlOverlay(btn.dataset.id); return; }
+
+      if (action === "archKml") {
+        const a = STATE.archive.find(x => x.id === btn.dataset.id);
+        if (a) exportKmlForFlight(a, a.title || "flight");
+        return;
+      }
+      if (action === "archDel") {
+        STATE.archive = STATE.archive.filter(x => x.id !== btn.dataset.id);
+        saveToStorage();
+        renderAll();
+        setStatus("Archiv-Eintrag gelöscht.", "ok");
+        return;
+      }
+      if (action === "archShow") {
+        const a = STATE.archive.find(x => x.id === btn.dataset.id);
+        if (a && a.track?.length) {
+          const bounds = L.latLngBounds(a.track.map(p => [p.lat, p.lon]));
+          map.fitBounds(bounds.pad(0.2));
+          setStatus("Archiv: Track zentriert.", "ok");
+        }
         return;
       }
     });
@@ -2586,7 +2335,7 @@
     initMap();
     bindEvents();
 
-    // initial briefings if none
+    // seed briefing
     if (!STATE.briefings.list.length) {
       STATE.briefings.list.push({
         id: uid("brief"),
@@ -2607,21 +2356,14 @@
       saveToStorage();
     }
 
-    // restore settings
     setWindCollapsed(false);
+    setSheetState("expanded");
 
-    // restore KML overlays visibility in group (cannot persist full layers in localStorage single-file)
-    // => only keep runtime overlays. (Export/import for KML would require file re-load.)
-
-    // start systems
     startGps();
     startSimLoop();
 
-    // initial render
-    STATE.ui.drawerOpen = true;
     renderAll();
-
-    showToast("Bereit", "Kein Auto-Start der Fahrt. Briefing → Start.");
+    setStatus("Bereit: Plane Briefing im Panel unten. Keine Toasts auf der Karte.", "ok");
   };
   </script>
 </body>
