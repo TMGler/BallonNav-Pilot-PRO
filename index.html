@@ -3,407 +3,321 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Balloon Comp Navigator Pro</title>
-    
-    <!-- Leaflet CSS -->
+    <title>Balloon Navigator Pro v2</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
     <style>
         :root {
-            --bg-color: #121212;
-            --panel-color: #1e1e1e;
-            --accent-color: #00e676;
-            --text-color: #ffffff;
-            --danger-color: #ff5252;
+            --bg-color: #121212; --panel-color: #1e1e1e; --accent-color: #00e676;
+            --text-color: #ffffff; --danger-color: #ff5252; --warning-color: #ffeb3b;
         }
 
         body { 
-            margin: 0; 
-            padding: 0; 
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-            background: var(--bg-color); 
-            color: var(--text-color);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
+            margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; 
+            background: var(--bg-color); color: var(--text-color);
+            overflow: hidden; display: flex; flex-direction: column; height: 100vh;
         }
 
-        #map { 
-            flex-grow: 1; 
-            width: 100%; 
-            background: #222;
-        }
+        #map { flex-grow: 1; width: 100%; background: #222; }
 
+        /* Dashboard & Alarme */
         #dashboard { 
-            height: 220px; 
-            background: var(--panel-color); 
-            display: grid; 
-            grid-template-columns: repeat(3, 1fr); 
-            gap: 10px; 
-            padding: 15px;
-            box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
-            z-index: 1000;
-            border-top: 2px solid #333;
+            height: 180px; background: var(--panel-color); display: grid; 
+            grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 10px;
+            z-index: 1000; border-top: 2px solid #333;
+        }
+        #dashboard.alarm-active { background-color: #8b0000; animation: flash 1s infinite alternate; }
+        @keyframes flash { from { opacity: 1; } to { opacity: 0.7; } }
+
+        .data-box { background: #2a2a2a; padding: 8px; border-radius: 6px; text-align: center; border-bottom: 3px solid #444; }
+        .label { font-size: 0.65rem; color: #aaa; text-transform: uppercase; }
+        .value { font-size: 1.2rem; font-weight: bold; font-family: monospace; }
+
+        /* Overlays & Panels */
+        .overlay-panel {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(18, 18, 18, 0.95); z-index: 4000; display: none;
+            flex-direction: column; padding: 20px; box-sizing: border-box; overflow-y: auto;
         }
 
-        .data-box { 
-            background: #2a2a2a; 
-            padding: 10px; 
-            border-radius: 8px; 
-            text-align: center;
-            border-bottom: 3px solid #444;
-        }
-
-        .data-box.highlight { border-bottom-color: var(--accent-color); }
-        .data-box.target { border-bottom-color: var(--danger-color); }
-
-        .label { font-size: 0.7rem; color: #aaa; text-transform: uppercase; margin-bottom: 5px; }
-        .value { font-size: 1.4rem; font-weight: bold; font-family: monospace; }
-        .unit { font-size: 0.8rem; color: #888; margin-left: 3px; }
-
-        .controls {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            z-index: 1000;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        button {
-            background: var(--panel-color);
-            color: white;
-            border: 1px solid #444;
-            padding: 12px;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            font-size: 20px;
-            cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        button:active { background: var(--accent-color); }
-
-        /* Wind Profiler Panel */
-        #wind-panel {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            width: 260px;
-            max-height: 50vh;
-            background: rgba(30, 30, 30, 0.95);
-            border: 1px solid #444;
-            border-radius: 8px;
-            z-index: 1000;
-            display: none;
-            flex-direction: column;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
-            backdrop-filter: blur(5px);
-        }
-
-        .panel-header {
-            background: #111;
-            padding: 12px;
-            font-weight: bold;
-            border-bottom: 1px solid #555;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-radius: 8px 8px 0 0;
-        }
+        .section-title { border-bottom: 1px solid var(--accent-color); padding-bottom: 5px; margin: 15px 0 10px 0; }
+        .input-group { margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        input { background: #333; border: 1px solid #555; color: white; padding: 8px; border-radius: 4px; width: 60%; }
         
-        .close-btn {
-            background: none; border: none; color: #aaa; font-size: 16px;
-            width: auto; height: auto; padding: 0; box-shadow: none;
-        }
+        /* Wegpunkt Tabelle */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { text-align: left; padding: 8px; border-bottom: 1px solid #444; font-size: 0.9rem; }
+        .btn-small { padding: 4px 8px; font-size: 0.7rem; cursor: pointer; background: #444; color: white; border: none; border-radius: 3px; }
+        .btn-del { background: var(--danger-color); }
+        .btn-set { background: var(--accent-color); color: #000; }
 
-        .wind-list {
-            overflow-y: auto;
-            padding: 5px;
-            max-height: calc(50vh - 50px);
-        }
+        .controls { position: absolute; top: 10px; right: 10px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
+        .main-btn { background: var(--panel-color); color: white; border: 1px solid #444; border-radius: 50%; width: 50px; height: 50px; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
 
-        .wind-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 10px;
-            border-bottom: 1px solid #333;
-            font-family: monospace;
-            font-size: 14px;
+        #drop-warning-overlay {
+            position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%);
+            background: var(--danger-color); padding: 20px; border-radius: 10px;
+            font-weight: bold; font-size: 2rem; display: none; z-index: 2000;
         }
-        
-        .wind-row:last-child { border-bottom: none; }
-        
-        .wind-alt { color: var(--accent-color); font-weight: bold; width: 50px;}
-        .wind-dir { display: flex; align-items: center; gap: 5px; width: 70px;}
-        .wind-spd { text-align: right; width: 80px;}
-
-        /* UTM Overlay simple styling */
-        #utm-input {
-            position: absolute;
-            top: 70px;
-            right: 10px;
-            z-index: 1000;
-            background: rgba(0,0,0,0.8);
-            padding: 10px;
-            border-radius: 5px;
-            display: none;
-            flex-direction: column;
-            gap: 5px;
-        }
-        #utm-input input { width: 120px; padding: 5px; }
     </style>
 </head>
 <body>
 
-<!-- Wind Profiler Panel -->
-<div id="wind-panel">
-    <div class="panel-header">
-        <span>Windprofil</span>
-        <button class="close-btn" onclick="toggleWindPanel()">✖</button>
-    </div>
-    <div class="wind-list" id="wind-data-list">
-        <div style="padding: 10px; text-align: center; color: #888;">Noch keine Daten gesammelt...</div>
-    </div>
+<!-- Audio Start Overlay -->
+<div id="audio-init" style="position:fixed; inset:0; background:black; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+    <button onclick="initApp()" class="main-btn" style="width:200px; border-radius:10px;">APP STARTEN</button>
 </div>
 
-<div id="utm-input">
-    <input type="text" id="utm-val" placeholder="UTM (WIP)">
-    <button onclick="toggleUtmField()" style="width:100%; height:30px; border-radius:4px; font-size:12px;">Schließen</button>
+<!-- Settings & Waypoint Panel -->
+<div id="settings-panel" class="overlay-panel">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2 style="margin:0;">Einstellungen & Wegpunkte</h2>
+        <button onclick="togglePanel('settings-panel')" class="btn-small" style="font-size:1.2rem;">✖</button>
+    </div>
+
+    <div class="section-title">Marker Parameter</div>
+    <div class="input-group">
+        <label>Sinkrate (m/s):</label>
+        <input type="number" id="cfg-fallrate" step="0.1" value="6.5" onchange="updateConfig()">
+    </div>
+    <div class="input-group">
+        <label>Alarm Radius (m):</label>
+        <input type="number" id="cfg-radius" value="50" onchange="updateConfig()">
+    </div>
+
+    <div class="section-title">Wegpunkte verwalten</div>
+    <div style="display:flex; gap:5px; margin-bottom:15px;">
+        <input type="text" id="wp-name" placeholder="Name" style="width:30%;">
+        <input type="text" id="wp-lat" placeholder="Lat" style="width:25%;">
+        <input type="text" id="wp-lon" placeholder="Lon" style="width:25%;">
+        <button onclick="addWaypointManual()" class="btn-set" style="width:20%; border-radius:4px;">Add</button>
+    </div>
+    <table id="wp-table">
+        <thead><tr><th>Name</th><th>Position</th><th>Aktion</th></tr></thead>
+        <tbody></tbody>
+    </table>
+
+    <div class="section-title">Daten</div>
+    <button onclick="exportTrack()" class="btn-small">Track als JSON exportieren</button>
+    <button onclick="clearLocalStorage()" class="btn-small btn-del">Alles löschen</button>
 </div>
+
+<div id="drop-warning-overlay">MARKER DROP!</div>
 
 <div class="controls">
-    <button onclick="toggleWindPanel()" title="Windprofil anzeigen">🌬️</button>
-    <button onclick="toggleUtmField()" title="UTM Ziel eingeben">📍</button>
-    <button onclick="clearTrack()" title="Track löschen">🗑️</button>
+    <button class="main-btn" onclick="togglePanel('settings-panel')">⚙️</button>
+    <button class="main-btn" onclick="toggleWindPanel()">🌬️</button>
+    <button class="main-btn" onclick="centerMap()">🎯</button>
 </div>
 
 <div id="map"></div>
 
 <div id="dashboard">
-    <div class="data-box highlight">
-        <div class="label">Höhe (GPS)</div>
-        <div class="value"><span id="alt">0</span><span class="unit">m</span></div>
-    </div>
-    <div class="data-box">
-        <div class="label">Speed</div>
-        <div class="value"><span id="spd">0.0</span><span class="unit">km/h</span></div>
-    </div>
-    <div class="data-box">
-        <div class="label">Kurs</div>
-        <div class="value"><span id="hdg">0</span><span class="unit">°</span></div>
-    </div>
-    
-    <div class="data-box target">
-        <div class="label">Ziel Distanz</div>
-        <div class="value"><span id="dist">---</span><span class="unit">m</span></div>
-    </div>
-    <div class="data-box target">
-        <div class="label">Ziel Ablage</div>
-        <div class="value"><span id="bearing-diff">---</span><span class="unit">°</span></div>
-    </div>
-    <div class="data-box highlight" style="background: #1b2e1b;">
-        <div class="label">Marker Landepunkt</div>
-        <div id="drop-status" style="font-size: 0.8rem; color: var(--accent-color);">Warte auf GPS...</div>
-    </div>
+    <div class="data-box"><div class="label">Höhe</div><div class="value"><span id="alt">0</span>m</div></div>
+    <div class="data-box"><div class="label">Speed</div><div class="value"><span id="spd">0.0</span>k/h</div></div>
+    <div class="data-box"><div class="label">Kurs</div><div class="value"><span id="hdg">0</span>°</div></div>
+    <div class="data-box"><div class="label">Ziel Distanz</div><div class="value"><span id="dist">---</span>m</div></div>
+    <div class="data-box"><div class="label">Ablage</div><div class="value"><span id="bearing-diff">---</span></div></div>
+    <div class="data-box" id="drop-box"><div class="label">Drop Dist.</div><div class="value"><span id="drop-dist">---</span>m</div></div>
 </div>
 
-<!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-    // --- KONFIGURATION ---
-    const MARKER_FALL_RATE = 6.5; 
-    const WIND_LAYER_STEP = 10;   
-    
-    // Für Testzwecke simulieren wir Dummy-Daten, falls kein GPS da ist:
-    // let windProfile = { 150: {speed: 4.1, bearing: 90}, 160: {speed: 4.5, bearing: 95}, 170: {speed: 5.0, bearing: 110} };
-    let windProfile = {};         
-    
+    // --- STATE ---
+    let config = { fallRate: 6.5, alarmRadius: 50 };
+    let waypoints = [];
     let trackPoints = [];
+    let windProfile = {};
     let targetCoords = null;
     let currentPos = null;
+    let dropPosLatLon = null;
+    let audioCtx = null;
 
     // --- INITIALISIERUNG ---
-    const map = L.map('map', {
-        zoomControl: false,
-        maxZoom: 19
-    }).setView([51.1657, 10.4515], 6);
+    const map = L.map('map', { zoomControl: false }).setView([51.1, 10.4], 6);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '© OpenStreetMap'
-    }).addTo(map);
+    const balloonMarker = L.marker([0,0], {icon: L.divIcon({className:'b-icon', html:"<div style='background:#00e676; width:12px; height:12px; border-radius:50%; border:2px solid white;'></div>"})}).addTo(map);
+    const dropPointMarker = L.circleMarker([0,0], {color: '#ff5252', radius: 6}).addTo(map);
+    const targetCircle = L.circle([0,0], {radius: 50, color: '#ffeb3b', fillOpacity: 0.1}).addTo(map);
+    const trackLine = L.polyline([], {color: '#00e676', weight: 2}).addTo(map);
+    const dropLine = L.polyline([], {color: '#ff5252', weight: 1, dashArray: '5,5'}).addTo(map);
 
-    const balloonIcon = L.divIcon({
-        className: 'custom-div-icon',
-        html: "<div style='background-color: #00e676; width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px #000;'></div>",
-        iconSize: [14, 14],
-        iconAnchor: [7, 7]
+    // --- CORE LOGIC ---
+    function initApp() {
+        document.getElementById('audio-init').style.display = 'none';
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        loadData();
+        startGPS();
+    }
+
+    function loadData() {
+        const savedWp = localStorage.getItem('waypoints');
+        if(savedWp) { waypoints = JSON.parse(savedWp); updateWpTable(); }
+        const savedConfig = localStorage.getItem('config');
+        if(savedConfig) { 
+            config = JSON.parse(savedConfig); 
+            document.getElementById('cfg-fallrate').value = config.fallRate;
+            document.getElementById('cfg-radius').value = config.alarmRadius;
+        }
+        const savedTrack = localStorage.getItem('track');
+        if(savedTrack) { trackPoints = JSON.parse(savedTrack); trackLine.setLatLngs(trackPoints); }
+    }
+
+    function updateConfig() {
+        config.fallRate = parseFloat(document.getElementById('cfg-fallrate').value);
+        config.alarmRadius = parseInt(document.getElementById('cfg-radius').value);
+        targetCircle.setRadius(config.alarmRadius);
+        localStorage.setItem('config', JSON.stringify(config));
+    }
+
+    // --- WAYPOINTS ---
+    map.on('contextmenu', (e) => {
+        const name = prompt("Name für neuen Wegpunkt:", "WP " + (waypoints.length + 1));
+        if(name) {
+            waypoints.push({ name, lat: e.latlng.lat, lon: e.latlng.lng });
+            saveWaypoints();
+        }
     });
 
-    const balloonMarker = L.marker([0,0], {icon: balloonIcon}).addTo(map);
-    const dropPointMarker = L.circleMarker([0,0], {color: '#ff5252', radius: 6, weight: 3, fillOpacity: 0.8}).addTo(map);
-    const targetMarker = L.marker([0,0], {draggable: true}).addTo(map);
-    const trackLine = L.polyline([], {color: '#00e676', weight: 3, opacity: 0.8}).addTo(map);
-    const dropLine = L.polyline([], {color: '#ff5252', weight: 2, dashArray: '5, 10'}).addTo(map);
-
-    // --- UI FUNKTIONEN ---
-    map.on('contextmenu', (e) => setTarget(e.latlng));
-
-    function setTarget(latlng) {
-        targetCoords = latlng;
-        targetMarker.setLatLng(latlng).addTo(map);
+    function saveWaypoints() {
+        localStorage.setItem('waypoints', JSON.stringify(waypoints));
+        updateWpTable();
     }
 
-    function toggleUtmField() {
-        const f = document.getElementById('utm-input');
-        f.style.display = f.style.display === 'flex' ? 'none' : 'flex';
-    }
-
-    function toggleWindPanel() {
-        const p = document.getElementById('wind-panel');
-        p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
-        updateWindPanel(); // Sofort updaten wenn geöffnet
-    }
-
-    function clearTrack() {
-        trackPoints = [];
-        trackLine.setLatLngs([]);
-    }
-
-    // Rendert das Windprofil in die UI
-    function updateWindPanel() {
-        const listDiv = document.getElementById('wind-data-list');
-        const layers = Object.keys(windProfile).map(Number).sort((a, b) => b - a); // Absteigend (Höchste oben)
-
-        if (layers.length === 0) return; // Nichts zu tun, wenn keine Daten
-
-        listDiv.innerHTML = ''; // Leeren
-
-        layers.forEach(alt => {
-            const data = windProfile[alt];
-            const speedKmh = (data.speed * 3.6).toFixed(1);
-            const bearing = data.bearing.toFixed(0);
-            
-            // Pfeil-Rotation: Ein Pfeil nach OBEN (↑) gedreht um das Bearing zeigt in die Bewegungsrichtung
-            const arrowStyle = `transform: rotate(${bearing}deg); display: inline-block; font-weight: bold; font-size: 16px;`;
-
-            const row = document.createElement('div');
-            row.className = 'wind-row';
-            row.innerHTML = `
-                <span class="wind-alt">${alt}m</span>
-                <span class="wind-dir"><span style="${arrowStyle}">↑</span> ${String(bearing).padStart(3, '0')}°</span>
-                <span class="wind-spd">${speedKmh} km/h</span>
-            `;
-            listDiv.appendChild(row);
+    function updateWpTable() {
+        const tbody = document.querySelector('#wp-table tbody');
+        tbody.innerHTML = '';
+        waypoints.forEach((wp, idx) => {
+            const row = `<tr>
+                <td>${wp.name}</td>
+                <td>${wp.lat.toFixed(4)}, ${wp.lon.toFixed(4)}</td>
+                <td>
+                    <button class="btn-small btn-set" onclick="setAsTarget(${idx})">GOTO</button>
+                    <button class="btn-small btn-del" onclick="deleteWp(${idx})">DEL</button>
+                </td>
+            </tr>`;
+            tbody.innerHTML += row;
         });
     }
 
-    // --- BERECHNUNGS FUNKTIONEN ---
-    function movePoint(lat, lon, distanceMeter, bearingDeg) {
-        const R = 6371000;
-        const dist = distanceMeter / R;
-        const brng = bearingDeg * Math.PI / 180;
-        const lat1 = lat * Math.PI / 180;
-        const lon1 = lon * Math.PI / 180;
-
-        const lat2 = Math.asin(Math.sin(lat1) * Math.cos(dist) + Math.cos(lat1) * Math.sin(dist) * Math.cos(brng));
-        const lon2 = lon1 + Math.atan2(Math.sin(brng) * Math.sin(dist) * Math.cos(lat1), Math.cos(dist) - Math.sin(lat1) * Math.sin(lat2));
-
-        return [lat2 * 180 / Math.PI, lon2 * 180 / Math.PI];
+    function setAsTarget(idx) {
+        const wp = waypoints[idx];
+        targetCoords = L.latLng(wp.lat, wp.lon);
+        targetCircle.setLatLng(targetCoords).addTo(map);
+        togglePanel('settings-panel');
+        map.flyTo(targetCoords, 15);
     }
 
-    function getWindAtAlt(alt) {
+    function deleteWp(idx) { waypoints.splice(idx, 1); saveWaypoints(); }
+
+    function addWaypointManual() {
+        const name = document.getElementById('wp-name').value || "Manual";
+        const lat = parseFloat(document.getElementById('wp-lat').value);
+        const lon = parseFloat(document.getElementById('wp-lon').value);
+        if(!isNaN(lat) && !isNaN(lon)) {
+            waypoints.push({name, lat, lon});
+            saveWaypoints();
+        }
+    }
+
+    // --- NAVIGATION & WIND ---
+    function startGPS() {
+        navigator.geolocation.watchPosition(pos => {
+            const { latitude, longitude, altitude, speed, heading } = pos.coords;
+            currentPos = L.latLng(latitude, longitude);
+            const altM = altitude || 0;
+            const spdKmh = (speed || 0) * 3.6;
+
+            // Update UI
+            document.getElementById('alt').innerText = altM.toFixed(0);
+            document.getElementById('spd').innerText = spdKmh.toFixed(1);
+            document.getElementById('hdg').innerText = (heading || 0).toFixed(0);
+
+            // Track & Persistence
+            balloonMarker.setLatLng(currentPos);
+            trackPoints.push([latitude, longitude]);
+            if(trackPoints.length % 10 === 0) localStorage.setItem('track', JSON.stringify(trackPoints));
+            trackLine.setLatLngs(trackPoints);
+
+            // Wind Record
+            if(speed > 0.3) {
+                const layer = Math.floor(altM / 10) * 10;
+                windProfile[layer] = { speed: speed || 0, bearing: heading || 0 };
+            }
+
+            // Calculation
+            calcDrop(latitude, longitude, altM);
+            updateNavInfo(heading || 0);
+
+        }, err => console.error(err), { enableHighAccuracy: true });
+    }
+
+    function calcDrop(lat, lon, alt) {
+        if(alt < 5) return;
+        let sLat = lat, sLon = lon, sAlt = alt;
+        while(sAlt > 0) {
+            const wind = getWindAt(sAlt);
+            const dist = wind.speed * 1.0;
+            const brng = wind.bearing * Math.PI / 180;
+            sLat += (dist * Math.cos(brng)) / 111111;
+            sLon += (dist * Math.sin(brng)) / (111111 * Math.cos(lat * Math.PI/180));
+            sAlt -= config.fallRate;
+        }
+        dropPosLatLon = L.latLng(sLat, sLon);
+        dropPointMarker.setLatLng(dropPosLatLon);
+        dropLine.setLatLngs([currentPos, dropPosLatLon]);
+
+        if(targetCoords) {
+            const d = map.distance(dropPosLatLon, targetCoords);
+            document.getElementById('drop-dist').innerText = d.toFixed(0);
+            if(d < config.alarmRadius) triggerAlarm(); else stopAlarm();
+        }
+    }
+
+    function getWindAt(alt) {
         const layers = Object.keys(windProfile).map(Number);
-        if (layers.length === 0) return null;
-        const closest = layers.reduce((prev, curr) => Math.abs(curr - alt) < Math.abs(prev - alt) ? curr : prev);
+        if(layers.length === 0) return { speed: 0, bearing: 0 };
+        const closest = layers.reduce((p, c) => Math.abs(c - alt) < Math.abs(p - alt) ? c : p);
         return windProfile[closest];
     }
 
-    function updateDropCalculation(lat, lon, alt) {
-        if (alt < 2 || Object.keys(windProfile).length === 0) return;
-
-        let simLat = lat;
-        let simLon = lon;
-        let simAlt = alt;
-        const timeStep = 1.0; 
-
-        while (simAlt > 0) {
-            const wind = getWindAtAlt(simAlt);
-            if (wind) {
-                const [nextLat, nextLon] = movePoint(simLat, simLon, wind.speed * timeStep, wind.bearing);
-                simLat = nextLat;
-                simLon = nextLon;
-            }
-            simAlt -= (MARKER_FALL_RATE * timeStep);
-        }
-
-        const dropPos = [simLat, simLon];
-        dropPointMarker.setLatLng(dropPos);
-        dropLine.setLatLngs([[lat, lon], dropPos]);
-        
-        document.getElementById('drop-status').innerText = "Aktiv";
+    function updateNavInfo(hdg) {
+        if(!targetCoords) return;
+        const d = map.distance(currentPos, targetCoords);
+        document.getElementById('dist').innerText = d.toFixed(0);
+        // Vereinfachte Ablage-Berechnung
+        const angle = (Math.atan2(targetCoords.lng - currentPos.lng, targetCoords.lat - currentPos.lat) * 180 / Math.PI + 360) % 360;
+        const diff = (angle - hdg + 540) % 360 - 180;
+        document.getElementById('bearing-diff').innerText = (diff > 0 ? "R " : "L ") + Math.abs(diff).toFixed(0) + "°";
     }
 
-    // --- GPS CALLBACK ---
-    function onLocationUpdate(pos) {
-        const lat = pos.coords.latitude;
-        const lon = pos.coords.longitude;
-        const alt = pos.coords.altitude || 0;
-        const speed = pos.coords.speed || 0; 
-        const heading = pos.coords.heading || 0;
+    // --- UI HELPERS ---
+    function togglePanel(id) {
+        const p = document.getElementById(id);
+        p.style.display = (p.style.display === 'flex') ? 'none' : 'flex';
+    }
 
-        currentPos = [lat, lon];
-        
-        document.getElementById('alt').innerText = alt.toFixed(0);
-        document.getElementById('spd').innerText = (speed * 3.6).toFixed(1);
-        document.getElementById('hdg').innerText = heading.toFixed(0);
-
-        // Wind aufzeichnen (Nur wenn der Ballon fährt, z.B. > 1 km/h)
-        if (speed > 0.2) {
-            const roundedAlt = Math.floor(alt / WIND_LAYER_STEP) * WIND_LAYER_STEP;
-            // Daten im Profil speichern/aktualisieren
-            windProfile[roundedAlt] = { speed: speed, bearing: heading };
-            
-            // Wenn das Wind-Panel gerade offen ist, sofort visuell updaten
-            if (document.getElementById('wind-panel').style.display === 'flex') {
-                updateWindPanel();
-            }
-        }
-
-        balloonMarker.setLatLng(currentPos);
-        trackPoints.push(currentPos);
-        if (trackPoints.length > 500) trackPoints.shift();
-        trackLine.setLatLngs(trackPoints);
-
-        updateDropCalculation(lat, lon, alt);
-
-        if (targetCoords) {
-            const d = map.distance(currentPos, targetCoords);
-            document.getElementById('dist').innerText = d.toFixed(0);
-            
-            const angle = (Math.atan2(targetCoords.lng - lon, targetCoords.lat - lat) * 180 / Math.PI + 360) % 360;
-            const diff = (angle - heading + 540) % 360 - 180;
-            document.getElementById('bearing-diff').innerText = (diff > 0 ? "R " : "L ") + Math.abs(diff).toFixed(0);
+    function triggerAlarm() {
+        document.getElementById('dashboard').classList.add('alarm-active');
+        document.getElementById('drop-warning-overlay').style.display = 'block';
+        if(audioCtx && audioCtx.state === 'running') {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.frequency.value = 800; gain.gain.value = 0.1;
+            osc.start(); osc.stop(audioCtx.currentTime + 0.1);
         }
     }
 
-    if ("geolocation" in navigator) {
-        navigator.geolocation.watchPosition(onLocationUpdate, 
-            (err) => console.error("GPS Fehler:", err), 
-            { enableHighAccuracy: true, maximumAge: 1000 }
-        );
-    } else {
-        alert("GPS nicht verfügbar!");
+    function stopAlarm() {
+        document.getElementById('dashboard').classList.remove('alarm-active');
+        document.getElementById('drop-warning-overlay').style.display = 'none';
     }
 
+    function centerMap() { if(currentPos) map.panTo(currentPos); }
+
+    function clearLocalStorage() { if(confirm("Alle Daten löschen?")) { localStorage.clear(); location.reload(); } }
 </script>
 </body>
 </html>
