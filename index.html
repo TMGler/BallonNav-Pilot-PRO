@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Balloon Tactical Pro v7</title>
+    <title>Balloon Tactical Pro v9 - Windwatch Integration</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root {
@@ -13,55 +13,64 @@
         body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
         #map { flex-grow: 1; width: 100%; z-index: 1; }
 
-        /* Dashboard */
-        #dashboard { 
-            height: 140px; background: var(--card-bg); display: grid; 
-            grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 15px; 
-            z-index: 1000; border-top: 1px solid var(--glass);
-        }
-        .data-box { background: var(--glass); border-radius: 12px; padding: 8px; text-align: center; border: 1px solid var(--glass); display: flex; flex-direction: column; justify-content: center; }
-        .label { font-size: 0.65rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
-        .value { font-size: 1.2rem; font-weight: 700; font-family: 'Monaco', monospace; margin-top: 2px; }
-
-        /* Sidebar & UI */
-        #settings-panel { position: absolute; top: 0; left: 0; width: 320px; height: 100%; background: var(--card-bg); z-index: 5000; transform: translateX(-100%); transition: transform 0.3s ease; padding: 25px; box-sizing: border-box; border-right: 1px solid var(--glass); display: flex; flex-direction: column; gap: 20px; }
+        /* Panels */
+        #settings-panel { position: absolute; top: 0; left: 0; width: 340px; height: 100%; background: var(--card-bg); z-index: 5000; transform: translateX(-100%); transition: transform 0.3s ease; padding: 25px; box-sizing: border-box; border-right: 1px solid var(--glass); overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
         #settings-panel.open { transform: translateX(0); }
-        .section { background: var(--glass); padding: 15px; border-radius: 15px; display: flex; flex-direction: column; gap: 10px; }
-        .btn { background: var(--accent); color: #000; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .section { background: var(--glass); padding: 12px; border-radius: 12px; display: flex; flex-direction: column; gap: 8px; }
+        .section-title { font-size: 0.8rem; color: var(--accent); font-weight: bold; text-transform: uppercase; border-bottom: 1px solid var(--glass); padding-bottom: 4px; }
         
-        .fab-container { position: absolute; top: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 15px; }
-        .fab { width: 55px; height: 55px; background: var(--card-bg); border: 1px solid var(--glass); border-radius: 18px; color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; }
+        .btn { background: var(--accent); color: #000; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; text-align: center; text-decoration: none; font-size: 0.9rem; }
+        .btn-file { background: #5c6bc0; color: white; }
+        .btn-export { background: #f9a825; color: black; }
         
-        /* Wake Lock Status Indicator */
-        #wake-status { position: absolute; top: 20px; left: 20px; z-index: 2000; background: var(--card-bg); padding: 5px 12px; border-radius: 20px; font-size: 0.7rem; border: 1px solid var(--glass); display: flex; align-items: center; gap: 8px; }
-        .dot { width: 8px; height: 8px; border-radius: 50%; background: #555; }
-        .dot.active { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+        #dashboard { height: 140px; background: var(--card-bg); display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 15px; z-index: 1000; border-top: 1px solid var(--glass); }
+        .data-box { background: var(--glass); border-radius: 12px; padding: 5px; text-align: center; border: 1px solid var(--glass); display: flex; flex-direction: column; justify-content: center; }
+        .label { font-size: 0.6rem; color: #888; }
+        .value { font-size: 1.1rem; font-weight: bold; font-family: monospace; }
+
+        .fab-container { position: absolute; top: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 12px; }
+        .fab { width: 50px; height: 50px; background: var(--card-bg); border: 1px solid var(--glass); border-radius: 15px; color: white; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; }
+        
+        #audio-init { position:fixed; inset:0; background:var(--bg); z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align: center; }
+        
+        /* Status indicators */
+        #source-indicator { font-size: 0.7rem; margin-top: 4px; }
+        .source-live { color: var(--accent); }
+        .source-file { color: #5c6bc0; }
     </style>
 </head>
 <body>
 
-<div id="audio-init" style="position:fixed; inset:0; background:var(--bg); z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center;">
-    <button onclick="initApp()" class="btn" style="padding: 20px 60px; font-size: 1.2rem;">MISSION STARTEN</button>
-    <p style="color:#555; margin-top:20px; font-size:0.8rem;">Aktiviert GPS, Audio & Keep-Awake</p>
+<div id="audio-init">
+    <h1 style="color: var(--accent);">BALLOON TACTICAL PRO</h1>
+    <p>Version 9.0 - Windwatch Parser</p>
+    <button onclick="initApp()" class="btn" style="padding: 20px 40px; margin-top: 20px;">MISSION STARTEN</button>
 </div>
 
-<div id="wake-status"><div id="wake-dot" class="dot"></div> SCREEN LOCK: <span id="wake-text">OFF</span></div>
-
 <div id="settings-panel">
-    <h2>Setup</h2>
+    <h2>Daten & Windprofil</h2>
+    
     <div class="section">
-        <div style="font-size:0.8rem; color:var(--accent)">UTM 4x4 Ziel</div>
-        <input type="number" id="utm-4-e" placeholder="Easting (4 Digits)">
-        <input type="number" id="utm-4-n" placeholder="Northing (4 Digits)">
-        <button class="btn" onclick="setGoalFromUTM()">Setze Ziel</button>
+        <div class="section-title">Windwatch.dat Import</div>
+        <input type="file" id="wind-file" accept=".dat,.csv,.txt" style="display: none;" onchange="importWindwatchData(this)">
+        <button class="btn btn-file" onclick="document.getElementById('wind-file').click()">Wind-Datei laden</button>
+        <div id="wind-status" style="font-size: 0.7rem; color: #888;">Warte auf Import...</div>
     </div>
+
     <div class="section">
-        <label class="label">Zielhöhe AMSL (m)</label>
-        <input type="number" id="cfg-target-alt" value="400">
+        <div class="section-title">Fahrt-Export</div>
+        <button class="btn btn-export" onclick="exportGPX()">GPX mit Telemetrie speichern</button>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Physik-Parameter</div>
         <label class="label">Marker Sinkrate (m/s)</label>
         <input type="number" id="cfg-fallrate" value="6.5" step="0.1">
+        <label class="label">Zielhöhe AMSL (m)</label>
+        <input type="number" id="cfg-target-alt" value="400">
     </div>
-    <button class="btn" style="background:#444; color:white;" onclick="toggleSettings()">Schließen</button>
+
+    <button class="btn" style="background:#333; color:white;" onclick="toggleSettings()">Schließen</button>
 </div>
 
 <div class="fab-container">
@@ -73,17 +82,27 @@
 <div id="map"></div>
 
 <div id="dashboard">
-    <div class="data-box"><div class="label">HÖHE</div><div id="alt" class="value">0m</div></div>
+    <div class="data-box"><div class="label">HÖHE (AMSL)</div><div id="alt" class="value">0m</div></div>
     <div class="data-box"><div class="label">KURS</div><div id="hdg" class="value">0°</div></div>
-    <div class="data-box"><div class="label">ZIEL DIST</div><div id="dist" class="value">---</div></div>
-    <div class="data-box"><div class="label">DROP DIST</div><div id="drop-dist" class="value">---</div></div>
+    <div class="data-box"><div class="label">ZIEL</div><div id="dist" class="value">---</div></div>
+    <div class="data-box" style="border-color: var(--accent);">
+        <div class="label">DROP</div>
+        <div id="drop-dist" class="value">---</div>
+        <div id="source-indicator">---</div>
+    </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    let windProfile = {}; let currentPos = null; let targetCoords = null;
-    let dropPos = null; let trackPoints = []; let audioCtx = null;
+    let windProfile = {}; 
+    let currentPos = null;
+    let targetCoords = null;
+    let dropPos = null;
+    let trackHistory = []; 
+    let markerDrops = []; 
+    let audioCtx = null;
     let wakeLock = null;
+    let groundLevelM = 0;
 
     const map = L.map('map', { zoomControl: false, tap: false }).setView([51.1, 10.4], 6);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
@@ -92,103 +111,145 @@
     const dropMarker = L.circleMarker([0,0], { radius: 6, color: '#ff5252' }).addTo(map);
     const trackLine = L.polyline([], { color: '#00e676', weight: 2, opacity: 0.5 }).addTo(map);
 
-    // --- WAKE LOCK LOGIK ---
-    async function requestWakeLock() {
-        try {
-            if ('wakeLock' in navigator) {
-                wakeLock = await navigator.wakeLock.request('screen');
-                updateWakeUI(true);
-                wakeLock.addEventListener('release', () => {
-                    updateWakeUI(false);
-                });
-            }
-        } catch (err) {
-            console.error(`${err.name}, ${err.message}`);
-            updateWakeUI(false);
-        }
-    }
-
-    function updateWakeUI(isActive) {
-        document.getElementById('wake-dot').className = isActive ? 'dot active' : 'dot';
-        document.getElementById('wake-text').innerText = isActive ? 'ACTIVE' : 'OFF';
-        document.getElementById('wake-text').style.color = isActive ? 'var(--accent)' : '#888';
-    }
-
-    // Wenn man die App wechselt und zurückkommt, WakeLock neu anfordern
-    document.addEventListener('visibilitychange', async () => {
-        if (wakeLock !== null && document.visibilityState === 'visible') {
-            await requestWakeLock();
-        }
-    });
-
-    // --- INITIALISIERUNG ---
     function initApp() {
         document.getElementById('audio-init').style.display = 'none';
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        requestWakeLock(); // Screen wach halten
+        if ('wakeLock' in navigator) navigator.wakeLock.request('screen').then(lock => wakeLock = lock);
         startGPS();
     }
 
-    // --- MAP INTERACTION ---
-    map.on('contextmenu', e => setGoal(e.latlng));
-    function setGoal(latlng) {
-        targetCoords = latlng;
-        L.marker(latlng).addTo(map);
-        playBeep(600, 0.1);
+    // --- WINDWATCH PARSER ---
+    function importWindwatchData(input) {
+        const file = input.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const lines = e.target.result.split('\n');
+            let count = 0;
+            let tempGroundLevel = 0;
+
+            lines.forEach(line => {
+                // Ground Level Extraktion (ft -> m)
+                if (line.includes("Ground Level:")) {
+                    const match = line.match(/Ground Level:\s+([\d.]+)/);
+                    if (match) tempGroundLevel = parseFloat(match[1]) * 0.3048;
+                }
+
+                const parts = line.trim().split(/\s+/);
+                // Validierung der Datenzeilen (AGL Wind Speed)
+                if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+                    const aglM = parseFloat(parts[0]) * 0.3048;
+                    const amslM = Math.round((aglM + tempGroundLevel) / 10) * 10;
+                    const dir = parseFloat(parts[1]);
+                    const spd = parseFloat(parts[2]) / 3.6;
+
+                    // Nur speichern, wenn keine Live-Daten existieren
+                    if (!windProfile[amslM] || windProfile[amslM].source === 'file') {
+                        windProfile[amslM] = { speed: spd, bearing: dir, source: 'file' };
+                        count++;
+                    }
+                }
+            });
+            groundLevelM = tempGroundLevel;
+            document.getElementById('wind-status').innerText = count + " Schichten geladen. Ground: " + groundLevelM.toFixed(0) + "m";
+            alert("Windwatch Import erfolgreich. " + count + " Schichten initialisiert.");
+        };
+        reader.readAsText(file);
     }
 
-    // --- GPS & PHYSIK ---
+    // --- GPS & LIVE WIND ---
     function startGPS() {
         navigator.geolocation.watchPosition(pos => {
             const { latitude, longitude, altitude, speed, heading } = pos.coords;
             currentPos = L.latLng(latitude, longitude);
-            document.getElementById('alt').innerText = (altitude || 0).toFixed(0) + "m";
-            document.getElementById('hdg').innerText = (heading || 0).toFixed(0) + "°";
-            balloonMarker.setLatLng(currentPos);
-            trackPoints.push([latitude, longitude]);
-            trackLine.setLatLngs(trackPoints);
+            const alt = altitude || 0;
+            const spd = speed || 0;
+            const hdg = heading || 0;
 
-            if(speed > 0.4) {
-                windProfile[Math.floor((altitude || 0)/10)*10] = { speed, bearing: heading || 0 };
+            document.getElementById('alt').innerText = alt.toFixed(0) + "m";
+            document.getElementById('hdg').innerText = hdg.toFixed(0) + "°";
+
+            trackHistory.push({ lat: latitude, lon: longitude, alt: alt, speed: spd, hdg: hdg, time: new Date().toISOString() });
+            balloonMarker.setLatLng(currentPos);
+            trackLine.setLatLngs(trackHistory.map(p => [p.lat, p.lon]));
+
+            // Live-Wind überschreibt File-Wind
+            if (spd > 0.4) {
+                const layer = Math.round(alt / 10) * 10;
+                windProfile[layer] = { speed: spd, bearing: hdg, source: 'live' };
             }
-            updatePhysics(latitude, longitude, altitude || 0);
+
+            updatePhysics(latitude, longitude, alt);
         }, null, { enableHighAccuracy: true });
     }
 
     function updatePhysics(lat, lon, alt) {
-        if(alt < 5) return;
+        if (alt < 2) return;
         let sLat = lat, sLon = lon, sAlt = alt;
         const fallRate = parseFloat(document.getElementById('cfg-fallrate').value);
+        let usedLive = false;
 
-        while(sAlt > 0) {
+        while (sAlt > 0) {
             const layers = Object.keys(windProfile).map(Number);
-            const closest = layers.length ? layers.reduce((p, c) => Math.abs(c-sAlt) < Math.abs(p-sAlt) ? c : p) : null;
-            const wind = closest ? windProfile[closest] : { speed: 0, bearing: 0 };
+            if (layers.length === 0) break;
             
-            sLat += (wind.speed * Math.cos(wind.bearing * Math.PI/180)) / 111111;
-            sLon += (wind.speed * Math.sin(wind.bearing * Math.PI/180)) / (111111 * Math.cos(lat * Math.PI/180));
+            const closestLayer = layers.reduce((p, c) => Math.abs(c-sAlt) < Math.abs(p-sAlt) ? c : p);
+            const wind = windProfile[closestLayer];
+            
+            if (wind.source === 'live') usedLive = true;
+
+            const dist = wind.speed * 1.0;
+            const brng = wind.bearing * Math.PI / 180;
+            sLat += (dist * Math.cos(brng)) / 111111;
+            sLon += (dist * Math.sin(brng)) / (111111 * Math.cos(lat * Math.PI/180));
             sAlt -= fallRate;
         }
+
         dropPos = L.latLng(sLat, sLon);
         dropMarker.setLatLng(dropPos).addTo(map);
 
-        if(targetCoords) {
+        // Anzeige der Windquelle im Dashboard
+        const indicator = document.getElementById('source-indicator');
+        indicator.innerText = usedLive ? "WIND: LIVE-MIX" : "WIND: FILE-ONLY";
+        indicator.className = usedLive ? "source-live" : "source-file";
+
+        if (targetCoords) {
             document.getElementById('dist').innerText = map.distance(currentPos, targetCoords).toFixed(0) + "m";
-            const dDrop = map.distance(dropPos, targetCoords);
-            document.getElementById('drop-dist').innerText = dDrop.toFixed(0) + "m";
-            if(dDrop < 50) playBeep(800, 0.05);
+            document.getElementById('drop-dist').innerText = map.distance(dropPos, targetCoords).toFixed(0) + "m";
         }
     }
 
     function logMarkerDrop() {
-        if(!dropPos) return;
-        L.marker(dropPos, {icon: L.divIcon({html:'<b style="color:red; font-size:20px;">X</b>'})}).addTo(map);
-        playBeep(1200, 0.2);
+        if (!dropPos) return;
+        const marker = { lat: dropPos.lat, lon: dropPos.lng, alt: parseFloat(document.getElementById('alt').innerText), time: new Date().toISOString() };
+        markerDrops.push(marker);
+        L.marker(dropPos, { icon: L.divIcon({ html: '<b style="color:red; font-size:24px;">X</b>', className: '' }) }).addTo(map);
     }
 
+    function exportGPX() {
+        let gpx = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="BalloonTacticalPro" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata><time>${new Date().toISOString()}</time></metadata>`;
+
+        markerDrops.forEach((m, i) => {
+            gpx += `\n  <wpt lat="${m.lat}" lon="${m.lon}"><ele>${m.alt}</ele><name>Marker ${i+1}</name><time>${m.time}</time></wpt>`;
+        });
+
+        gpx += `\n  <trk><name>Flight Track</name><trkseg>`;
+        trackHistory.forEach(p => {
+            gpx += `\n    <trkpt lat="${p.lat}" lon="${p.lon}"><ele>${p.alt.toFixed(1)}</ele><time>${p.time}</time><desc>SPD: ${(p.speed*3.6).toFixed(1)}kmh, HDG: ${p.hdg.toFixed(0)}deg</desc></trkpt>`;
+        });
+        gpx += `\n  </trkseg></trk>\n</gpx>`;
+
+        const blob = new Blob([gpx], { type: 'application/gpx+xml' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `flight_telemetry.gpx`;
+        a.click();
+    }
+
+    map.on('contextmenu', e => { targetCoords = e.latlng; L.marker(e.latlng).addTo(map); });
     function toggleSettings() { document.getElementById('settings-panel').classList.toggle('open'); }
-    function centerMap() { if(currentPos) map.flyTo(currentPos, 15); }
-    function playBeep(f, d) { if(audioCtx) { const o=audioCtx.createOscillator(), g=audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); o.frequency.value=f; g.gain.value=0.1; o.start(); o.stop(audioCtx.currentTime+d); }}
+    function centerMap() { if (currentPos) map.flyTo(currentPos, 15); }
 </script>
 </body>
 </html>
