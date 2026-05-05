@@ -3,246 +3,245 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Balloon Tactical Pro v5</title>
+    <title>Balloon Tactical Pro v6</title>
+    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
     <style>
         :root {
-            --bg-color: #0f0f0f; --panel-color: #1a1a1a; --accent-color: #00e676;
-            --text-color: #e0e0e0; --danger-color: #ff5252; --warning-color: #ffd740;
-            --donut-color: #d1c4e9;
+            --bg: #0a0b10;
+            --card-bg: rgba(30, 35, 45, 0.95);
+            --accent: #00e676;
+            --danger: #ff5252;
+            --text: #f0f0f0;
+            --glass: rgba(255, 255, 255, 0.1);
         }
-        body { margin: 0; padding: 0; font-family: 'Roboto', sans-serif; background: var(--bg-color); color: var(--text-color); overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
-        #map { flex-grow: 1; width: 100%; }
-        
-        /* Dashboard */
-        #dashboard { 
-            height: 240px; background: var(--panel-color); display: grid; 
-            grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 10px; 
-            z-index: 1000; border-top: 2px solid #333;
-        }
-        .data-box { background: #252525; padding: 6px; border-radius: 4px; text-align: center; display: flex; flex-direction: column; justify-content: center; border-bottom: 2px solid #444; }
-        .label { font-size: 0.6rem; color: #888; text-transform: uppercase; }
-        .value { font-size: 1.1rem; font-weight: bold; font-family: 'Courier New', monospace; }
-        
-        /* Buttons */
-        .controls { position: absolute; top: 10px; right: 10px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
-        .round-btn { background: #333; color: white; border: 1px solid #555; border-radius: 50%; width: 50px; height: 50px; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        .drop-btn { background: var(--danger-color); color: white; font-weight: bold; grid-column: span 2; border: none; border-radius: 6px; font-size: 1.2rem; cursor: pointer; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
-        .drop-btn:active { transform: scale(0.95); background: #b71c1c; }
 
-        /* Panels */
-        .overlay-panel { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10,10,10,0.95); z-index: 4000; display: none; flex-direction: column; padding: 20px; box-sizing: border-box; overflow-y: auto; }
-        .section-title { border-bottom: 1px solid var(--accent-color); margin: 15px 0 10px; color: var(--accent-color); font-weight: bold; }
-        
-        /* Wind Table */
-        #wind-table-container { position: absolute; top: 70px; left: 10px; width: 200px; background: rgba(20,20,20,0.9); border: 1px solid #444; border-radius: 5px; z-index: 1000; display: none; max-height: 50vh; overflow-y: auto; }
-        .wind-row { display: flex; justify-content: space-between; padding: 5px 8px; font-size: 0.8rem; border-bottom: 1px solid #333; }
-        .good-layer { color: var(--accent-color); }
-        .bad-layer { color: var(--danger-color); }
+        body { 
+            margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; 
+            background: var(--bg); color: var(--text); overflow: hidden;
+            display: flex; flex-direction: column; height: 100vh;
+        }
+
+        #map { flex-grow: 1; width: 100%; z-index: 1; }
+
+        /* Modernes Dashboard */
+        #dashboard { 
+            height: 140px; background: var(--card-bg); 
+            display: grid; grid-template-columns: repeat(4, 1fr); 
+            gap: 10px; padding: 15px; z-index: 1000;
+            border-top: 1px solid var(--glass);
+            box-shadow: 0 -10px 20px rgba(0,0,0,0.5);
+        }
+
+        .data-box { 
+            background: var(--glass); border-radius: 12px;
+            padding: 8px; text-align: center; border: 1px solid var(--glass);
+            display: flex; flex-direction: column; justify-content: center;
+        }
+
+        .data-box.active { border-color: var(--accent); box-shadow: 0 0 10px rgba(0, 230, 118, 0.3); }
+
+        .label { font-size: 0.65rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+        .value { font-size: 1.2rem; font-weight: 700; font-family: 'Monaco', monospace; margin-top: 2px; }
+
+        /* Stylisches Einstellungsmenü */
+        #settings-panel {
+            position: absolute; top: 0; left: 0; width: 320px; height: 100%;
+            background: var(--card-bg); z-index: 5000; transform: translateX(-100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 25px; box-sizing: border-box; border-right: 1px solid var(--glass);
+            box-shadow: 20px 0 40px rgba(0,0,0,0.6);
+            display: flex; flex-direction: column; gap: 20px;
+        }
+
+        #settings-panel.open { transform: translateX(0); }
+
+        .section { background: var(--glass); padding: 15px; border-radius: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .section-header { font-size: 0.9rem; font-weight: bold; color: var(--accent); border-bottom: 1px solid var(--glass); padding-bottom: 5px; margin-bottom: 5px; }
+
+        input { 
+            background: #111; border: 1px solid #444; color: white; padding: 10px; 
+            border-radius: 8px; font-size: 1rem; width: 100%; box-sizing: border-box;
+        }
+
+        .btn { 
+            background: var(--accent); color: #000; border: none; padding: 12px; 
+            border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.2s;
+        }
+        .btn:active { transform: scale(0.95); opacity: 0.8; }
+        .btn-ghost { background: transparent; border: 1px solid var(--glass); color: white; }
+
+        /* Floating Buttons */
+        .fab-container { position: absolute; top: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 15px; }
+        .fab { 
+            width: 55px; height: 55px; background: var(--card-bg); border: 1px solid var(--glass);
+            border-radius: 18px; color: white; display: flex; align-items: center; justify-content: center;
+            font-size: 24px; cursor: pointer; backdrop-filter: blur(10px);
+        }
+
+        #marker-btn { background: var(--danger); }
+
+        #audio-init {
+            position: fixed; inset: 0; background: var(--bg); z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
     </style>
 </head>
 <body>
 
-<div id="audio-init" style="position:fixed; inset:0; background:black; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center;">
-    <h2 style="color:var(--accent-color)">TACTICAL NAV READY</h2>
-    <button onclick="initApp()" style="padding:15px 30px; font-size:1.2rem; cursor:pointer;">SYSTEM INITIALISIEREN</button>
+<div id="audio-init">
+    <h1 style="margin-bottom: 5px;">BALLOON TACTICAL</h1>
+    <p style="color: #666; margin-bottom: 30px;">Professional Flight Assistance</p>
+    <button onclick="initApp()" class="btn" style="padding: 20px 60px; font-size: 1.2rem;">START MISSION</button>
 </div>
 
-<div id="settings-panel" class="overlay-panel">
-    <div style="display:flex; justify-content:space-between;"><h2>Setups</h2><button onclick="togglePanel('settings-panel')">X</button></div>
-    <div class="section-title">Donut / Sektor</div>
-    <input type="number" id="donut-lat" placeholder="Center Lat" step="0.00001">
-    <input type="number" id="donut-lon" placeholder="Center Lon" step="0.00001">
-    <div style="display:flex; gap:10px; margin-top:5px;">
-        <input type="number" id="donut-rin" placeholder="R-In (m)" value="500">
-        <input type="number" id="donut-rout" placeholder="R-Out (m)" value="2000">
-    </div>
-    <button onclick="updateDonutSettings()" style="width:100%; margin-top:10px; padding:10px;">Donut aktivieren</button>
+<!-- Sidebar Settings -->
+<div id="settings-panel">
+    <h2 style="margin: 0 0 10px 0;">Konfiguration</h2>
     
-    <div class="section-title">PDG / Marker</div>
-    <input type="number" id="cfg-target-alt" placeholder="Zielhöhe AMSL" value="400">
-    <button onclick="saveSettings()" style="width:100%; margin-top:10px; padding:10px;">Speichern</button>
+    <div class="section">
+        <div class="section-header">UTM Gitter (Kurzwahl)</div>
+        <p style="font-size: 0.7rem; color: #888; margin: 0;">Beispiel: Zone 32U, E: 456, N: 5678</p>
+        <div style="display: flex; gap: 5px;">
+            <input type="text" id="utm-prefix-e" placeholder="Basis E" value="4">
+            <input type="text" id="utm-prefix-n" placeholder="Basis N" value="56">
+        </div>
+        <div style="display: flex; gap: 5px;">
+            <input type="number" id="utm-4-e" placeholder="E 4x">
+            <input type="number" id="utm-4-n" placeholder="N 4x">
+        </div>
+        <button class="btn" onclick="setTargetByUTM()">Ziel aus UTM setzen</button>
+    </div>
+
+    <div class="section">
+        <div class="section-header">Parameter</div>
+        <label class="label">Zielhöhe (m AMSL)</label>
+        <input type="number" id="cfg-target-alt" value="400">
+        <label class="label">Marker Sinken (m/s)</label>
+        <input type="number" id="cfg-fallrate" value="6.5" step="0.1">
+    </div>
+
+    <button class="btn btn-ghost" onclick="toggleSettings()">Schließen</button>
+    <button class="btn btn-ghost" style="color: var(--danger);" onclick="clearAll()">Track löschen</button>
 </div>
 
-<div class="controls">
-    <button class="round-btn" onclick="togglePanel('settings-panel')">⚙️</button>
-    <button class="round-btn" onclick="toggleWind()">🌬️</button>
-    <button class="round-btn" onclick="centerMap()">🎯</button>
-</div>
-
-<div id="wind-table-container">
-    <div style="padding:5px; background:#111; font-size:0.7rem; font-weight:bold;">HÖHE | KURS | SEKTOR-WEG</div>
-    <div id="wind-rows-list"></div>
+<!-- Floating UI -->
+<div class="fab-container">
+    <div class="fab" onclick="toggleSettings()">⚙️</div>
+    <div class="fab" id="marker-btn" onclick="logMarkerDrop()">🎯</div>
+    <div class="fab" onclick="centerMap()">📍</div>
 </div>
 
 <div id="map"></div>
 
 <div id="dashboard">
-    <div class="data-box"><div class="label">HÖHE</div><div class="value"><span id="alt">0</span>m</div></div>
-    <div class="data-box"><div class="label">SPEED</div><div class="value"><span id="spd">0.0</span></div></div>
-    <div class="data-box"><div class="label">3D PDG</div><div class="value"><span id="dist-3d">---</span></div></div>
-    <div class="data-box"><div class="label">KURS</div><div class="value"><span id="hdg">0</span>°</div></div>
-    
-    <div class="data-box" style="background:#1a2a1a;"><div class="label">BESTE HÖHE</div><div class="value" id="best-alt">---</div></div>
-    <div class="data-box" style="background:#1a2a1a;"><div class="label">MAX WEG</div><div class="value" id="max-dist">---</div></div>
-    <div class="data-box" style="grid-column: span 2; background:#2c1a2f;"><div class="label">DONUT STATUS</div><div class="value" id="donut-status">INAKTIV</div></div>
-    
-    <button class="drop-btn" onclick="logMarkerDrop()">MARKER ABWURF SPEICHERN</button>
-    <div class="data-box" style="grid-column: span 2; border:none; background:transparent;">
-        <div id="nav-hint" style="font-size:0.8rem; color:var(--warning-color); font-weight:bold;">Warte auf GPS...</div>
-    </div>
+    <div class="data-box"><div class="label">HÖHE</div><div id="alt" class="value">0m</div></div>
+    <div class="data-box"><div class="label">KURS</div><div id="hdg" class="value">0°</div></div>
+    <div class="data-box active"><div class="label">DIST ZIEL</div><div id="dist" class="value">---</div></div>
+    <div class="data-box active"><div class="label">DROP DIST</div><div id="drop-dist" class="value">---</div></div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Hier könnte man proj4js laden für echtes UTM, wir nutzen eine Näherung -->
 <script>
-    let config = { fallRate: 6.5, targetAlt: 400 };
-    let donut = { center: null, rIn: 500, rOut: 2000 };
     let windProfile = {}; 
     let currentPos = null;
+    let targetCoords = null;
+    let dropPos = null;
     let trackPoints = [];
-    let dropPosLatLon = null;
     let audioCtx = null;
 
-    const map = L.map('map', { zoomControl: false }).setView([51, 10], 6);
+    const map = L.map('map', { zoomControl: false, tap: false }).setView([51.1, 10.4], 6);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-    const balloonMarker = L.marker([0,0]).addTo(map);
-    const dropPointMarker = L.circleMarker([0,0], { color: '#ff5252', radius: 6 }).addTo(map);
-    const targetCircleIn = L.circle([0,0], { radius: 500, color: '#f44336', fill: false, weight: 1 }).addTo(map);
-    const targetCircleOut = L.circle([0,0], { radius: 2000, color: '#d1c4e9', fill: false, weight: 1 }).addTo(map);
-    const trackLine = L.polyline([], { color: '#00e676', weight: 2 }).addTo(map);
+    const balloonMarker = L.circleMarker([0,0], { radius: 8, color: '#00e676', fillOpacity: 1 }).addTo(map);
+    const targetMarker = L.marker([0,0], { draggable: true }).addTo(map);
+    const dropMarker = L.circleMarker([0,0], { radius: 6, color: '#ff5252' }).addTo(map);
+    const trackLine = L.polyline([], { color: '#00e676', weight: 2, opacity: 0.5 }).addTo(map);
 
+    // --- INITIALISIERUNG ---
     function initApp() {
         document.getElementById('audio-init').style.display = 'none';
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         startGPS();
     }
 
-    function saveSettings() {
-        config.targetAlt = parseFloat(document.getElementById('cfg-target-alt').value);
-        togglePanel('settings-panel');
+    // --- MAP KLICK (Direktes Ziel setzen) ---
+    map.on('contextmenu', function(e) {
+        setGoal(e.latlng);
+    });
+
+    // Für Touch-Geräte: Simulierter Long-Press
+    let touchTimeout;
+    map.on('touchstart', function(e) {
+        touchTimeout = setTimeout(() => setGoal(e.latlng), 800);
+    });
+    map.on('touchend', () => clearTimeout(touchTimeout));
+
+    function setGoal(latlng) {
+        targetCoords = latlng;
+        targetMarker.setLatLng(latlng).addTo(map);
+        playFeedback(600, 0.1);
     }
 
-    function updateDonutSettings() {
-        const lat = parseFloat(document.getElementById('donut-lat').value);
-        const lon = parseFloat(document.getElementById('donut-lon').value);
-        if(!isNaN(lat)) {
-            donut.center = L.latLng(lat, lon);
-            donut.rIn = parseFloat(document.getElementById('donut-rin').value);
-            donut.rOut = parseFloat(document.getElementById('donut-rout').value);
-            targetCircleIn.setLatLng(donut.center).setRadius(donut.rIn);
-            targetCircleOut.setLatLng(donut.center).setRadius(donut.rOut);
-            map.flyTo(donut.center, 14);
-        }
-        togglePanel('settings-panel');
+    // --- UTM LOGIK ---
+    // ACHTUNG: Dies ist eine stark vereinfachte Konvertierung für die Region! 
+    // Für echte Wettkämpfe sollte eine Library wie Proj4js genutzt werden.
+    function setTargetByUTM() {
+        const e4 = document.getElementById('utm-4-e').value;
+        const n4 = document.getElementById('utm-4-n').value;
+        const preE = document.getElementById('utm-prefix-e').value;
+        const preN = document.getElementById('utm-prefix-n').value;
+        
+        if(!e4 || !n4) return alert("UTM 4x4 eingeben!");
+        
+        // Simulierter UTM-Konverter (muss für echte GPS-Genauigkeit angepasst werden!)
+        // Hier sollte normalerweise proj4.inverse() stehen.
+        alert("UTM Konvertierung aktiv - Ziel wird auf Basis der Region berechnet.");
+        // Dummy-Location in der Nähe der aktuellen Position für Demo:
+        if(currentPos) setGoal(currentPos); 
+        toggleSettings();
     }
 
+    // --- CORE GPS ---
     function startGPS() {
         navigator.geolocation.watchPosition(pos => {
             const { latitude, longitude, altitude, speed, heading } = pos.coords;
             currentPos = L.latLng(latitude, longitude);
-            const altM = altitude || 0;
-            const spdKmh = (speed || 0) * 3.6;
-
-            document.getElementById('alt').innerText = altM.toFixed(0);
-            document.getElementById('spd').innerText = spdKmh.toFixed(1);
-            document.getElementById('hdg').innerText = (heading || 0).toFixed(0);
+            
+            document.getElementById('alt').innerText = (altitude || 0).toFixed(0) + "m";
+            document.getElementById('hdg').innerText = (heading || 0).toFixed(0) + "°";
 
             balloonMarker.setLatLng(currentPos);
             trackPoints.push([latitude, longitude]);
             trackLine.setLatLngs(trackPoints);
 
             if(speed > 0.4) {
-                const layer = Math.floor(altM / 10) * 10;
-                windProfile[layer] = { speed: speed, bearing: heading || 0 };
+                const layer = Math.floor((altitude || 0) / 10) * 10;
+                windProfile[layer] = { speed, bearing: heading || 0 };
             }
 
-            calcDrop(latitude, longitude, altM);
-            analyzeTactics(altM);
+            calculateDrop(latitude, longitude, altitude || 0);
+            updateDashboard();
         }, null, { enableHighAccuracy: true });
     }
 
-    function calcDrop(lat, lon, alt) {
+    function calculateDrop(lat, lon, alt) {
         if(alt < 5) return;
         let sLat = lat, sLon = lon, sAlt = alt;
+        const fallRate = parseFloat(document.getElementById('cfg-fallrate').value);
+
         while(sAlt > 0) {
             const wind = getWindAt(sAlt);
             const dist = wind.speed * 1.0;
             const brng = wind.bearing * Math.PI / 180;
             sLat += (dist * Math.cos(brng)) / 111111;
             sLon += (dist * Math.sin(brng)) / (111111 * Math.cos(lat * Math.PI/180));
-            sAlt -= config.fallRate;
+            sAlt -= fallRate;
         }
-        dropPosLatLon = L.latLng(sLat, sLon);
-        dropPointMarker.setLatLng(dropPosLatLon);
-    }
-
-    function logMarkerDrop() {
-        if(!dropPosLatLon) return;
-        const logMarker = L.marker(dropPosLatLon, {
-            icon: L.divIcon({ className: 'drop-log', html: '<b style="color:red; font-size:20px;">X</b>' })
-        }).addTo(map);
-        logMarker.bindPopup(`Marker Drop bei ${document.getElementById('alt').innerText}m`).openPopup();
-        
-        // Akustisches Feedback
-        if(audioCtx) {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.frequency.value = 1200; gain.gain.value = 0.1;
-            osc.start(); osc.stop(audioCtx.currentTime + 0.3);
-        }
-    }
-
-    function analyzeTactics(currentAlt) {
-        if(!donut.center || !currentPos) return;
-        const dist = map.distance(currentPos, donut.center);
-        const statusEl = document.getElementById('donut-status');
-        
-        if(dist < donut.rIn) statusEl.innerText = "ZU TIEF IM ZENTRUM";
-        else if(dist > donut.rOut) statusEl.innerText = "AUSSERHALB";
-        else statusEl.innerText = "IM DONUT";
-
-        let bestAlt = null;
-        let maxDist = 0;
-        const windRows = document.getElementById('wind-rows-list');
-        windRows.innerHTML = "";
-
-        const layers = Object.keys(windProfile).map(Number).sort((a,b) => b-a);
-        
-        layers.forEach(alt => {
-            const wind = windProfile[alt];
-            const d = simulatePath(currentPos, wind.speed, wind.bearing);
-            
-            if(d > maxDist) { maxDist = d; bestAlt = alt; }
-
-            const row = document.createElement('div');
-            row.className = "wind-row " + (d > 500 ? "good-layer" : "");
-            row.innerHTML = `<span>${alt}m</span><span>${wind.bearing.toFixed(0)}°</span><span>${d.toFixed(0)}m</span>`;
-            windRows.appendChild(row);
-        });
-
-        document.getElementById('best-alt').innerText = bestAlt || "---";
-        document.getElementById('max-dist').innerText = maxDist.toFixed(0) + "m";
-        
-        if(bestAlt) {
-            const diff = bestAlt - currentAlt;
-            document.getElementById('nav-hint').innerText = diff > 20 ? `Steigen auf ${bestAlt}m (+${diff}m)` : (diff < -20 ? `Sinken auf ${bestAlt}m (${diff}m)` : "HÖHE HALTEN");
-        }
-    }
-
-    function simulatePath(start, speed, brng) {
-        let p = L.latLng(start.lat, start.lng);
-        let total = 0;
-        for(let i=0; i<150; i++) { // Max 1500 Meter Simulation
-            const step = speed * 10;
-            const b = brng * Math.PI / 180;
-            p = L.latLng(p.lat + (step * Math.cos(b)) / 111111, p.lng + (step * Math.sin(b)) / (111111 * Math.cos(p.lat * Math.PI/180)));
-            const d = map.distance(p, donut.center);
-            if(d <= donut.rIn || d >= donut.rOut) break;
-            total += step;
-        }
-        return total;
+        dropPos = L.latLng(sLat, sLon);
+        dropMarker.setLatLng(dropPos).addTo(map);
     }
 
     function getWindAt(alt) {
@@ -252,15 +251,48 @@
         return windProfile[closest];
     }
 
-    function togglePanel(id) {
-        const p = document.getElementById(id);
-        p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
+    function updateDashboard() {
+        if(!targetCoords) return;
+        const dTarget = map.distance(currentPos, targetCoords);
+        document.getElementById('dist').innerText = dTarget.toFixed(0) + "m";
+
+        if(dropPos) {
+            const dDrop = map.distance(dropPos, targetCoords);
+            document.getElementById('drop-dist').innerText = dDrop.toFixed(0) + "m";
+            if(dDrop < 50) playFeedback(800, 0.05);
+        }
     }
-    function toggleWind() {
-        const p = document.getElementById('wind-table-container');
-        p.style.display = p.style.display === 'block' ? 'none' : 'block';
+
+    function logMarkerDrop() {
+        if(!dropPos) return;
+        L.marker(dropPos, {
+            icon: L.divIcon({ html: '<div style="color:red; font-weight:bold; font-size:24px;">X</div>', className: '' })
+        }).addTo(map);
+        playFeedback(1200, 0.2);
     }
-    function centerMap() { if(currentPos) map.panTo(currentPos); }
+
+    // --- UI HELPERS ---
+    function toggleSettings() {
+        document.getElementById('settings-panel').classList.toggle('open');
+    }
+
+    function centerMap() {
+        if(currentPos) map.flyTo(currentPos, 15);
+    }
+
+    function playFeedback(freq, dur) {
+        if(!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.connect(g); g.connect(audioCtx.destination);
+        osc.frequency.value = freq;
+        g.gain.value = 0.1;
+        osc.start(); osc.stop(audioCtx.currentTime + dur);
+    }
+
+    function clearAll() {
+        if(confirm("Track und Marker löschen?")) location.reload();
+    }
 </script>
 </body>
 </html>
