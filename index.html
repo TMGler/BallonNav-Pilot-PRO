@@ -3,125 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Balloon Tactical Pro v11</title>
+    <title>Balloon Tactical Pro v12 - Sim & Mission</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root {
             --bg: #0a0b10; --card-bg: rgba(30, 35, 45, 0.95);
             --accent: #00e676; --danger: #ff5252; --text: #f0f0f0; --glass: rgba(255, 255, 255, 0.1);
-            --predict: #4fc3f7; --traj: #ff9800;
+            --sim: #ffeb3b;
         }
         body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
         #map { flex-grow: 1; width: 100%; z-index: 1; }
 
         /* Panels */
-        #settings-panel, #wind-list-panel { 
-            position: absolute; top: 0; left: 0; width: 340px; height: 100%; 
-            background: var(--card-bg); z-index: 5000; transform: translateX(-110%); 
-            transition: transform 0.3s ease; padding: 25px; box-sizing: border-box; 
-            border-right: 1px solid var(--glass); overflow-y: auto; 
-        }
-        #settings-panel.open, #wind-list-panel.open { transform: translateX(0); }
+        .side-panel { position: absolute; top: 0; left: 0; width: 340px; height: 100%; background: var(--card-bg); z-index: 5000; transform: translateX(-110%); transition: transform 0.3s ease; padding: 25px; box-sizing: border-box; border-right: 1px solid var(--glass); overflow-y: auto; }
+        .side-panel.open { transform: translateX(0); }
         
         .section { background: var(--glass); padding: 12px; border-radius: 12px; margin-bottom: 15px; }
         .section-title { font-size: 0.8rem; color: var(--accent); font-weight: bold; text-transform: uppercase; margin-bottom: 8px; }
 
         /* Dashboard */
-        #dashboard { height: 160px; background: var(--card-bg); display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 15px; z-index: 1000; border-top: 1px solid var(--glass); }
+        #dashboard { height: 180px; background: var(--card-bg); display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 15px; z-index: 1000; border-top: 1px solid var(--glass); }
         .data-box { background: var(--glass); border-radius: 12px; padding: 5px; text-align: center; border: 1px solid var(--glass); display: flex; flex-direction: column; justify-content: center; }
-        .label { font-size: 0.6rem; color: #888; text-transform: uppercase; }
+        .label { font-size: 0.6rem; color: #888; }
         .value { font-size: 1.1rem; font-weight: bold; font-family: monospace; }
         
         .btn { background: var(--accent); color: #000; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 5px; }
-        .drop-btn { background: var(--danger); color: white; grid-column: span 4; font-size: 1.1rem; margin-top: 5px; height: 40px; }
+        .sim-btn { background: var(--sim); color: #000; }
+
+        /* Sim Controls Overlay */
+        #sim-controls { position: absolute; bottom: 200px; left: 50%; transform: translateX(-50%); z-index: 2000; display: none; gap: 20px; }
+        .ctrl-btn { width: 80px; height: 80px; border-radius: 50%; border: 4px solid white; color: white; font-weight: bold; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; text-align: center; }
+        #btn-burn { background: #d32f2f; box-shadow: 0 0 20px #f44336; }
+        #btn-vent { background: #1976d2; box-shadow: 0 0 20px #2196f3; }
 
         .fab-container { position: absolute; top: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 12px; }
-        .fab { width: 50px; height: 50px; background: var(--card-bg); border: 1px solid var(--glass); border-radius: 15px; color: white; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
-
-        #audio-init { position:fixed; inset:0; background:var(--bg); z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; }
-        
-        .wind-row { display: grid; grid-template-columns: 1fr 1fr 1fr; padding: 8px 0; border-bottom: 1px solid #333; font-size: 0.85rem; font-family: monospace; }
-        .source-live { color: var(--accent); }
-        .source-file { color: #5c6bc0; }
+        .fab { width: 50px; height: 50px; background: var(--card-bg); border: 1px solid var(--glass); border-radius: 15px; color: white; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<div id="audio-init">
-    <h1 style="color:var(--accent)">TACTICAL NAV V11</h1>
-    <button onclick="initApp()" class="btn" style="width:220px; font-size: 1.2rem;">MISSION STARTEN</button>
+<div id="audio-init" style="position:fixed; inset:0; background:black; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+    <h1 style="color:var(--accent)">BALLOON MISSION PRO</h1>
+    <button onclick="initApp()" class="btn" style="width:220px; font-size:1.2rem;">INITIALISIEREN</button>
 </div>
 
-<!-- Wind Layer Sidebar -->
-<div id="wind-list-panel">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-        <h2 style="margin:0;">Windprofil (AMSL)</h2>
-        <button onclick="togglePanel('wind-list-panel')" style="background:none; border:none; color:white; font-size:1.5rem;">✕</button>
-    </div>
-    <div class="wind-row" style="font-weight:bold; color:var(--accent); border-bottom: 2px solid #555;">
-        <span>HÖHE (m)</span><span>KURS</span><span>SPD (k/h)</span>
-    </div>
-    <div id="wind-data-list"></div>
+<!-- Simulation Controls -->
+<div id="sim-controls">
+    <div id="btn-vent" class="ctrl-btn" onmousedown="simAction('vent', true)" onmouseup="simAction('vent', false)" ontouchstart="simAction('vent', true)" ontouchend="simAction('vent', false)">VENTIL<br>(SINKEN)</div>
+    <div id="btn-burn" class="ctrl-btn" onmousedown="simAction('burn', true)" onmouseup="simAction('burn', false)" ontouchstart="simAction('burn', true)" ontouchend="simAction('burn', false)">HEIZEN<br>(STEIGEN)</div>
 </div>
 
-<!-- Settings Sidebar -->
-<div id="settings-panel">
-    <h2>Konfiguration</h2>
+<!-- Mission Planner Sidebar -->
+<div id="mission-panel" class="side-panel">
+    <h2>Missions-Planer</h2>
+    <div class="section">
+        <div class="section-title">Briefing / Aufgaben</div>
+        <input type="text" id="mission-name" placeholder="Missions-Name" style="width:100%; padding:8px; margin-bottom:10px;">
+        <button class="btn" onclick="saveMission()">Mission Speichern</button>
+        <button class="btn" style="background:#555; color:white; margin-top:5px;" onclick="loadMission()">Mission Laden</button>
+    </div>
+    <div class="section">
+        <div class="section-title">Modus</div>
+        <button id="toggle-sim" class="btn sim-btn" onclick="toggleSimMode()">SIMULATOR: OFF</button>
+    </div>
     <div class="section">
         <div class="section-title">Windwatch Import</div>
         <input type="file" id="wind-file" accept=".dat" style="display:none" onchange="importWindwatch(this)">
         <button class="btn" style="background:#5c6bc0; color:white;" onclick="document.getElementById('wind-file').click()">Windwatch.dat laden</button>
     </div>
-    <div class="section">
-        <div class="section-title">Trajektorie & Marker</div>
-        <label class="label">Gepl. Sinken Ballon (m/s)</label>
-        <input type="number" id="cfg-ballon-sink" value="2.0" step="0.1" style="width:100%; padding:8px; margin-bottom:10px;">
-        <label class="label">Marker Sinkrate (m/s)</label>
-        <input type="number" id="cfg-fallrate" value="6.5" step="0.1" style="width:100%; padding:8px;">
-    </div>
-    <button class="btn" onclick="exportGPX()" style="background:#f9a825;">GPX Export</button>
-    <button class="btn" style="background:#444; color:white; margin-top:20px;" onclick="togglePanel('settings-panel')">Schließen</button>
+    <button class="btn" style="background:#444; color:white; margin-top:20px;" onclick="togglePanel('mission-panel')">Schließen</button>
 </div>
 
 <div class="fab-container">
-    <div class="fab" onclick="togglePanel('settings-panel')">⚙️</div>
-    <div class="fab" onclick="togglePanel('wind-list-panel')">🌬️</div>
-    <div class="fab" id="traj-toggle" onclick="toggleTraj()" title="Trajektorie Ein/Aus">🚀</div>
+    <div class="fab" onclick="togglePanel('mission-panel')">📋</div>
+    <div class="fab" style="background:var(--danger)" onclick="logMarkerDrop()">🎯</div>
     <div class="fab" onclick="centerMap()">📍</div>
 </div>
 
 <div id="map"></div>
 
 <div id="dashboard">
-    <div class="data-box"><div class="label">HÖHE AMSL</div><div id="alt" class="value">0m</div></div>
+    <div class="data-box"><div class="label">HÖHE (m)</div><div id="alt" class="value">0</div></div>
+    <div class="data-box"><div class="label">VS (m/s)</div><div id="vs" class="value">0.0</div></div>
+    <div class="data-box"><div class="label">SPD (k/h)</div><div id="spd" class="value">0.0</div></div>
     <div class="data-box"><div class="label">KURS</div><div id="hdg" class="value">0°</div></div>
-    <div class="data-box" style="border-bottom: 3px solid var(--traj);"><div class="label">TRAJ. DIST</div><div id="traj-dist" class="value">---</div></div>
-    <div class="data-box" style="border-bottom: 3px solid var(--danger);"><div class="label">DROP DIST</div><div id="drop-dist" class="value">---</div></div>
-    <button class="btn drop-btn" onclick="logMarkerDrop()">MARKER DROP</button>
+    <button class="btn" style="grid-column: span 4; background: var(--danger); color: white;" onclick="logMarkerDrop()">MARKER ABWURF</button>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+    let isSimMode = false;
+    let simData = { alt: 801, lat: 51.1, lon: 10.4, vs: 0, spd: 0, hdg: 0, burn: false, vent: false };
     let windProfile = {}; let currentPos = null; let targetCoords = null;
-    let trackHistory = []; let markerDrops = []; let audioCtx = null;
-    let groundLevelM = 801; // Basis aus windwatch.dat
-    let showTraj = true;
+    let trackHistory = []; let groundLevelM = 801; //
 
-    const map = L.map('map', { zoomControl: false, tap: false }).setView([51.1, 10.4], 6);
+    const map = L.map('map', { zoomControl: false, tap: false }).setView([51.1, 10.4], 14);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-    const balloonMarker = L.circleMarker([0,0], { radius: 8, color: '#00e676', fillOpacity: 1 }).addTo(map);
-    const dropMarker = L.circleMarker([0,0], { radius: 6, color: '#ff5252' }).addTo(map);
-    const trajMarker = L.circleMarker([0,0], { radius: 5, color: 'var(--traj)', fillOpacity: 0.7 }).addTo(map);
-    
-    const trackLine = L.polyline([], { color: '#00e676', weight: 2, opacity: 0.3 }).addTo(map);
-    const trajLine = L.polyline([], { color: 'var(--traj)', weight: 3, opacity: 0.8, dashArray: '5, 10' }).addTo(map);
+    const balloonMarker = L.circleMarker([0,0], { radius: 10, color: '#00e676', fillOpacity: 1 }).addTo(map);
+    const trackLine = L.polyline([], { color: '#00e676', weight: 2, opacity: 0.5 }).addTo(map);
 
     function initApp() {
         document.getElementById('audio-init').style.display = 'none';
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if ('wakeLock' in navigator) navigator.wakeLock.request('screen');
         startGPS();
+        setInterval(simulationLoop, 100); // 10Hz Physik-Update
     }
 
     // --- WINDWATCH PARSER ---
@@ -130,7 +115,6 @@
         reader.onload = function(e) {
             const lines = e.target.result.split('\n');
             let gLevelFt = 2627.95; //
-            let count = 0;
             lines.forEach(line => {
                 if(line.includes("Ground Level:")) {
                     const m = line.match(/Ground Level:\s+([\d.]+)/);
@@ -140,115 +124,109 @@
                 if(p.length === 3 && !isNaN(p[0])) {
                     // AGL ft -> AMSL m conversion
                     const amslM = Math.round((parseFloat(p[0]) + gLevelFt) * 0.3048 / 10) * 10;
-                    windProfile[amslM] = { speed: parseFloat(p[2])/3.6, bearing: parseFloat(p[1]), source: 'file' };
-                    count++;
+                    windProfile[amslM] = { speed: parseFloat(p[2])/3.6, bearing: parseFloat(p[1]) };
                 }
             });
             groundLevelM = gLevelFt * 0.3048;
-            updateWindUI();
-            alert("Profil geladen. Basis: " + groundLevelM.toFixed(0) + "m AMSL");
+            simData.alt = groundLevelM;
+            alert("Windwatch-Profil für Simulation bereit!");
         };
         reader.readAsText(input.files[0]);
     }
 
+    // --- SIMULATOR PHYSIK ---
+    function toggleSimMode() {
+        isSimMode = !isSimMode;
+        document.getElementById('toggle-sim').innerText = isSimMode ? "SIMULATOR: ON" : "SIMULATOR: OFF";
+        document.getElementById('sim-controls').style.display = isSimMode ? "flex" : "none";
+        if(isSimMode) {
+            simData.lat = map.getCenter().lat;
+            simData.lon = map.getCenter().lng;
+            trackHistory = [];
+        }
+    }
+
+    function simAction(type, active) {
+        if(type === 'burn') simData.burn = active;
+        if(type === 'vent') simData.vent = active;
+    }
+
+    function simulationLoop() {
+        if(!isSimMode) return;
+
+        // Vertikale Physik
+        if(simData.burn) simData.vs += 0.05;
+        if(simData.vent) simData.vs -= 0.08;
+        simData.vs -= 0.01; // Natürliche Abkühlung / Schwerkraft
+        simData.vs *= 0.98; // Luftwiderstand
+        simData.alt += simData.vs * 0.1;
+
+        if(simData.alt < groundLevelM) { simData.alt = groundLevelM; simData.vs = 0; }
+
+        // Horizontale Physik basierend auf Windprofil[cite: 1]
+        const layers = Object.keys(windProfile).map(Number);
+        if(layers.length > 0) {
+            const closest = layers.reduce((p, c) => Math.abs(c-simData.alt) < Math.abs(p-simData.alt) ? c : p);
+            const wind = windProfile[closest];
+            simData.spd = wind.speed;
+            simData.hdg = wind.bearing;
+
+            // Bewegung berechnen
+            const dist = simData.spd * 0.1;
+            const bRad = simData.hdg * Math.PI / 180;
+            simData.lat += (dist * Math.cos(bRad)) / 111111;
+            simData.lon += (dist * Math.sin(bRad)) / (111111 * Math.cos(simData.lat * Math.PI / 180));
+        }
+
+        updateUI(simData.lat, simData.lon, simData.alt, simData.spd, simData.hdg, simData.vs);
+    }
+
+    function updateUI(lat, lon, alt, spd, hdg, vs) {
+        currentPos = L.latLng(lat, lon);
+        document.getElementById('alt').innerText = alt.toFixed(0);
+        document.getElementById('vs').innerText = vs.toFixed(1);
+        document.getElementById('spd').innerText = (spd * 3.6).toFixed(1);
+        document.getElementById('hdg').innerText = hdg.toFixed(0) + "°";
+
+        balloonMarker.setLatLng(currentPos);
+        trackHistory.push([lat, lon]);
+        if(trackHistory.length > 500) trackHistory.shift();
+        trackLine.setLatLngs(trackHistory);
+    }
+
+    // --- GPS LOGIK ---
     function startGPS() {
         navigator.geolocation.watchPosition(pos => {
+            if(isSimMode) return;
             const { latitude, longitude, altitude, speed, heading } = pos.coords;
-            currentPos = L.latLng(latitude, longitude);
-            const alt = altitude || 0;
-            const spd = speed || 0;
-            const hdg = heading || 0;
-
-            document.getElementById('alt').innerText = alt.toFixed(0) + "m";
-            document.getElementById('hdg').innerText = hdg.toFixed(0) + "°";
-
-            balloonMarker.setLatLng(currentPos);
-            trackHistory.push({ lat: latitude, lon: longitude, alt, spd, hdg, time: new Date().toISOString() });
-            trackLine.setLatLngs(trackHistory.map(p => [p.lat, p.lon]));
-
-            if(spd > 0.4) {
-                const layer = Math.round(alt / 10) * 10;
-                windProfile[layer] = { speed: spd, bearing: hdg, source: 'live' };
-                updateWindUI();
-            }
-
-            calculatePhysics(latitude, longitude, alt);
+            updateUI(latitude, longitude, altitude || 0, speed || 0, heading || 0, 0);
         }, null, { enableHighAccuracy: true });
     }
 
-    function calculatePhysics(lat, lon, alt) {
-        if(alt < groundLevelM + 2) return;
+    // --- MISSION SAVING ---
+    function saveMission() {
+        const name = document.getElementById('mission-name').value || "Default";
+        const mission = { name, wind: windProfile, target: targetCoords };
+        localStorage.setItem("mission_" + name, JSON.stringify(mission));
+        alert("Mission '" + name + "' gespeichert!");
+    }
 
-        // 1. Trajektorie (Ballon sinkt)
-        if(showTraj) {
-            const bSink = parseFloat(document.getElementById('cfg-ballon-sink').value);
-            let result = simulatePath(lat, lon, alt, bSink, groundLevelM);
-            trajLine.setLatLngs(result.path);
-            trajMarker.setLatLng(result.endPos).addTo(map);
-            if(targetCoords) document.getElementById('traj-dist').innerText = map.distance(result.endPos, targetCoords).toFixed(0) + "m";
+    function loadMission() {
+        const name = document.getElementById('mission-name').value;
+        const data = localStorage.getItem("mission_" + name);
+        if(data) {
+            const mission = JSON.parse(data);
+            windProfile = mission.wind;
+            targetCoords = mission.target;
+            if(targetCoords) L.marker(targetCoords).addTo(map);
+            alert("Mission '" + name + "' geladen!");
         }
-
-        // 2. Marker Drop
-        const mSink = parseFloat(document.getElementById('cfg-fallrate').value);
-        let mResult = simulatePath(lat, lon, alt, mSink, groundLevelM);
-        dropMarker.setLatLng(mResult.endPos).addTo(map);
-        if(targetCoords) document.getElementById('drop-dist').innerText = map.distance(mResult.endPos, targetCoords).toFixed(0) + "m";
-    }
-
-    function simulatePath(lat, lon, startAlt, sinkRate, targetAlt) {
-        let sLat = lat, sLon = lon, sAlt = startAlt;
-        let path = [[lat, lon]];
-        const timeStep = 2.0;
-
-        while(sAlt > targetAlt) {
-            const layers = Object.keys(windProfile).map(Number);
-            const wind = layers.length ? windProfile[layers.reduce((p, c) => Math.abs(c-sAlt) < Math.abs(p-sAlt) ? c : p)] : { speed: 0, bearing: 0 };
-            
-            const dist = wind.speed * timeStep;
-            const bRad = wind.bearing * Math.PI / 180;
-            
-            sLat += (dist * Math.cos(bRad)) / 111111;
-            sLon += (dist * Math.sin(bRad)) / (111111 * Math.cos(lat * Math.PI / 180));
-            sAlt -= (sinkRate * timeStep);
-            path.push([sLat, sLon]);
-        }
-        return { path: path, endPos: L.latLng(sLat, sLon) };
-    }
-
-    function updateWindUI() {
-        const list = document.getElementById('wind-data-list');
-        list.innerHTML = "";
-        const sorted = Object.keys(windProfile).map(Number).sort((a,b) => b-a);
-        sorted.forEach(alt => {
-            const w = windProfile[alt];
-            const row = document.createElement('div');
-            row.className = `wind-row ${w.source === 'live' ? 'source-live' : 'source-file'}`;
-            row.innerHTML = `<span>${alt}m</span><span>${w.bearing.toFixed(0)}°</span><span>${(w.speed*3.6).toFixed(1)}</span>`;
-            list.appendChild(row);
-        });
-    }
-
-    function toggleTraj() {
-        showTraj = !showTraj;
-        if(!showTraj) { trajLine.setLatLngs([]); map.removeLayer(trajMarker); }
-        document.getElementById('traj-toggle').style.background = showTraj ? "var(--card-bg)" : "#333";
-    }
-
-    function logMarkerDrop() {
-        const pos = dropMarker.getLatLng();
-        L.marker(pos, { icon: L.divIcon({ html: '<b style="color:red; font-size:24px;">X</b>', className: '' }) }).addTo(map);
     }
 
     function togglePanel(id) { document.getElementById(id).classList.toggle('open'); }
     function centerMap() { if(currentPos) map.flyTo(currentPos, 15); }
     map.on('contextmenu', e => { targetCoords = e.latlng; L.marker(e.latlng).addTo(map); });
-    
-    function exportGPX() {
-        let g = `<?xml version="1.0"?><gpx version="1.1" creator="TacticalNav"><trk><trkseg>`;
-        trackHistory.forEach(p => g += `<trkpt lat="${p.lat}" lon="${p.lon}"><ele>${p.alt}</ele><time>${p.time}</time></trkpt>`);
-        g += `</trkseg></trk></gpx>`;
-        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([g])); a.download = "flight.gpx"; a.click();
-    }
+    function logMarkerDrop() { alert("Marker Drop registriert bei " + document.getElementById('alt').innerText + "m"); }
 </script>
 </body>
 </html>
